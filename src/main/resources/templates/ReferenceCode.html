@@ -1,0 +1,730 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+
+<!-- 
+CREATED BY	: NITHYAPRIYA
+CREATED ON	: 13.06.2025
+PURPOSE		: ACCESS AND ROLE
+ -->
+<!-- 
+CREATED BY	: SURIYA K
+CREATED ON	: 28.06.2025
+PURPOSE		: SCREEN DESIGNS
+ -->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+/* Match list screen font style and size */
+.card, .card-body, .form-group, .form-control, .btn, label {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+}
+
+.card-header h5, .card-header h4 {
+	font-weight: bold;
+	font-size: 16px;
+}
+
+.form-control-sm {
+	font-size: 14px;
+}
+
+.btn-sm {
+	font-size: 13px;
+}
+</style>
+<style>
+.btns {
+	float: right;
+	margin: 5px;
+}
+
+td {
+	padding: 0.30rem !important;
+}
+
+.col-sm-5 {
+	padding-bottom: 15px;
+}
+
+.list-body {
+	padding: 0px;
+}
+
+.error {
+	color: red;
+	padding-left: 10px;
+}
+
+.formline {
+	padding-bottom: 0px;
+}
+
+.btn-primary {
+	background-color: #E77400;
+	border-color: #0c0c0c;
+}
+
+.btn-primary:not (:disabled ):not (.disabled ).active, .btn-primary:not
+	 (:disabled ):not (.disabled ):active, .show>.btn-primary.dropdown-toggle
+	{
+	color: #fff;
+	background-color: #cc000000;
+	border-color: #161617;
+}
+
+#finusertb {
+	width: 460px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+	padding: 0px;
+}
+</style>
+<style>
+.valids {
+	color: green;
+}
+
+.invalids {
+	color: red;
+}
+</style>
+<style>
+.dataTables_wrapper {
+	width: 100% !important;
+}
+
+table.dataTable {
+	width: 100% !important;
+}
+
+.user-profile-wrapper {
+	width: 100%;
+	padding: 0 20px; /* optional spacing */
+}
+/* Expand the card or box */
+.card {
+	width: 100% !important;
+}
+
+/* Make table fill full width */
+table.dataTable {
+	width: 100% !important;
+}
+
+/* Optional: make header also full width */
+.user-profile-wrapper {
+	width: 100%;
+}
+</style>
+<style>
+.btn-xs:hover {
+	opacity: 0.85;
+	box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+</style>
+<script th:inline="javascript">
+	function home() {
+		location.href = 'Dashboard'
+	}
+	function back() {
+		window.history.back();
+	}
+	function list() {
+		location.href = 'refcode?formmode=list';
+	}
+</script>
+<script type="text/javascript">
+	function view_btn(a) {
+		var id = a.getAttribute("data-view");
+		location.href = './refcode?formmode=view&ref_id=' + id;
+	}
+	function modify_btn(a) {
+		var id = a.getAttribute("data-modify");
+		location.href = './refcode?formmode=modify&ref_id=' + id;
+	}
+	function cancelform(a) {
+		var refId = a.getAttribute("data-delete");
+		$('#refDelete').attr("data-delete", refId);
+		$("#datacancel").modal("toggle");
+	}
+	function addUser() {
+		location.href = 'refcode?formmode=add';
+	}
+</script>
+<script type="text/javascript">
+	// ADD REF
+	function submitform(a) {
+    var refId = document.getElementById("refId").value;
+
+    if (!refId) {
+        $.toast({
+            heading: 'Warning',
+            text: 'Please enter a Reference ID.',
+            icon: 'warning',
+            position: 'bottom-right'
+        });
+        return false;
+    }
+
+    // ✅ Base URL with Thymeleaf context path (auto injects /BRECON if set)
+    var baseUrl = /*[[@{/}]]*/ '';
+
+    // ✅ First check for duplicate Reference ID
+    $.ajax({
+    	 url: './refcodeadd?formmode=add',
+        data: { ref_id: refId },   // must match @RequestParam("ref_id")
+        type: 'POST',
+        success: function(responseText) {
+            if (responseText === 'Match') {
+                $.toast({
+                    heading: 'Warning',
+                    text: 'Hold on! Reference ID "' + refId + '" already exists. Please try a different name.',
+                    icon: 'warning',
+                    position: 'bottom-right'
+                });
+                return false;
+            } else {
+                // ✅ No duplicate → submit form via AJAX
+                if ($("#adminRefCodeMaster").valid()) {
+                    var url = baseUrl + "refcodeadd?formmode=add";
+                    $("#adminRefCodeMaster").ajaxSubmit({
+                        url: url,
+                        type: 'POST',
+                        success: showResponse,
+                        error: handleError
+                    });
+                }
+            }
+        },
+        error: function(xhr) {
+            $.toast({
+                heading: 'Error',
+                text: xhr.responseText || "Could not check for duplicates.",
+                icon: 'error',
+                position: 'bottom-right'
+            });
+        }
+    });
+
+    // ✅ Success handler
+    function showResponse(responseText) {
+        $.toast({
+            heading: 'Success',
+            text: responseText || 'New entry saved!',
+            icon: 'success',
+            showHideTransition: 'plain',
+            position: { left: 1600, top: 0 },
+            loaderBg: '#376275',
+            hideAfter: 3000
+        });
+
+        setTimeout(function() {
+            location.href = baseUrl + "refcode?formmode=list";
+        }, 3100);
+    }
+
+    // ✅ Error handler
+    function handleError(xhr) {
+        var errorMessage = xhr.responseText
+            || "An error occurred while processing your request. Please try again.";
+        $.toast({
+            heading: 'Error',
+            text: errorMessage,
+            icon: 'error',
+            showHideTransition: 'plain',
+            position: { left: 1600, top: 0 },
+            loaderBg: '#dc3545',
+            hideAfter: 5000
+        });
+    }
+}
+	// MODIFY REF
+	function modifyUserData() {
+		var refId = document.getElementById("ref_Id_modify").value;
+		if ($("#adminRefCodeMaster").valid()) {
+			var url = "./adminRefCodeMasterAdd?formmode=modify&ref_id="
+					+ encodeURIComponent(refId);
+			$("#adminRefCodeMaster").attr('action', url);
+			var options = {
+				success : showResponse,
+				error : handleError
+			};
+			$("#adminRefCodeMaster").ajaxSubmit(options);
+		}
+		function showResponse(responseText, statusText, xhr, $form) {
+			$.toast({
+				heading : 'Success',
+				text : responseText,
+				icon : 'success',
+				showHideTransition : 'plain',
+				position : {
+					left : 1600,
+					top : 0
+				}, // or any standard position like 'top-center'
+				loaderBg : '#376275',
+				hideAfter : 3000
+			});
+
+			// Delay the redirect to allow user to see toast
+			setTimeout(function() {
+				location.href = 'refcode?formmode=list';
+			}, 3100); // Wait just a bit longer than toast duration 
+		}
+
+		function handleError(xhr, statusText, error) {
+			var errorMessage = xhr.responseText
+					|| "An error occurred while processing your request. Please try again.";
+			$.toast({
+				heading : 'Error',
+				text : errorMessage,
+				icon : 'error',
+				showHideTransition : 'plain',
+				position : {
+					left : 1600,
+					top : 0
+				},
+				loaderBg : '#dc3545',
+				hideAfter : 5000
+			});
+		}
+	}
+	// DELETE REF
+	function deleteRef(element) {
+		$("#datacancel").hide();
+		var refId = element.getAttribute("data-delete");
+		$.ajax({
+					url : './refcodedelete',
+					data : {
+						refId : refId
+					},
+					type : 'POST',
+					success : function(responseText, statusText, xhr) {
+						$.toast({
+							heading : 'Success',
+							text : 'Deletion complete!',
+							icon : 'success',
+							showHideTransition : 'plain',
+							position : {
+								left : 1600,
+								top : 0
+							}, // or any standard position like 'top-center'
+							loaderBg : '#376275',
+							hideAfter : 3000
+						});
+						setTimeout(function() {
+							location.href = 'refcode?formmode=list';
+						}, 3100);
+					},
+					error : function(xhr, status, error) {
+						var errorMessage = xhr.responseText
+								|| "An error occurred while processing your request. Please try again.";
+						$.toast({
+							heading : 'Error',
+							text : errorMessage,
+							icon : 'error',
+							showHideTransition : 'plain',
+							position : {
+								left : 1600,
+								top : 0
+							},
+							loaderBg : '#dc3545',
+							hideAfter : 5000
+						});
+					}
+				});
+	}
+</script>
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		var refTypeDropdown = document.getElementById("refType11");
+		var typeDescField = document.getElementById("typeDesc11");
+
+		if (refTypeDropdown && typeDescField) {
+			refTypeDropdown.addEventListener("change", function() {
+				var selectedValue = this.value;
+				var desc = "";
+				switch (selectedValue) {
+				case "C001":
+					desc = "Country Code";
+					break;
+				case "B001":
+					desc = "Branch Code";
+					break;
+				case "S001":
+					desc = "Sol Type";
+					break;
+				default:
+					desc = "";
+					break;
+				}
+				typeDescField.value = desc.toUpperCase();
+			});
+		}
+	});
+</script>
+<script>
+	function adjustHeight() {
+		const cardBody = document.getElementById("cardBody");
+		const viewportHeight = window.innerHeight;
+		cardBody.style.maxHeight = `${viewportHeight * 0.95}px`; // Adjust 80% of the viewport height
+	}
+
+	window.addEventListener("resize", adjustHeight);
+	document.addEventListener("DOMContentLoaded", adjustHeight);
+</script>
+</head>
+<title>BRECON</title>
+<body>
+	<div th:insert="XBRLHeaderMenu :: header"></div>
+	<!-- -------------------User List Starts----------------------------------------------------- -->
+	<div class="container-fluid py-5">
+		<div class="row justify-content-center">
+			<div class="col-md-10">
+				<div class="card shadow-lg border-0" style="border-radius: 16px;">
+					<div th:if="${formmode}=='list'">
+						<div class="card"
+							style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+							<div class="card-header text-center"
+								style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+								<h4 class="text-white m-0">
+									<i class="fas fa-tags mr-2" style="color: lightblue;"></i>
+									Reference Code &nbsp; <i class="fas fa-user-plus	"
+										onclick="addUser();"></i>
+
+								</h4>
+							</div>
+							<div id="cardBody" class="card-body p-2">
+								<div class="table-responsive">
+									<div class="upload-section flex-fill p-3"
+										style="min-width: 300px;">
+										<div class="table-responsive">
+											<table class="table table-bordered table-hover table-sm"
+												style="font-family: Verdana; font-size: 13px;">
+												<thead class="thead-light"
+													style="background-color: #e9ecf0;">
+													<tr>
+														<th>Reference Type</th>
+														<th>Type Description</th>
+														<th>Reference ID</th>
+														<th>Reference Description</th>
+														<th class="text-center">Select</th>
+													</tr>
+												</thead>
+												<tbody style="font-family: Verdana;">
+													<tr th:each="refCodeMaster : ${reflist}" class="text-left">
+														<td th:text="${refCodeMaster?.ref_type?.toUpperCase()}"></td>
+														<td
+															th:text="${refCodeMaster?.ref_type_desc?.toUpperCase()}"></td>
+														<td th:text="${refCodeMaster?.ref_id?.toUpperCase()}"
+															title="View" th:attr="data-view=${refCodeMaster?.ref_id}"
+															style="color: #376275;" onclick="view_btn(this)"></td>
+														<td th:text="${refCodeMaster?.ref_id_desc?.toUpperCase()}"></td>
+														<td class="text-center"><i class="fas fa-edit"
+															style="font-size: 13px; color: #376275; cursor: pointer;"
+															title="Modify"
+															th:attr="data-modify=${refCodeMaster?.ref_id}"
+															onclick="modify_btn(this)"></i> <i class="fas fa-trash"
+															title="Delete"
+															th:attr="data-delete=${refCodeMaster?.ref_id}"
+															onclick="cancelform(this)"
+															style="font-size: 13px; color: #376275; cursor: pointer;"></i>
+
+														</td>
+
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+
+								<div class="card-footer bg-white text-center p-1"
+									style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+									<button type="button" class="btn btn-outline-dark me-3"
+										onclick="home()" style="border-radius: 6px;">
+										<i class="fas fa-home me-1"></i> Home
+									</button>
+									<button type="button" class="btn btn-outline-dark me-3"
+										onclick="back()" style="border-radius: 6px;">
+										<i class="fas fa-angle-left me-1"></i> Back
+									</button>
+								</div>
+							</div>
+						</div>
+						<!-- ------------------------ADD, VIEW--------------------------------- -->
+					</div>
+					<div
+						th:if="${formmode}=='modify' OR ${formmode}=='add' OR ${formmode}=='view'">
+						<div class="row">
+							<div class="col-sm-12 finuserapply">
+								<div>
+									<div class="card"
+										style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+										<!-- Header -->
+										<div class="card-header text-center"
+											style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+											<h4 class="text-white m-0">
+												<i class="fas fa-tags mr-2" style="color: lightblue;"></i> <span
+													th:if="${formmode}=='add'">Reference Code- Add</span> <span
+													th:if="${formmode}=='modify'">Reference Code - Edit</span>
+												<span th:if="${formmode}=='view'">Reference Code -
+													View</span>
+											</h4>
+										</div>
+
+
+										<!-- Body -->
+										<form action="#" th:object="${RefCodeMaster}" method="post"
+											autocomplete="off" id="adminRefCodeMaster">
+											<div class="card-body p-3">
+												<!-- Reference Type & Type Description -->
+												<div class="row formline mb-2">
+													<label class="col-sm-2">Reference Type</label>
+													<div class="col-sm-2">
+														<!-- View -->
+														<input type="text" id="refType"
+															th:if="${formmode}=='view'"
+															th:value="${RefCodeMaster?.ref_type}" name="ref_type"
+															class="form-control form-control-sm" readonly />
+														<!-- Modify -->
+														<select id="refType11" th:if="${formmode}=='modify'"
+															class="form-control form-control-sm w-100"
+															name="ref_type" required>
+															<option value="">SELECT</option>
+
+															<option th:each="item : ${refTypeList}"
+																th:value="${item.ref_type}"
+																th:text="${item.ref_type + ' (' + item.ref_id_desc + ')'}"
+																th:selected="${item.ref_type == RefCodeMaster.ref_type}">
+															</option>
+														</select>
+
+														<!-- Add -->
+														<select id="refType11"
+															class="form-control form-control-sm w-100"
+															th:if="${formmode}=='add'" name="ref_type" required>
+															<option value="">SELECT</option>
+															<!-- your options remain unchanged -->
+															<option value="C001">C001 (Country Code)</option>
+															<option value="B001">B001 (Branch Code)</option>
+															<option value="S001">S001 (Sol Type)</option>
+														</select>
+													</div>
+													<div class="col-sm-2"></div>
+													<label class="col-sm-2">Type Description <span
+														style="color: red;"
+														th:if="${formmode}=='add' OR ${formmode}=='modify'">*</span></label>
+													<div class="col-sm-2">
+														<input type="text" id="typeDesc"
+															th:if="${formmode}=='view'"
+															th:value="${RefCodeMaster?.ref_type_desc.toUpperCase()}"
+															class="form-control form-control-sm" readonly /> <input
+															type="text" id="typeDesc" th:if="${formmode}=='modify'"
+															onkeyup="this.value = this.value.toUpperCase();"
+															th:value="${RefCodeMaster?.ref_type_desc.toUpperCase()}"
+															name="ref_type_desc" class="form-control form-control-sm" />
+														<input type="text" id="typeDesc11"
+															th:if="${formmode}=='add'" name="ref_type_desc"
+															onkeyup="this.value = this.value.toUpperCase();"
+															class="form-control form-control-sm" required readonly />
+													</div>
+												</div>
+
+												<!-- Reference ID & Description -->
+												<div class="row formline mb-2">
+													<label class="col-sm-2">Reference ID <span
+														style="color: red;"
+														th:if="${formmode}=='add' OR ${formmode}=='modify'">*</span></label>
+													<div class="col-sm-2">
+														<input type="text" id="refId" th:if="${formmode}=='view'"
+															th:value="${RefCodeMaster?.ref_id}"
+															class="form-control form-control-sm" readonly /> <input
+															type="text" id="ref_Id_modify"
+															th:if="${formmode}=='modify'" readonly
+															onkeyup="this.value = this.value.toUpperCase();"
+															th:value="${RefCodeMaster?.ref_id}"
+															class="form-control form-control-sm commonBackground" />
+														<input type="text" id="refId" th:if="${formmode}=='add'"
+															onkeyup="this.value = this.value.toUpperCase();"
+															class="form-control form-control-sm commonBackground"
+															name="ref_id" required />
+													</div>
+													<div class="col-sm-2"></div>
+													<label class="col-sm-2">Reference Description <span
+														style="color: red;"
+														th:if="${formmode}=='add' OR ${formmode}=='modify'">*</span></label>
+													<div class="col-sm-2">
+														<input type="text" id="refDesc"
+															th:if="${formmode}=='view'"
+															th:value="${RefCodeMaster?.ref_id_desc}"
+															class="form-control form-control-sm" readonly /> <input
+															type="text" id="refDesc" th:if="${formmode}=='modify'"
+															onkeyup="this.value = this.value.toUpperCase();"
+															th:value="${RefCodeMaster?.ref_id_desc}"
+															name="ref_id_desc"
+															class="form-control form-control-sm commonBackground" />
+														<input type="text" id="refDesc" th:if="${formmode}=='add'"
+															onkeyup="this.value = this.value.toUpperCase();"
+															class="form-control form-control-sm commonBackground"
+															name="ref_id_desc" required />
+													</div>
+												</div>
+
+												<!-- Module & Remarks -->
+												<div class="row formline mb-2">
+													<label class="col-sm-2">Module <span
+														style="color: red;"
+														th:if="${formmode}=='add' OR ${formmode}=='modify'">*</span></label>
+													<div class="col-sm-2">
+														<input type="text" id="module" th:if="${formmode}=='view'"
+															th:value="${RefCodeMaster?.module_id}"
+															class="form-control form-control-sm" readonly /> <input
+															type="text" id="module" th:if="${formmode}=='modify'"
+															onkeyup="this.value = this.value.toUpperCase();"
+															th:value="${RefCodeMaster?.module_id}" name="module_id"
+															class="form-control form-control-sm commonBackground" />
+														<input type="text" id="module" th:if="${formmode}=='add'"
+															onkeyup="this.value = this.value.toUpperCase();"
+															class="form-control form-control-sm commonBackground"
+															name="module_id" required />
+													</div>
+													<div class="col-sm-2"></div>
+													<label class="col-sm-2">Remarks</label>
+													<div class="col-sm-2">
+														<input type="text" id="remarks"
+															th:if="${formmode}=='view'"
+															th:value="${RefCodeMaster?.remarks}"
+															class="form-control form-control-sm" readonly /> <input
+															type="text" id="remarks" th:if="${formmode}=='modify'"
+															onkeyup="this.value = this.value.toUpperCase();"
+															th:value="${RefCodeMaster?.remarks}" name="remarks"
+															class="form-control form-control-sm commonBackground" />
+														<input type="text" id="remarks" th:if="${formmode}=='add'"
+															onkeyup="this.value = this.value.toUpperCase();"
+															class="form-control form-control-sm commonBackground"
+															name="remarks" />
+													</div>
+												</div>
+											</div>
+
+											<!-- Footer -->
+											<div class="card-footer bg-white text-center p-1"
+												style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+												<button type="button" class="btn btn-outline-dark me-3"
+													onclick="home()" style="border-radius: 6px;">
+													<i class="fas fa-home me-1"></i> Home
+												</button>
+												<button th:if="${formmode}=='add'" type="button"
+													class="btn btn-outline-dark me-3" form="RefCodeMaster"
+													th:attr="data-formmode=${formmode}" id="btnSubmit"
+													onclick="submitform(this);">
+													<i class="fas fa-upload me-1"></i> Submit
+												</button>
+												<button th:if="${formmode}=='modify'" type="button"
+													class="btn btn-outline-dark me-3"
+													th:attr="data-formmode=${formmode}" id="btnSubmit"
+													onclick="modifyUserData(this);">
+													<i class="fas fa-upload me-1"></i> Submit
+												</button>
+												<button type="button" class="btn btn-outline-dark me-3"
+													onclick="back()" style="border-radius: 6px;">
+													<i class="fas fa-angle-left me-1"></i> Back
+												</button>
+											</div>
+										</form>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+	</div>
+	<div class="modal fade" id="alert">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body" style="text-align: center">
+					<p id="alertmsg"></p>
+					<button type="button" class="btn btn-outline-dark me-3"
+						data-dismiss="modal" onclick="list();">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+	<div class="modal fade" id="datadelete">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body"
+					style="margin-top: 8px; text-align: center; color: #f15362;">
+					<button type="button" class="close" data-dismiss="modal">×</button>
+					Are you Sure want to delete?
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-outline-dark me-3"
+						onclick="submitformdelete(this);" th:attr="data-formmode=delete">Submit</button>
+					<button type="button" class="btn btn-outline-dark me-3"
+						data-dismiss="modal">Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal fade" id="formmsg">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body"
+					style="margin-top: 8px; text-align: center; color: aliceblue;">
+					<button type="button" class="close" data-dismiss="modal">×</button>
+					<a th:value="${msg}"></a>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-outline-dark me-3"
+						onclick="submitformdelete(this);" th:attr="data-formmode=delete">Submit</button>
+					<button type="button" class="btn btn-outline-dark me-3"
+						data-dismiss="modal">Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	</div>
+	<!-- Delete Confirmation Modal -->
+	<div class="modal fade" id="datacancel" style="background: #000000b0;"
+		role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable"
+			role="document">
+			<div class="modal-content">
+
+				<!-- Modal Header -->
+
+
+				<!-- Modal Body -->
+				<div class="modal-body">
+					<h5 style="font-size: 17px; color: black; padding: 15px;">Are
+						you sure you want to delete the Reference Code?</h5>
+				</div>
+				<!-- Modal Footer -->
+				<div style="padding: 10px; text-align: center;">
+					<button type="button" class="btn btn-outline-dark me-3"
+						style="font-size: 16px;" onclick="$('#datacancel').modal('hide')">Cancel</button>
+					<button type="button" class="btn btn-outline-dark me-3"
+						id="refDelete" style="font-size: 16px;" onclick="deleteRef(this);"
+						th:attr="data-formmode=delete">Yes, Delete</button>
+				</div>
+
+			</div>
+		</div>
+	</div>
+</body>
+</html>

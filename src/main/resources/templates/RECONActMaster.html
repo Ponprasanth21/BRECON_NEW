@@ -1,0 +1,941 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+
+<!-- 
+CREATED BY	: SURIYA K
+CREATED ON	: 08.07.2025
+PURPOSE		: LIST FUNCTIONLITY
+VERSION     : 01
+ -->
+<!-- 
+CREATED BY	: SURIYA K
+CREATED ON	: 12.07.2025
+PURPOSE		: ADD FUNCTINLITY
+VERSION     : 02
+ -->
+ <!-- 
+CREATED BY	: SURIYA K
+CREATED ON	: 13.07.2025
+PURPOSE		: EDIT , VERIFY , VIEW AND DELTE FUNCTINLITY
+VERSION     : 03
+ -->
+  <!-- 
+CREATED BY	: SURIYA K
+CREATED ON	: 01.08.2025
+PURPOSE		: ADD A AUDIT FUNCTINLITY
+VERSION     : 04
+ -->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+.dataTables_wrapper {
+	width: 100% !important;
+}
+
+table.dataTable {
+	width: 100% !important;
+}
+
+.user-profile-wrapper {
+	width: 100%;
+	padding: 0 20px; /* optional spacing */
+}
+/* Expand the card or box */
+.card {
+	width: 100% !important;
+}
+/* Make table fill full width */
+table.dataTable {
+	width: 100% !important;
+}
+/* Optional: make header also full width */
+.user-profile-wrapper {
+	width: 100%;
+}
+/* Match list screen font style and size */
+.card, .card-body, .form-group, .form-control, .btn, label {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+}
+
+.card-header h5, .card-header h4 {
+	font-weight: bold;
+	font-size: 16px;
+}
+
+.form-control-sm {
+	font-size: 14px;
+}
+
+.btn-sm {
+	font-size: 13px;
+}
+</style>
+<style>
+.btns {
+	float: right;
+	margin: 5px;
+}
+
+td {
+	padding: 0.30rem !important;
+}
+
+.col-sm-5 {
+	padding-bottom: 15px;
+}
+
+.list-body {
+	padding: 0px;
+}
+
+.error {
+	color: red;
+	padding-left: 10px;
+}
+
+.formline {
+	padding-bottom: 0px;
+}
+
+.btn-primary {
+	background-color: #E77400;
+	border-color: #0c0c0c;
+}
+
+.btn-primary:not (:disabled ):not (.disabled ).active, .btn-primary:not
+	 (:disabled ):not (.disabled ):active, .show>.btn-primary.dropdown-toggle
+	{
+	color: #fff;
+	background-color: #cc000000;
+	border-color: #161617;
+}
+
+#finusertb {
+	width: 460px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+	padding: 0px;
+}
+</style>
+<style>
+.valids {
+	color: green;
+}
+
+.invalids {
+	color: red;
+}
+</style>
+<style>
+.dataTables_wrapper {
+	width: 100% !important;
+}
+
+table.dataTable {
+	width: 100% !important;
+}
+
+.user-profile-wrapper {
+	width: 100%;
+	padding: 0 20px; /* optional spacing */
+}
+/* Expand the card or box */
+.card {
+	width: 100% !important;
+}
+
+/* Make table fill full width */
+table.dataTable {
+	width: 100% !important;
+}
+
+/* Optional: make header also full width */
+.user-profile-wrapper {
+	width: 100%;
+}
+</style>
+<style>
+.btn-xs:hover {
+	opacity: 0.85;
+	box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+</style>
+
+<script th:inline="javascript">
+	function home() {
+		location.href = 'Dashboard'
+
+	}
+
+	function back() {
+		window.history.back();
+	}
+</script>
+<!-- Add Script  -->
+<script>
+	function addUser() {
+		location.href = 'AccountMaster?formmode=add'
+	}
+
+	function AcctSubmit() {
+
+		var formElement = document.getElementById("AccountMasterSubmit");
+
+		if (!(formElement instanceof HTMLFormElement)) {
+			console
+					.error("Element with ID 'AccountMasterSubmit' is not a form.");
+			alert("Internal Error: Form not found.");
+			return;
+		}
+
+		var formData = new FormData(formElement);
+		const formmode = getQueryParam("formmode");
+
+		$.ajax({
+			url : './AccountMasterAdd?formmode=' + formmode,
+			type : 'POST',
+			data : formData,
+			processData : false,
+			contentType : false,
+			success : function(response) {
+				$.toast({
+					heading : 'Success',
+					text : response,
+					icon : 'success',
+					showHideTransition : 'plain',
+					position : {
+						left : 1400,
+						top : 0
+					},
+					loaderBg : '#376275',
+					hideAfter : 3000
+				});
+
+				setTimeout(function() {
+					location.href = 'AccountMaster?formmode=list';
+				}, 3100);
+			},
+			error : function(error) {
+				console.error("Submission Error:", error.responseText);
+				$("#loader1").modal("hide");
+				let errorMessage = "An unexpected error occurred .";
+		        $.toast({
+		            heading: 'Submission Error',
+		            text: errorMessage,
+		            icon: 'error',
+		            showHideTransition: 'fade',
+		            position: { left: 1600, top: 0 },
+		            loaderBg: '#dc3545',
+		            hideAfter: 6000,
+		            stack: false
+		        });
+			}
+		});
+	}
+
+	function view_btn_submit(a) {
+		var no = a.getAttribute("data-acct_num");
+		location.href = 'AccountMaster?formmode=view&no=' + no;
+	}
+
+	function verify_btn_submit(a) {
+		var no = a.getAttribute("data-acct_num");
+		location.href = 'AccountMaster?formmode=verify&no=' + no;
+	}
+
+	function edit_btn_submit(a) {
+		var no = a.getAttribute("data-acct_num");
+		location.href = 'AccountMaster?formmode=edit&no=' + no;
+	}
+	
+	function VerifySubmit(){
+		var no = document.getElementById("acct_num").value;
+		$.ajax({
+			url : './AccountMasterVerify?no=' + no,
+			type : 'POST',
+			processData : false,
+			contentType : false,
+			success : function(response) {
+				/* $.toast({
+					heading : 'Verified!',
+					text : "Verification complete!",
+					icon : 'success',
+					showHideTransition : 'plain',
+					position : {
+						left : 1400,
+						top : 0
+					},
+					loaderBg : '#376275',
+					hideAfter : 3000
+				});
+
+				setTimeout(function() {
+					location.href = 'AccountMaster?formmode=list';
+				}, 3100); */
+				 $('#alertmsg').text("Verification complete!");
+	                $('#alert').modal("toggle");
+			},
+			error : function(error) {
+				console.error("Submission Error:", error.responseText);
+				$("#loader1").modal("hide");
+				alert("Failed to submit. Please try again.");
+			}
+		});
+	}
+	
+	function cancelform(a) {
+		var no = a.getAttribute("data-acct_num");
+		$('#refDelete').attr("data-acct_num", no);
+		$("#datacancel").modal("toggle");
+	}
+	
+	function deleteRef(element) {
+		$("#datacancel").hide();
+		var no = element.getAttribute("data-acct_num");
+		$
+				.ajax({
+					url : './AccountMasterDelete',
+					data : {
+						no : no
+					},
+					type : 'POST',
+					success : function(responseText, statusText, xhr) {
+						/*  $.toast({
+						        heading: 'Success',
+						        text: responseText,
+						        icon: 'success',
+						        showHideTransition: 'plain',
+						        position: {
+					                left: 1400,
+					                top: 0
+					            },  // or any standard position like 'top-center'
+						        loaderBg: '#376275',
+						        hideAfter: 3000
+						    });
+						 setTimeout(function() {
+						        location.href = 'AccountMaster?formmode=list';
+						    }, 3100); */ 
+						 $('#alertmsg').text("Deletion completed!");
+			                $('#alert').modal("toggle");
+					},
+					error : function(xhr, status, error) {
+						var errorMessage = xhr.responseText
+								|| "An error occurred while processing your request. Please try again.";
+						$("#alertmsg").text(errorMessage);
+						$('#alert').modal("toggle");
+					}
+				});
+	}
+</script>
+
+<!-- format for uppercase and remove space , super characters -->
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		const textInputs = document.querySelectorAll('input[type="text"]');
+
+		textInputs.forEach(function(input) {
+			input.addEventListener("keyup", function() {
+				this.value = this.value.replace(/[^a-zA-Z0-9]/g, '')
+						.toUpperCase();
+			});
+		});
+	});
+</script>
+<!-- format functions -->
+<script>
+	function formatDate(dateStr) {
+
+		const parts = dateStr.split("-");
+		if (parts.length === 3) {
+			return `${parts[2]}-${parts[1]}-${parts[0]}`; // dd-MM-yyyy
+		}
+		return dateStr;
+	}
+
+	$(function() {
+		$("#last_recon_date, #next_recon_date").datepicker({
+			dateFormat : "dd-mm-yy", // Matches dd-MM-yyyy expected in Spring
+			changeMonth : true,
+			changeYear : true,
+			yearRange : "1900:2100"
+		});
+	});
+
+	function getQueryParam(param) {
+		const urlParams = new URLSearchParams(window.location.search);
+		return urlParams.get(param);
+	}
+</script>
+
+</head>
+<title>BRECON</title>
+<body>
+	<div th:insert="XBRLHeaderMenu :: header"></div>
+
+	<!-- -------------------User List Starts----------------------------------------------------- -->
+	<div class="container-fluid py-5">
+		<div class="row justify-content-center">
+			<div class="col-md-10">
+				<div class="card shadow-lg border-0" style="border-radius: 16px;">
+					<!-- LIST FUNCTIONLITY -->
+					<div th:if="${formmode}=='list'">
+						<div class="card"
+							style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+							<div class="card-header text-center"
+								style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+								<h4 class="text-white m-0">
+									<i class="fas fa-sliders-h mr-2" style="color: lightblue;"></i>Account
+									Master <i class="fas fa-user-plus	" onclick="addUser();"></i>
+								</h4>
+							</div>
+							<div class="card-body p-2">
+								<div class="table-responsive p-3" id="cardBody">
+									<table class="table table-bordered table-hover table-sm"
+										style="font-family: Verdana; font-size: 13px;">
+										<thead class="thead-light" style="background-color: #e9ecf0;">
+											<tr>
+												<th>Account Place Holder</th>
+												<th>Account Number</th>
+												<th>Account Name</th>
+												<th>Mirror Account Number</th>
+												<th>Recon Period</th>
+												<th>Last Recon</th>
+												<th>Next Recon</th>
+												<th>Select</th>
+											</tr>
+										</thead>
+										<tbody style="font-family: Verdana;">
+											<tr th:each="parList : ${list}" class="text-left">
+												<td th:text="${parList?.acct_place_holder}">-</td>
+												<td th:text="${parList?.acct_num}"
+													onclick="view_btn_submit(this)"
+													th:attr="data-acct_num=${parList?.acct_num}"
+													style="color: #376275;">-</td>
+												<td th:text="${parList?.acct_name}">-</td>
+												<td th:text="${parList?.mirror_acct_num}">-</td>
+												<td th:text="${parList?.recon_period_freq}">-</td>
+												<td
+													th:text="${#dates.format(parList?.last_recon_date, 'dd-MM-yyyy')}">-</td>
+												<td
+													th:text="${#dates.format(parList?.next_recon_date, 'dd-MM-yyyy')}">-</td>
+												<td>
+													<div
+														class="d-flex justify-content-center align-items-center gap-1">
+														<button class="btn btn-xs  px-1 py-1" title="Modify"
+															th:if="${parList?.modify_flg} == 'N'"
+															th:attr="data-acct_num=${parList?.acct_num}"
+															onclick="edit_btn_submit(this)" style="color: #376275;">
+															<i class="fas fa-edit"></i>
+														</button>
+														<button class="btn btn-xs  px-1 py-1" title="Verify"
+															th:if="${parList?.modify_flg} == 'Y'"
+															th:attr="data-acct_num=${parList?.acct_num}"
+															onclick="verify_btn_submit(this)" style="color: #376275;">
+															<i class="fas fa-check-to-slot me-1"></i>
+														</button>
+														<button class="btn btn-xs  px-1 py-1" title="Delete"
+															th:attr="data-acct_num=${parList?.acct_num}"
+															onclick="cancelform(this)" style="color: #376275;">
+															<i class="fas fa-trash"></i>
+														</button>
+													</div>
+												</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+							<div class="card-footer bg-white text-center p-1"
+								style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+								<button type="button" class="btn btn-outline-dark me-3"
+									onclick="home()" style="border-radius: 6px;">
+									<i class="fas fa-home me-1"></i> Home
+								</button>
+								<button type="button" class="btn btn-outline-dark me-3"
+									onclick="back()" style="border-radius: 6px;">
+									<i class="fas fa-angle-left me-1"></i> Back
+								</button>
+							</div>
+						</div>
+					</div>
+					<!--  ADD FUNCTIONLITY-->
+					<div th:if="${formmode}=='add' OR ${formmode}=='edit' "
+						th:object="${reconForm}">
+						<div class="card "
+							style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+							<form action="#" method="post" autocomplete="off"
+								id="AccountMasterSubmit">
+								<div class="card-header text-center"
+									style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+									<h4 class="text-white m-0">
+										<i class="fas fa-sliders-h mr-2" style="color: lightblue;"></i>Account
+										Master - Add
+									</h4>
+								</div>
+								<div class="card-body p-3">
+									<div class="form-group">
+
+										<!-- Bank Id & Sol Id -->
+										<div class="row formline">
+											<label class="col-sm-2">Bank Id</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{bank_id}"
+													class="form-control form-control-sm" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Sol Id</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{sol_id}"
+													class="form-control form-control-sm" />
+											</div>
+										</div>
+
+										<!-- Account Place Holder & Access Code -->
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Account Place Holder</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{acct_place_holder}"
+													class="form-control form-control-sm" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Account Access Code</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{acct_access_code}"
+													class="form-control form-control-sm" />
+											</div>
+										</div>
+
+										<!-- Account No & Name -->
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Account No</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{acct_num}"
+													class="form-control form-control-sm" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Account Name</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{acct_name}"
+													class="form-control form-control-sm" />
+											</div>
+										</div>
+
+										<!-- Currency Code & Country -->
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Currency Code</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{crncy_code}"
+													class="form-control form-control-sm" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Country</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{crncy_cntry}"
+													class="form-control form-control-sm" />
+											</div>
+										</div>
+
+										<!-- Mirror Account -->
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Mirror Account No</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{mirror_acct_num}"
+													class="form-control form-control-sm" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Mirror Account Name</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{mirror_acct_name}"
+													class="form-control form-control-sm" />
+											</div>
+										</div>
+
+										<!-- Account Bank -->
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Account Bank Code</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{acct_bank_code}"
+													class="form-control form-control-sm" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Account Bank Name</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{acct_bank_name}"
+													class="form-control form-control-sm" />
+											</div>
+										</div>
+
+										<!-- Address -->
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Address 1</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{addr_1}"
+													class="form-control form-control-sm" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Address 2</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{addr_2}"
+													class="form-control form-control-sm" />
+											</div>
+										</div>
+
+										<!-- City & Country -->
+										<div class="row formline mt-1">
+											<label class="col-sm-2">City</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{acct_city}"
+													class="form-control form-control-sm" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Country</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{acct_cntry_code}"
+													class="form-control form-control-sm" />
+											</div>
+										</div>
+
+										<!-- Additional Ref & Remarks -->
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Additional Reference</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{addl_ref}"
+													class="form-control form-control-sm" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Remarks</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{acct_remarks}"
+													class="form-control form-control-sm" />
+											</div>
+										</div>
+
+										<!-- Dates -->
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Last Reconciliation Date</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{last_recon_date}"
+													class="form-control form-control-sm datepicker" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Next Reconciliation Date</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{next_recon_date}"
+													class="form-control form-control-sm datepicker" />
+											</div>
+										</div>
+
+										<!-- Period & Status -->
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Reconciliation Period</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{recon_period_freq}"
+													class="form-control form-control-sm" />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Status</label>
+											<div class="col-sm-2">
+												<input type="text" th:field="*{recon_status}"
+													class="form-control form-control-sm" />
+											</div>
+										</div>
+
+									</div>
+								</div>
+								<div class="card-footer bg-white text-center p-1"
+									style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+									<button type="button" class="btn btn-outline-dark me-3"
+										onclick="home()" style="border-radius: 6px;">
+										<i class="fas fa-home me-1"></i> Home
+									</button>
+									<button type="button" class="btn btn-outline-dark me-3"
+										onclick="AcctSubmit()" style="border-radius: 6px;">
+										<i class="fas fa-upload me-1"></i> Submit
+									</button>
+									<button type="button" class="btn btn-outline-dark me-3"
+										onclick="back()" style="border-radius: 6px;">
+										<i class="fas fa-angle-left me-1"></i> Back
+									</button>
+								</div>
+							</form>
+						</div>
+					</div>
+					<!-- VIEW SCREEN  -->
+					<div th:if="${formmode}=='view' OR ${formmode}=='verify' ">
+						<div class="card "
+							style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+							<form action="#" method="post" autocomplete="off"
+								id="AccountMasterSubmit">
+								<div class="card-header text-center"
+									style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+									<h4 class="text-white m-0" th:if="${formmode}=='view'">
+										<i class="fas fa-sliders-h mr-2" style="color: lightblue;"></i>Account
+										Master - View
+									</h4>
+									<h4 class="text-white m-0" th:if="${formmode}=='verify'">
+										<i class="fas fa-sliders-h mr-2" style="color: lightblue;"></i>Account
+										Master - Verify
+									</h4>
+								</div>
+								<div class="card-body p-3">
+									<div class="form-group">
+										<div class="row formline">
+											<label class="col-sm-2">Bank Id</label>
+											<div class="col-sm-2">
+												<input type="text" id="bank_id" name="bank_id"
+													th:value="${acct?.bank_id}"
+													class="form-control form-control-sm" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Sol Id</label>
+											<div class="col-sm-2">
+												<input type="text" id="sol_id" name="sol_id"
+													th:value="${acct?.sol_id}"
+													class="form-control form-control-sm" readonly />
+											</div>
+										</div>
+
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Account Place Holder</label>
+											<div class="col-sm-2">
+												<input type="text" id="acct_place_holder"
+													name="acct_place_holder"
+													th:value="${acct?.acct_place_holder}"
+													class="form-control form-control-sm" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Account Access Code</label>
+											<div class="col-sm-2">
+												<input type="text" id="acct_access_code"
+													name="acct_access_code"
+													th:value="${acct?.acct_access_code}"
+													class="form-control form-control-sm" readonly />
+											</div>
+										</div>
+
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Account No</label>
+											<div class="col-sm-2">
+												<input type="text" id="acct_num" name="acct_num"
+													th:value="${acct?.acct_num}"
+													class="form-control form-control-sm" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Account Name</label>
+											<div class="col-sm-2">
+												<input type="text" id="acct_name" name="acct_name"
+													th:value="${acct?.acct_name}"
+													class="form-control form-control-sm" readonly />
+											</div>
+										</div>
+
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Currency Code</label>
+											<div class="col-sm-2">
+												<input type="text" id="crncy_code" name="crncy_code"
+													th:value="${acct?.crncy_code}"
+													class="form-control form-control-sm" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Country</label>
+											<div class="col-sm-2">
+												<input type="text" id="crncy_cntry" name="crncy_cntry"
+													th:value="${acct?.crncy_cntry}"
+													class="form-control form-control-sm" readonly />
+											</div>
+										</div>
+
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Mirror Account No</label>
+											<div class="col-sm-2">
+												<input type="text" id="mirror_acct_num"
+													name="mirror_acct_num" th:value="${acct?.mirror_acct_num}"
+													class="form-control form-control-sm" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Mirror Account Name</label>
+											<div class="col-sm-2">
+												<input type="text" id="mirror_acct_name"
+													name="mirror_acct_name"
+													th:value="${acct?.mirror_acct_name}"
+													class="form-control form-control-sm" readonly />
+											</div>
+										</div>
+
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Account Bank Code</label>
+											<div class="col-sm-2">
+												<input type="text" id="acct_bank_code" name="acct_bank_code"
+													th:value="${acct?.acct_bank_code}"
+													class="form-control form-control-sm" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Account Bank Name</label>
+											<div class="col-sm-2">
+												<input type="text" id="acct_bank_name" name="acct_bank_name"
+													th:value="${acct?.acct_bank_name}"
+													class="form-control form-control-sm" readonly />
+											</div>
+										</div>
+
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Address 1</label>
+											<div class="col-sm-2">
+												<input type="text" id="addr_1" name="addr_1"
+													th:value="${acct?.addr_1}"
+													class="form-control form-control-sm" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Address 2</label>
+											<div class="col-sm-2">
+												<input type="text" id="addr_2" name="addr_2"
+													th:value="${acct?.addr_2}"
+													class="form-control form-control-sm" readonly />
+											</div>
+										</div>
+
+										<div class="row formline mt-1">
+											<label class="col-sm-2">City</label>
+											<div class="col-sm-2">
+												<input type="text" id="acct_city" name="acct_city"
+													th:value="${acct?.acct_city}"
+													class="form-control form-control-sm" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Country</label>
+											<div class="col-sm-2">
+												<input type="text" id="acct_cntry_code"
+													name="acct_cntry_code" th:value="${acct?.acct_cntry_code}"
+													class="form-control form-control-sm" readonly />
+											</div>
+										</div>
+
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Additional Reference</label>
+											<div class="col-sm-2">
+												<input type="text" id="addl_ref" name="addl_ref"
+													th:value="${acct?.addl_ref}"
+													class="form-control form-control-sm" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Remarks</label>
+											<div class="col-sm-2">
+												<input type="text" id="acct_remarks" name="acct_remarks"
+													th:value="${acct?.acct_remarks}"
+													class="form-control form-control-sm" readonly />
+											</div>
+										</div>
+
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Last Reconciliation Date</label>
+											<div class="col-sm-2">
+												<input type="text" name="last_recon_date"
+													th:value="${#dates.format(acct?.last_recon_date, 'dd-MM-yyyy')}"
+													class="form-control form-control-sm datepicker" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Next Reconciliation Date</label>
+											<div class="col-sm-2">
+												<input type="text" name="next_recon_date"
+													th:value="${#dates.format(acct?.next_recon_date, 'dd-MM-yyyy')}"
+													class="form-control form-control-sm datepicker" readonly />
+											</div>
+										</div>
+
+										<div class="row formline mt-1">
+											<label class="col-sm-2">Reconciliation Period</label>
+											<div class="col-sm-2">
+												<input type="text" id="recon_period_freq"
+													name="recon_period_freq"
+													th:value="${acct?.recon_period_freq}"
+													class="form-control form-control-sm" readonly />
+											</div>
+
+											<div class="col-sm-2"></div>
+											<label class="col-sm-2">Status</label>
+											<div class="col-sm-2">
+												<input type="text" id="recon_status" name="recon_status"
+													th:value="${acct?.recon_status}"
+													class="form-control form-control-sm" readonly />
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<div class="card-footer bg-white text-center p-1"
+									style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+									<button type="button" class="btn btn-outline-dark me-3"
+										onclick="home()" style="border-radius: 6px;">
+										<i class="fas fa-home me-1"></i> Home
+									</button>
+									<button type="button" class="btn btn-outline-dark me-3"
+										th:if="${formmode}=='verify'" onclick="VerifySubmit()"
+										style="border-radius: 6px;">
+										<i class="fas fa-upload me-1"></i> Submit
+									</button>
+									<button type="button" class="btn btn-outline-dark me-3"
+										onclick="back()" style="border-radius: 6px;">
+										<i class="fas fa-angle-left me-1"></i> Back
+									</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+		<!-- Delete Confirmation Modal -->
+	<div class="modal fade" id="datacancel" style="background: #000000b0;"
+		role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable"
+			role="document">
+			<div class="modal-content">
+
+				<!-- Modal Header -->
+				
+
+				<!-- Modal Body -->
+				<div class="modal-body">
+					<h5 style="font-size: 17px; color: black; padding: 15px;">Are
+						you sure you want to delete the Reference Code?</h5>
+				</div>
+				<!-- Modal Footer -->
+				<div style="padding: 10px; text-align: center;">
+					<button type="button" class="btn btn-outline-dark me-3"
+						style="font-size: 16px;"  onclick="$('#datacancel').modal('hide')">Cancel</button>
+					<button type="button" class="btn btn-outline-dark me-3" id="refDelete"
+						style="font-size: 16px;" onclick="deleteRef(this);"
+						th:attr="data-formmode=delete">Yes, Delete</button>
+				</div>
+
+			</div>
+		</div>
+	</div>
+</body>
+</html>

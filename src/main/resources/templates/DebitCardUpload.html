@@ -1,0 +1,1232 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+ <!-- 
+CREATED BY	: AISHWARYA V
+CREATED ON	: 16.08.2025
+PURPOSE		: SCREEN DESIGN AND FUNCTIONALITY
+VERSION     : 01
+ -->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/BRECON/js/jquery.min.js"></script>
+<script src="/BRECON/js/jquery-ui.min.js"></script>
+<style>
+/* Match list screen font style and size */
+.card, .card-body, .form-group, .form-control, .btn, label {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+}
+.card-header h5, .card-header h4 {
+	font-weight: bold;
+	font-size: 16px;
+}
+.form-control-sm {
+	font-size: 14px;
+}
+.btn-sm {
+	font-size: 13px;
+}
+</style>
+<style>
+.btns {
+	float: right;
+	margin: 5px;
+}
+td {
+	padding: 0.30rem !important;
+}
+.col-sm-5 {
+	padding-bottom: 15px;
+}
+.list-body {
+	padding: 0px;
+}
+.error {
+	color: red;
+	padding-left: 10px;
+}
+.formline {
+	padding-bottom: 0px;
+}
+.btn-primary {
+	background-color: #E77400;
+	border-color: #0c0c0c;
+}
+.btn-primary:not (:disabled ):not (.disabled ).active, .btn-primary:not
+	 (:disabled ):not (.disabled ):active, .show>.btn-primary.dropdown-toggle
+	{
+	color: #fff;
+	background-color: #cc000000;
+	border-color: #161617;
+}
+#finusertb {
+	width: 460px;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+	padding: 0px;
+}
+</style>
+<style>
+.valids {
+	color: green;
+}
+.invalids {
+	color: red;
+}
+</style>
+<style>
+.custom-file-label {
+    display: inline-block;
+    padding: 6px 12px;
+    cursor: pointer;
+    background-color: #376275;  /* Your desired color */
+    color: white;
+    border-radius: 4px;
+}
+.custom-file-label:hover {
+    background-color: #274b5a;
+}
+</style>
+<style>
+.dataTables_wrapper {
+	width: 100% !important;
+}
+table.dataTable {
+	width: 100% !important;
+
+.user-profile-wrapper {
+	width: 100%;
+	padding: 0 20px; /* optional spacing */
+}
+/* Expand the card or box */
+.card {
+	width: 100% !important;
+}
+/* Make table fill full width */
+table.dataTable {
+	width: 100% !important;
+}
+/* Optional: make header also full width */
+.user-profile-wrapper {
+	width: 100%;
+}
+#loadingModal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(255, 255, 255, 0.2);  /* Light semi-transparent white */
+	backdrop-filter: blur(5px); /* Keeps the blur effect */
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 9999;
+}
+#loadingContent {
+	text-align: center;
+	background-color: transparent;  /* Keep loader background transparent */
+	z-index: 10000;
+}
+</style>
+<script th:inline="javascript">
+	function home() {
+		location.href = 'Dashboard'
+	}
+	function back() {
+		window.history.back();
+	}
+	function view_source_input(a) {	
+		var ref = a.getAttribute("data-ref");
+		location.href = 'Debit_Upload?formmode=viewsour&ref=' + ref;
+	}
+	function view_dest_input(a) {		
+		var ref = a.getAttribute("data-ref");
+		location.href = 'Debit_Upload?formmode=viewdest&ref=' + ref;	
+	} 
+</script>
+<script>
+let destinationFiles = [];
+
+function handleFileSelect(event, type) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    if (type === 'SOURCE') {   // ✅ use same case
+        document.getElementById("sourceFileInfo").innerHTML =
+            `<i class="fas fa-file-excel text-success"></i> ${files[0].name}`;
+        uploadFiles([files[0]], "SOURCE", "sourceProgress");
+    } else {
+        for (let i = 0; i < files.length; i++) {
+            destinationFiles.push(files[i]);
+        }
+        renderDestFiles();
+        $('#destConfirmModal').modal('show');
+    }
+}
+
+
+function renderDestFiles() {
+    let fileNames = "";
+    destinationFiles.forEach(file => {
+        fileNames += `<div><i class="fas fa-file-excel text-success"></i> ${file.name}</div>`;
+    });
+    document.getElementById("destFileInfo").innerHTML = fileNames;
+}
+
+$(document).ready(function() {
+
+	let fileDialogOpen = false;
+
+	$('#addMoreBtn').on('click', function() {
+	    $('#destConfirmModal').modal('hide');
+	    $('#addMoreDestFile').val(""); // reset
+
+	    fileDialogOpen = true;
+	    $('#addMoreDestFile').click();
+	});
+
+	// Handle actual selection
+	$('#addMoreDestFile').on('change', function(event) {
+	    const files = event.target.files;
+	    if (files && files.length > 0) {
+	        for (let i = 0; i < files.length; i++) {
+	            destinationFiles.push(files[i]);
+	        }
+	        renderDestFiles();
+	    }
+	    fileDialogOpen = false; // handled, no need reopen here
+	    setTimeout(() => {
+	        $('#destConfirmModal').modal('show');
+	    }, 200);
+	});
+
+	// Detect cancel (file dialog closed but no change event)
+	$(window).on('focus', function() {
+	    if (fileDialogOpen) {
+	        // File dialog closed without selecting
+	        fileDialogOpen = false;
+	        setTimeout(() => {
+	            $('#destConfirmModal').modal('show');
+	        }, 200);
+	    }
+	});
+
+	//Confirm upload
+	$('#confirmDestUpload').on('click', function() {
+	    uploadFiles(destinationFiles, "DESTINATION", "destProgress"); // ✅ fixed
+	    destinationFiles = [];
+	    $('#destConfirmModal').modal('hide');
+	});
+
+ // Cancel upload → hard refresh the page
+    $('#cancelDestUpload').off('click').on('click', function (e) {
+        e.preventDefault();
+        // small delay so Bootstrap can finish closing animations on some browsers
+        setTimeout(function () {
+            window.location.reload(); // full page reload
+        }, 50);
+    });
+});
+</script>
+<script type="text/javascript">
+function uploadFiles(files, type, progressId) {
+    document.getElementById('loadingModal').style.display = 'flex'; 
+    const progressBar = document.querySelector(`#${progressId} .progress-bar`);
+    document.getElementById(progressId).style.display = 'block';
+    progressBar.style.width = '100%';
+
+    var formData = new FormData();
+    formData.append("fileInput", type); // "SOURCE" or "DESTINATION"
+
+    for (let i = 0; i < files.length; i++) {
+        formData.append("file", files[i]);  
+    }
+    formData.append("overwrite", false); // ✅ keep same logic as UPI
+
+    // ✅ Pick value from datepicker
+    var fromDate = document.getElementById('Fromdate').value;
+    formData.append("fromDate", fromDate);
+
+    $.ajax({
+        url: './DrFileUpload',  // ✅ DR file upload endpoint
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        dataType: 'json',   // ✅ Expect JSON
+        success: function(response) {
+            document.getElementById('loadingModal').style.display = 'none';
+            document.getElementById(progressId).style.display = 'none';
+
+            // ✅ Norate check
+            if (response.status === "norate") {
+                $.toast({
+                    heading: 'Oops! No Rate',
+                    text: response.message,
+                    icon: 'warning',
+                    showHideTransition: 'plain',
+                    position: { left: 1600, top: 0 },
+                    loaderBg: '#ff9800',
+                    hideAfter: 9000
+                });
+                setTimeout(function() { location.reload(); }, 9000);
+                return;
+            }
+
+            // ✅ Duplicate check
+            if (response.status === "duplicate") {
+            
+                $('#alertmsgpopup')
+                    .text(`Duplicate REF(s) found: ${response.ref2.join(", ")}. Do you want to overwrite them?`)
+                    .css("white-space", "nowrap");
+
+                // Save files + type globally for overwrite re-upload
+                window.lastFiles = files;
+                window.lastType = type;
+
+                $('#datacancel').modal("show");
+                return;
+            }
+
+            // ✅ Standard success/fail toast + reload
+            showToastAndReload(response, progressId);
+
+            // ✅ Download reports if available
+           if (Number(response.Download) === 1) { 
+                const filetype = "EXCEL";
+                const recon_date = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+
+                const urls = [
+                    'ReconDownload?Cur=' + encodeURIComponent("usd")
+                        + '&type=' + encodeURIComponent("DR")
+                        + '&filetype=' + encodeURIComponent(filetype)
+                        + '&recon_date=' + encodeURIComponent(fromDate)
+                        + '&report=' + encodeURIComponent("SUMMARY"),
+
+                    'ReconDownload?Cur=' + encodeURIComponent("mur")
+                        + '&type=' + encodeURIComponent("DR")
+                        + '&filetype=' + encodeURIComponent(filetype)
+                        + '&recon_date=' + encodeURIComponent(fromDate)
+                        + '&report=' + encodeURIComponent("SUMMARY")
+                ];
+
+                urls.forEach(url => {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = ""; // backend decides filename
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+
+                $.toast({
+                    heading: response.status === 'success' ? 'Success' : 'Error',
+                    text: 'Your Excel report is ready! Check your Downloads',
+                    icon: response.status === 'success' ? 'success' : 'error',
+                    showHideTransition: 'plain',
+                    position: { left: 1600, top: 0 },
+                    loaderBg: '#376275',
+                    hideAfter: 9000
+                });
+
+                setTimeout(function() { location.reload(); }, 9000);
+            }  
+        },
+        error: function(xhr, status, error) {
+            document.getElementById('loadingModal').style.display = 'none';
+            document.getElementById(progressId).style.display = 'none';
+            $('#alertmsg').text("File not Uploaded");
+            $('#alert').modal("toggle");
+            console.error("AJAX Error:", status, error);
+            console.error("Response Text:", xhr.responseText);
+        }
+    });
+}
+function showToastAndReload(response) {
+    if (response.status === 'success') {
+    	let totalIgnored = (response.IgnoredExcel || 0) + (response.IgnoredDB || 0);
+
+        // ✅ Success Toast Message
+        let message = "Upload Completed<br>" +
+            "Total No of Rows Succeeded: " + response.TotalSucceeded + "<br>" +
+            "Total No of Rows Failed: " + response.TotalFailed + "<br>" +
+            "Total Rows Processed: " + response.TotalProcessed + "<br>" +
+            "<span style='color:#2196f3;'>ℹ️ Ignored: " + response.Ignored + "</span><br>" +
+            "<span style='color:#2196f3;'>🔁 Duplicates in Excel: " + (response.DuplicateExcel || 0) + "</span><br>" +
+            "<span style='color:#ff9800; font-weight:bold;'>⚠️ Note:</span> " +
+            "Records with <b>CREDIT_ prefixed account numbers</b> or <b>restricted Card Types</b> were ignored.<br><br>The system automatically skips reversible accounts.</br>";
+      
+            $.toast({
+                heading: '✅ Upload Successful',
+                text: message,
+                icon: 'success',
+                showHideTransition: 'fade',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#28a745',
+                hideAfter: 30000, // ⏳ Toast will stay for 20 seconds
+                stack: false
+            });
+
+        setTimeout(function () { location.reload(); }, 9000);
+
+    } else {
+        // ❌ Error Toast
+        let errorMessage = response.message || "An unexpected error occurred during upload.";
+
+        $.toast({
+            heading: '❌ Upload Failed',
+            text: errorMessage,
+            icon: 'error',
+            showHideTransition: 'fade',
+            position: { left: 1600, top: 0 },
+            loaderBg: '#dc3545',
+            hideAfter: 6000,
+            stack: false,
+            afterHidden: function () {
+                location.reload(); // ✅ reload exactly after toast closes
+            }
+        });
+    }
+}
+function setupDropzone(dropzoneId, inputId) {
+    const dropzone = document.getElementById(dropzoneId);
+    const input = document.getElementById(inputId);
+    if (!dropzone || !input) return;
+
+    dropzone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropzone.style.background = '#e3f2fd';
+        dropzone.style.borderColor = '#E77400';
+    });
+
+    dropzone.addEventListener('dragleave', function(e) {
+        dropzone.style.background = '#f5faff';
+        dropzone.style.borderColor = '#376275';
+    });
+
+    dropzone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropzone.style.background = '#f5faff';
+        dropzone.style.borderColor = '#376275';
+        input.files = e.dataTransfer.files;
+        handleFileSelect({ target: input }, dropzoneId === 'sourceDropzone' ? 'SOURCE' : 'DESTINATION');
+    });
+}
+document.addEventListener('DOMContentLoaded', function () {
+    setupDropzone('sourceDropzone', 'sourcefile');
+    setupDropzone('destDropzone', 'destfile');
+});
+function downloadExcel(type) {
+	const basePath = /*[[${#httpServletRequest.contextPath}]]*/ '';
+	window.location.href = basePath + '/BRECON/DrDisplayExcel?type=' + type;
+}
+function viewSource() {
+	location.href = 'Debit_Upload?formmode=listsource';
+}
+function viewDest() {
+	location.href = 'Debit_Upload?formmode=listdest';
+}
+</script>
+<script>
+  function adjustTableHeights() {
+    const scrollSections = document.querySelectorAll(".dynamic-table-scroll");
+    const headerHeight = document.querySelector(".navbar")?.offsetHeight || 0;
+    const footerHeight = document.querySelector("footer")?.offsetHeight || 0;
+    const availableHeight = window.innerHeight - headerHeight - footerHeight - 200;
+
+    scrollSections.forEach(div => {
+      div.style.maxHeight = `${Math.max(480, availableHeight / 2)}px`;
+    });
+  }
+  window.addEventListener("resize", adjustTableHeights);
+  document.addEventListener("DOMContentLoaded", adjustTableHeights);
+</script>
+<script>
+  const rowsPerPage = 20;
+  let currentPage = 1;
+
+  function paginateTable() {
+    const allRows = document.querySelectorAll("#sourceTableBody tr");
+    const totalRows = allRows.length;
+    const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+    allRows.forEach((row, index) => {
+      const start = (currentPage - 1) * rowsPerPage;
+      const end = currentPage * rowsPerPage;
+      row.style.display = (index >= start && index < end) ? "" : "none";
+    });
+
+    renderPaginationControls(totalPages);
+  }
+
+  function renderPaginationControls(totalPages) {
+    const container = document.getElementById("pagination-controls");
+    container.innerHTML = "";
+
+    const prevBtn = document.createElement("button");
+    prevBtn.textContent = "Previous";
+    prevBtn.className = "btn btn-sm btn-secondary mx-1";
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => {
+      if (currentPage > 1) {
+        currentPage--;
+        paginateTable();
+      }
+    };
+
+    const nextBtn = document.createElement("button");
+    nextBtn.textContent = "Next";
+    nextBtn.className = "btn btn-sm btn-secondary mx-1";
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        paginateTable();
+      }
+    };
+
+    container.appendChild(prevBtn);
+    container.appendChild(document.createTextNode(` Page ${currentPage} of ${totalPages} `));
+    container.appendChild(nextBtn);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    adjustTableHeights();  // existing function
+    paginateTable();       // new function
+  });
+
+  window.addEventListener("resize", adjustTableHeights);
+</script>
+<script type="text/javascript">
+function deleteRecUpload(btn) {
+    $('#datacancel').modal('hide');
+    document.getElementById('loadingModal').style.display = 'flex';
+
+    var formData = new FormData();
+    formData.append("fileInput", window.lastType); // keep SOURCE/DEST
+    formData.append("overwrite", true); // ✅ NEW FLAG
+
+    // ✅ Append all files from the stored array
+    if (window.lastFiles && window.lastFiles.length > 0) {
+        for (let i = 0; i < window.lastFiles.length; i++) {
+            formData.append("file", window.lastFiles[i]);
+        }
+    }
+    
+    var fromDate =  document.getElementById('Fromdate').value;
+    formData.append("fromDate", fromDate);
+
+    $.ajax({
+        url: './DrFileUpload',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(response) {
+            document.getElementById('loadingModal').style.display = 'none';
+            showToastAndReload(response);
+
+             if (Number(response.Download) === 1) { 
+                const filetype = "EXCEL";
+                const recon_date = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+
+                const urls = [
+                    'ReconDownload?Cur=' + encodeURIComponent("USD")
+                        + '&type=' + encodeURIComponent("UPI")
+                        + '&filetype=' + encodeURIComponent(filetype)
+                        + '&recon_date=' + encodeURIComponent(fromDate),
+                        + '&report=' + encodeURIComponent("SUMMARY"),
+                    'ReconDownload?Cur=' + encodeURIComponent("MUR")
+                        + '&type=' + encodeURIComponent("UPI")
+                        + '&filetype=' + encodeURIComponent(filetype)
+                        + '&recon_date=' + encodeURIComponent(fromDate)
+                        + '&report=' + encodeURIComponent("SUMMARY")
+                ];
+
+                urls.forEach(url => {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = "";
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+
+                $.toast({
+                    heading: response.status === 'success' ? 'Success' : 'Error',
+                    text: 'Your Excel report is ready! Check your Downloads',
+                    icon: response.status === 'success' ? 'success' : 'error',
+                    showHideTransition: 'plain',
+                    position: { left: 1600, top: 0 },
+                    loaderBg: '#376275',
+                    hideAfter: 9000
+                });
+
+                setTimeout(function() { location.reload(); }, 9000);
+            } 
+        },
+        error: function(xhr, status, error) {
+            document.getElementById('loadingModal').style.display = 'none';
+            $('#alertmsg').text("Overwrite Upload failed");
+            $('#alert').modal("toggle");
+        }
+    });
+}
+ 
+</script>
+<script>
+
+$(document).ready(function () {
+    $("#Fromdate").datepicker({
+    	maxDate : new Date(),
+        changeMonth: true,
+        changeYear: true,
+        dateFormat: "dd-mm-yy"
+    }).datepicker("setDate", new Date()); 
+});
+
+
+</script>
+</head>
+<title>BRECON</title>
+<body>
+<div th:insert="XBRLHeaderMenu :: header"></div><!--  -->
+<!-- --------------------------------------------------------------------- List Starts----------------------------------------------------- -->
+<div class="container-fluid py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-lg border-0" style="border-radius: 16px;" th:if="${formmode}=='list'">
+            <!-- Unified Header -->
+				<div class="card-header d-flex justify-content-between align-items-center"
+						style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+							<h4 class="text-white m-0 flex-grow-1 text-center">
+							<i class="fas fa-credit-card mr-2" style="color: lightblue;"></i>
+							Upload Debit Card Data
+						</h4>
+						<!-- Right-aligned Filter -->
+						<div class="d-flex align-items-center ms-auto">
+							<input type="text" id="Fromdate" 
+								class="form-control col-sm-8 form-control-sm me-2" 
+								autocomplete="off"  /> 
+						</div>
+					</div>
+
+                <!-- Split Upload Area -->
+                <div class="card-body d-flex flex-wrap justify-content-between">
+                    <!-- Source Data -->
+                    <div class="upload-section flex-fill p-3" style="min-width: 300px;">
+                        <h5 class="text-center mb-3"><strong>Source Data</strong></h5>
+                        <label class="w-100" style="cursor: pointer;">
+                            <div id="sourceDropzone" class="dropzone text-center py-4" style="border: 2px dashed #376275; border-radius: 8px; background: #f5faff;">
+                                <input type="file" id="sourcefile" accept=".xls,.xlsx,.csv" style="display:none" onchange="handleFileSelect(event, 'SOURCE')" />
+                                <div class="dz-message" style="color:#376275;">
+                                    <i class="fas fa-cloud-upload-alt fa-2x text-primary"></i><br>
+                                    <strong>Drag and drop a file here</strong><br>
+                                    or <span style="color:royalblue; text-decoration:underline;">click to choose</span><br>
+                                    <small>XLS, .XLSX</small>
+                                </div>
+								<div class="text-center mt-3">
+                                <i class="fas fa-eye text-primary" style="cursor:pointer;" onclick="viewSource()" title="View Source Data"></i>
+                                <i class="fas fa-download text-primary mx-2" style="cursor:pointer;" onclick="downloadExcel('source')" title="Download Source Data"></i>
+                                </div>
+                                <div class="file-info mt-2" id="sourceFileInfo"></div>
+                                <div class="progress mt-3" id="sourceProgress" style="display:none; height:6px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="d-none d-md-block mx-2" style="border-left: 1px solid #ccc; height: auto;"></div>
+
+                    <!-- Destination Data -->
+                    <div class="upload-section flex-fill p-3" style="min-width: 300px;">
+                        <h5 class="text-center mb-3"><strong>Destination Data</strong></h5>
+                        <label class="w-100" style="cursor: pointer;">
+                            <div id="destDropzone" class="dropzone text-center py-4" style="border: 2px dashed #376275; border-radius: 8px; background: #f5faff;">
+									<input type="file" id="destfile" multiple accept=".xls,.xlsx,.csv" style="display: none" onchange="handleFileSelect(event, 'DESTINATION')" />
+									<div class="dz-message" style="color:#376275;">
+                                    <i class="fas fa-cloud-upload-alt fa-2x text-primary"></i><br>
+                                    <strong>Drag and drop a file here</strong><br>
+                                    or <span style="color:royalblue ; text-decoration:underline;">click to choose</span><br>
+                                    <small>XLS, .XLSX</small>
+                                </div>
+								<div class="text-center mt-3">
+                                <i class="fas fa-eye text-primary" style="cursor:pointer;" onclick="viewDest()" title="View Destination Data"></i>
+                                <i class="fas fa-download text-primary mx-2" style="cursor:pointer;" onclick="downloadExcel('destination')" title="Download Destination Data"></i>
+                                </div>
+                                <div class="file-info mt-2" id="destFileInfo"></div>
+                                <div class="progress mt-3" id="destProgress" style="display:none; height:6px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <!-- Footer Buttons -->
+                <div class="card-footer bg-white text-center" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                    <button type="button" class="btn btn-outline-dark me-3" onclick="home()" style="border-radius: 6px;"><i class="fas fa-home me-1"></i> Home</button>
+                    <button type="button" class="btn btn-outline-dark me-3" onclick="back()" style="border-radius: 6px;"><i class="fas fa-angle-left me-1"></i> Back</button>
+                </div>
+            </div>		
+<!----------------------------------------------------------------- Source list -------------------------------------------------------------->
+            <div th:if="${formmode}=='listsource'">
+					<div class="card shadow-lg border-0" style="border-radius: 16px;">
+						<div class="card-header text-center"
+							style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+							<h4 class="text-white m-0">
+								<i class="fas fa-code mr-2" style="color: lightblue;"></i>
+								Source Data &nbsp;
+							</h4>
+						</div>
+						<div class="card-body p-2">
+							<div class="table-responsive dynamic-table-scroll">
+								<table class="table table-bordered table-hover table-sm"
+									style="font-family: Verdana; font-size: 13px;">
+									<thead class="thead-light" style="background-color: #e9ecf0;">
+										<tr>
+											<th>Srl No</th>
+											<th>Tran Ref</th>
+											<th>Tran Desc</th>
+											<th>Tran Date</th>
+											<th>Value Date</th>
+											<th>Ref1</th>
+											<th>Ref2</th>
+											<th>Country</th>
+											<th>Cr Org</th>
+										</tr>
+									</thead>
+									<tbody id="sourceTableBody">
+										<tr th:each="sourcelist, iterStat : ${source}">
+                                            <td th:text="${iterStat.index + 1}"></td>
+											<td th:text="${sourcelist.trn_ref}"
+												onclick="view_source_input(this)"
+												th:attr="data-ref=${sourcelist.ref2}" style="color: #376275"></td>
+											<td th:text="${sourcelist.trn_desc}"></td>
+											<td th:text="${#dates.format(sourcelist.trn_dt, 'dd-MM-yyyy')}"></td>
+											<td th:text="${#dates.format(sourcelist.value_dt, 'dd-MM-yyyy')}"></td>
+											<td th:text="${sourcelist.ref1}"></td>
+											<td th:text="${sourcelist.ref2}"></td>
+											<td th:text="${sourcelist.ctry}"></td>
+											<td th:text="${#numbers.formatDecimal(sourcelist.cr_org, 1, 'COMMA', 2, 'POINT')}" style="text-align: right;"></td>											
+										</tr> 
+									</tbody>
+								</table>
+								<div id="pagination-controls" class="mt-2 text-center"></div>
+							</div>
+						</div>
+						<!-- Footer Buttons -->
+						<div class="card-footer bg-white text-center p-1"
+							style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="home()" style="border-radius: 6px;">
+								<i class="fas fa-home me-1"></i> Home
+							</button>
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="back()" style="border-radius: 6px;">
+								<i class="fas fa-angle-left me-1"></i> Back
+							</button>
+						</div>
+					</div>
+				</div>
+<!----------------------------------------------------------------- Source View -------------------------------------------------------------->
+<div th:if="${formmode}=='viewsour'" th:Object="${source}">
+    <div class="card shadow-lg border-0" style="border-radius: 16px;">
+        <div class="card-header text-center"
+            style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+            <h4 class="text-white m-0">
+                <i class="fas fa-code mr-2" style="color: lightblue;"></i>
+                Source View &nbsp;
+            </h4>
+        </div>
+        <div class="card-body p-3">
+            <div class="form-group">
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Tran Date</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="trn_dt" name="trn_dt"
+                               th:value="${#dates.format(source?.trn_dt, 'dd-MM-yyyy')}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Value Date</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="value_dt" name="value_dt"
+                               th:value="${#dates.format(source?.value_dt, 'dd-MM-yyyy')}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Tran Ref</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="trn_ref" name="trn_ref"
+                               th:value="${source?.trn_ref}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Country</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="ctry" name="ctry"
+                               th:value="${source?.ctry}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Related Account</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="related_account" name="related_account"
+                               th:value="${source?.related_account}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Tran Desc</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="trn_desc" name="trn_desc"
+                               th:value="${source?.trn_desc}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Additional Details</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="addl_text" name="addl_text"
+                               th:value="${source?.addl_text}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Ref1</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="ref1" name="ref1"
+                               th:value="${source?.ref1}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Ref2</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="ref2" name="ref2"
+                               th:value="${source?.ref2}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Account Currency</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="ac_ccy" name="ac_ccy"
+                               th:value="${source?.ac_ccy}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Dr Org</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="dr_org" name="dr_org"
+                               th:value="${#numbers.formatDecimal(source?.dr_org, 1, 'COMMA', 2, 'POINT')}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Cr Org</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="cr_org" name="cr_org"
+                               th:value="${#numbers.formatDecimal(source?.cr_org, 1, 'COMMA', 2, 'POINT')}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div class="card-footer bg-white text-center p-1"
+             style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+            <button type="button" class="btn btn-outline-dark me-3"
+                    onclick="home()" style="border-radius: 6px;">
+                <i class="fas fa-home me-1"></i> Home
+            </button>
+            <button type="button" class="btn btn-outline-dark me-3"
+                    onclick="back()" style="border-radius: 6px;">
+                <i class="fas fa-angle-left me-1"></i> Back
+            </button>
+        </div>
+    </div>
+</div>
+<!----------------------------------------------------------------- Destination list -------------------------------------------------------------->
+            <div th:if="${formmode}=='listdest'">
+					<div class="card shadow-lg border-0" style="border-radius: 16px;">
+						<div class="card-header text-center"
+							style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+							<h4 class="text-white m-0">
+								<i class="fas fa-file-export mr-2" style="color: lightblue;"></i>
+								Destination Data &nbsp;
+							</h4>
+						</div>
+						<div class="card-body p-2">
+							<div class="table-responsive dynamic-table-scroll">
+								<table class="table table-bordered table-hover table-sm"
+									style="font-family: Verdana; font-size: 13px;">
+									<thead class="thead-light" style="background-color: #e9ecf0;">
+										<tr>
+											<th>Srl No</th>
+											<th>Ref Num</th>
+											<th>Tran Date</th>
+											<th>Tran Amt</th>
+											<th>Tran Cur</th>
+											<th>Cbs Acct Number</th>
+											<th>Card Type</th>
+											<th>Country Name</th>
+											<th>Approval Code</th>
+										</tr>
+									</thead>
+									<tbody id="sourceTableBody">
+										<tr th:each="destlist, iterStat : ${dest}">
+                                            <td th:text="${iterStat.index + 1}"></td>
+											<td th:text="${destlist.refnum}"
+												onclick="view_dest_input(this)"
+												th:attr="data-ref=${destlist.refnum}" style="color: #376275"></td>
+											<td th:text="${#dates.format(destlist.transaction_date, 'dd-MM-yyyy')}"></td>
+											<td th:text="${#numbers.formatDecimal(destlist.transaction_amount, 1, 'COMMA', 2, 'POINT')}" style="text-align: right;"></td>
+											<td th:text="${destlist.transaction_currency}"></td>
+											<td th:text="${destlist.cbs_account_number}"></td>
+											<td th:text="${destlist.card_type}"></td>
+											<td th:text="${destlist.country_name}"></td>
+											<td th:text="${destlist.approval_code}"></td>											
+										</tr> 
+									</tbody>
+								</table>
+								<div id="pagination-controls" class="mt-2 text-center"></div>
+							</div>
+						</div>
+						<!-- Footer Buttons -->
+						<div class="card-footer bg-white text-center p-1"
+							style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="home()" style="border-radius: 6px;">
+								<i class="fas fa-home me-1"></i> Home
+							</button>
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="back()" style="border-radius: 6px;">
+								<i class="fas fa-angle-left me-1"></i> Back
+							</button>
+						</div>
+					</div>
+				</div>
+<!----------------------------------------------------------------- Destination view -------------------------------------------------------------->
+<div th:if="${formmode}=='viewdest'" th:Object="${dest}">
+    <div class="card shadow-lg border-0" style="border-radius: 16px;">
+        <div class="card-header text-center"
+            style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+            <h4 class="text-white m-0">
+                <i class="fas fa-file-export mr-2" style="color: lightblue;"></i>
+                Destination View &nbsp;
+            </h4>
+        </div>
+        <div class="card-body p-3">
+            <div class="form-group">
+
+                <!-- Row 1 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">ARN</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="arn" name="arn"
+                               th:value="${dest?.arn}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">MCC</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="mcc" name="mcc"
+                               th:value="${dest?.mcc}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Auth Amount</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="auth_amnt" name="auth_amnt"
+                               th:value="${#numbers.formatDecimal(dest?.auth_amnt, 1, 'COMMA', 2, 'POINT')}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Acct Amount</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="acct_amnt" name="acct_amnt"
+                               th:value="${#numbers.formatDecimal(dest?.acct_amnt, 1, 'COMMA', 2, 'POINT')}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Auth Currency</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="auth_currency" name="auth_currency"
+                               th:value="${dest?.auth_currency}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Transaction Date</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="transaction_date" name="transaction_date"
+                               th:value="${#dates.format(dest?.transaction_date,'dd-MM-yyyy')}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 4 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Transaction Amount</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="transaction_amount" name="transaction_amount"
+                               th:value="${#numbers.formatDecimal(dest?.transaction_amount, 1, 'COMMA', 2, 'POINT')}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Transaction Currency</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="transaction_currency" name="transaction_currency"
+                               th:value="${dest?.transaction_currency}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 5 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Transaction Type</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="transaction_type" name="transaction_type"
+                               th:value="${dest?.transaction_type}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">CBS Account Number</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="cbs_account_number" name="cbs_account_number"
+                               th:value="${dest?.cbs_account_number}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 6 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Card Number</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="card_number" name="card_number"
+                               th:value="${dest?.card_number}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Card Type</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="card_type" name="card_type"
+                               th:value="${dest?.card_type}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 7 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Merchant Desc</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="merchant_desc" name="merchant_desc"
+                               th:value="${dest?.merchant_desc}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Country Name</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="country_name" name="country_name"
+                               th:value="${dest?.country_name}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 8 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Approval Code</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="approval_code" name="approval_code"
+                               th:value="${dest?.approval_code}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Reconcile Amount</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="reconcile_amount" name="reconcile_amount"
+                               th:value="${#numbers.formatDecimal(dest?.reconcile_amount, 1, 'COMMA', 2, 'POINT')}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 9 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Reconcile Currency</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="reconcile_cur" name="reconcile_cur"
+                               th:value="${dest?.reconcile_cur}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Fees</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="fees" name="fees"
+                               th:value="${dest?.fees}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 10 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">I Fee Ind</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="i_fee_ind" name="i_fee_ind"
+                               th:value="${dest?.i_fee_ind}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Refnum</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="refnum" name="refnum"
+                               th:value="${dest?.refnum}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 11 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Dr/Cr</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="dr_cr" name="dr_cr"
+                               th:value="${dest?.dr_cr}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-2">Markup Value</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="markup_value" name="markup_value"
+                               th:value="${#numbers.formatDecimal(dest?.markup_value, 1, 'COMMA', 2, 'POINT')}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 12 -->
+                <div class="row formline mt-1">
+                    <label class="col-sm-2">Markup Currency</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="markup_currency" name="markup_currency"
+                               th:value="${dest?.markup_currency}"
+                               class="form-control form-control-sm" readonly />
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div class="card-footer bg-white text-center p-1"
+             style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+            <button type="button" class="btn btn-outline-dark me-3"
+                    onclick="home()" style="border-radius: 6px;">
+                <i class="fas fa-home me-1"></i> Home
+            </button>
+            <button type="button" class="btn btn-outline-dark me-3"
+                    onclick="back()" style="border-radius: 6px;">
+                <i class="fas fa-angle-left me-1"></i> Back
+            </button>
+        </div>
+    </div>
+</div>
+<!----------------------------------------------------------------- end -------------------------------------------------------------->
+        </div>
+    </div>
+</div>
+<!----------------------------------------------------------------- Modal --------------------------------------------------------------> 
+<div class="modal fade" id="alert">
+	<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-body" style="text-align: center; font-size: 16px;">
+				<p id="alertmsg"></p>
+				<button type="button" class="btn btn-sm  mx-1" style="background-color: #376275; color: white;"
+					data-dismiss="modal" onclick="home();">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+<!----------------------------------------------------------------- Modal1 --------------------------------------------------------------> 
+<input type="file" id="addMoreDestFile" multiple style="display:none" />
+
+<!-- Modal -->
+<div class="modal fade" id="destConfirmModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-3">
+      
+      <div class="modal-body text-center p-4">
+        <h6 class="fw-semibold mb-3">Do you want to upload selected Destination files now?</h6>
+        <div id="destFileInfo" class="mb-3"></div>
+
+        <!-- Buttons -->
+        <div class="d-flex justify-content-center gap-3">
+          <button class="btn btn-success btn-lg rounded-circle shadow hover-scale" id="confirmDestUpload" title="Yes, Upload">
+            <i class="fas fa-check"></i> 
+          </button>
+          <button class="btn btn-primary btn-lg rounded-circle shadow hover-scale mx-3" style="border: none;" id="addMoreBtn" title="Add More">
+            <i class="fas fa-upload"></i>
+          </button>
+          <button class="btn btn-danger btn-lg rounded-circle shadow hover-scale" id="cancelDestUpload" title="Cancel">
+            <i class="fas fa-times"></i> 
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!----------------------------------------------------------------- Modal -------------------------------------------------------------->
+	<div class="modal fade" id="datacancel" style="background: #000000b0;"
+		role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable"
+			role="document">
+			<div class="modal-content">
+				<!-- Modal Body -->
+				<div class="modal-body">
+					<h5  id="alertmsgpopup" style="font-size: 17px; color: black; padding: 15px;"></h5>
+				</div>
+				<!-- Modal Footer -->
+				<div style="padding: 10px; text-align: center;">
+					<button type="button" class="btn btn-outline-dark me-3"
+						style="font-size: 16px;"  onclick="$('#datacancel').modal('hide')">Cancel</button>
+					<button type="button" class="btn btn-outline-dark me-3" id="refDelete"
+						style="font-size: 16px;" onclick="deleteRecUpload(this);"
+						th:attr="data-formmode=delete">Confirm  , OverWrite</button>
+				</div>
+
+			</div>
+		</div>
+	</div>
+		<script>
+	document.addEventListener("DOMContentLoaded", function () {
+	    let today = new Date().toISOString().split("T")[0]; 
+	    document.getElementById("Fromdate").value = today; // ✅ works with HTML5 date
+	});
+
+	</script>
+<!----------------------------------------------------------------- End -------------------------------------------------------------->
+</body>
+<!-- Extra styling -->
+<style>
+  #destConfirmModal .btn {
+    transition: all 0.25s ease-in-out;
+  }
+  #destConfirmModal .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  }
+</style>
+</html>

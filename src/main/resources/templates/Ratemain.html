@@ -1,0 +1,1396 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+<!-- 
+CREATED BY	: AISHWARYA V
+CREATED ON	: 11.07.2025
+PURPOSE		: SCREEN DESIGNS AND FUNCTION
+VERSION     : 1.0
+ -->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/BRECON/js/jquery.min.js"></script>
+<script src="/BRECON/js/jquery-ui.min.js"></script>
+<style>
+	.btns {
+		float: right;
+		margin: 5px;
+	}
+	.col-sm-5,
+	.formline {
+		padding-bottom: 15px;
+	}
+	.container-manager {
+		margin: 80px 0 0 18.3%;
+		padding: 0 15px 0 43px;
+	}
+	.error {
+		color: red;
+		padding-left: 10px;
+	}
+	.valids {
+		color: green;
+	}
+	.invalids {
+		color: red;
+	}
+	td {
+		padding: 0.3rem !important;
+	}
+.dataTables_wrapper,
+	table.dataTable,
+	.user-profile-wrapper,
+	.card {
+		width: 100% !important;
+	}
+	.card,
+	.card-body,
+	.form-group,
+	.form-control,
+	.btn,
+	label {
+		font-family: Arial, sans-serif;
+		font-size: 14px;
+	}
+	.card-header h4,
+	.card-header h5 {
+		font-size: 16px;
+		font-weight: bold;
+	}
+	.form-control-sm {
+		font-size: 14px;
+	}
+	.btn-sm {
+		font-size: 13px;
+	}
+	.btn-primary {
+		background-color: #2c4e5e;
+		border-color: white;
+	}
+	.btn-primary:active,
+	.btn-primary.active,
+	.btn-primary.dropdown-toggle.show {
+		background-color: rgba(204, 0, 0, 0);
+		border-color: #161617;
+		color: #fff;
+	}
+	.dataTables_wrapper .dataTables_paginate .paginate_button {
+		padding: 0;
+	}
+	/* custom toast position: right-center */
+.jq-toast-wrap {
+    top: 50% !important;        /* vertically center */
+    right: 20px !important;     /* keep a little margin from right */
+    left: auto !important;      /* disable left alignment */
+    transform: translateY(-50%);
+}
+</style>
+<script th:inline="javascript">
+	function home() {
+		location.href = 'Dashboard'
+	}
+	function back() {
+		window.history.back();
+	}
+	function List() {
+	location.href = 'Rate_main?formmode=list';
+	}
+</script>
+<script>
+function addNewRateRow() {
+    const tableBody = document.getElementById("rateTableBody");
+    const noDataRow = document.getElementById("noDataRow");
+    if (noDataRow) noDataRow.remove();
+    document.getElementById("submitAllBtn").style.display = "inline-block";
+    const today = new Date().toISOString().split('T')[0];
+    const row = document.createElement("tr");
+    // ✅ Serial number = current row count + 1
+    const srlNo = tableBody.querySelectorAll("tr").length + 1;
+    const version = 1;
+    row.innerHTML = `
+    	<td>${srlNo}</td>
+        <td>
+            <select class="form-control form-control-sm" name="rate_code_desc">
+                <option value="">--Select--</option>
+                <option value="R001">R001</option>
+                <option value="R002">R002</option>
+                <option value="R003">R003</option>
+                <option value="R004">R004</option>
+                <option value="R005">R005</option>
+            </select>
+        </td>
+        <td><input type="date" class="form-control form-control-sm" name="date" value="${today}" readonly></td>
+        <td><input type="date" class="form-control form-control-sm" name="eff_date" max="${today}" value="${today}"></td>
+        <td class="version-col">${version}</td>
+        <td>
+            <select class="form-control form-control-sm fxd_crncy" name="fxd_crncy" onchange="checkDuplicateCombination(this)">
+                <option value="">--Select--</option>
+                <option value="INR">INR</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="SCR">SCR</option>
+                <option value="MUR">MUR</option>
+            </select>
+        </td>
+        <td>
+            <select class="form-control form-control-sm var_crncy" name="var_crncy" onchange="checkDuplicateCombination(this)">
+                <option value="">--Select--</option>
+                <option value="INR">INR</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="SCR">SCR</option>
+                <option value="MUR">MUR</option>
+            </select>
+        </td>
+        <td><input type="text" class="form-control form-control-sm" name="rate" style="text-align:right;" onblur="formatTolerance(this)" oninput="allowNumbersOnly(this)" ></td>
+        <td></td>
+        <td class="text-center">
+            <i class="fas fa-minus-circle text-danger" style="cursor:pointer;" onclick="removeRow(this)"></i>
+        </td>
+        <td></td>
+    `;
+    tableBody.appendChild(row);
+}
+function removeRow(icon) {
+    const row = icon.closest("tr");
+    row.remove();
+
+    const tableBody = document.getElementById("rateTableBody");
+
+    if (tableBody.rows.length === 0) {
+        // ✅ Refresh page whenever the table becomes empty
+        location.reload();
+    }
+}
+   function formatDateToDDMMYYYY(dateStr) {
+    const parts = dateStr.split('-'); // input = 'yyyy-MM-dd'
+    if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`; // output = 'dd-MM-yyyy'
+    }
+    return dateStr;
+}
+function checkDuplicateCombination(selectElement) {
+	    const row = selectElement.closest("tr");
+	    const fxd = row.querySelector('[name="fxd_crncy"]').value;
+	    const vrb = row.querySelector('[name="var_crncy"]').value;
+
+	    if (fxd && vrb) {
+	        if (fxd === vrb) {
+	        	  $.toast({
+	                  heading: 'Warning',
+	                  text: 'Fixed and Variable currency cannot be the same.',
+	                  icon: 'warning',
+	                  showHideTransition: 'plain',
+	                  position: { left: 1600, top: 0 },
+	                  loaderBg: '#ffc107',
+	                  hideAfter: 4000
+	              }); 
+	            selectElement.value = "";
+	            return;
+	        }
+
+	        const tableBody = document.getElementById("rateTableBody");
+	        const rows = tableBody.querySelectorAll("tr");
+	        let duplicateFound = false;
+
+	        rows.forEach(r => {
+	            if (r !== row) {
+	                const existingFxd = r.querySelector('[name="fxd_crncy"]').value;
+	                const existingVrb = r.querySelector('[name="var_crncy"]').value;
+
+	                if (fxd === existingFxd && vrb === existingVrb) {
+	                    duplicateFound = true;
+	                }
+	            }
+	        });
+	        if (duplicateFound) {
+	        	  $.toast({
+	                  heading: 'Warning',
+	                  text: 'This currency combination already exists.',
+	                  icon: 'warning',
+	                  showHideTransition: 'plain',
+	                  position: { left: 1600, top: 0 },
+	                  loaderBg: '#ffc107',
+	                  hideAfter: 4000
+	              }); 
+	        	  selectElement.value = "";
+	              return;  
+	        }
+	    }
+}
+function submitAllRates() {
+	document.getElementById('loadingModal').style.display = 'flex';
+    const tableBody = document.getElementById("rateTableBody");
+    const rows = tableBody.querySelectorAll("tr");
+    const dataList = [];
+    // ✅ Serial number = current row count + 1
+    const srlNo = tableBody.querySelectorAll("tr").length + 1;
+    rows.forEach(row => {
+        const rate_code_desc = row.querySelector('[name="rate_code_desc"]')?.value;
+        const rate_code_desc_desc = row.querySelector('[name="rate_code_desc"]')?.selectedOptions[0]?.text;
+        const rate_date_raw = row.querySelector('[name="date"]')?.value;
+        const eff_date_raw = row.querySelector('[name="eff_date"]')?.value;
+        const fxd_crncy = row.querySelector('[name="fxd_crncy"]')?.value;
+        const var_crncy = row.querySelector('[name="var_crncy"]')?.value;
+        const rate = row.querySelector('[name="rate"]')?.value;
+        const version = 1;
+        if (rate_code_desc && rate_date_raw && eff_date_raw && fxd_crncy && var_crncy && rate) {
+            dataList.push({
+                rate_code_desc,
+                rate_code_desc_desc,
+                fxd_crncy,
+                var_crncy,
+                rate: parseFloat(rate),
+                rate_date: new Date(rate_date_raw),
+                eff_date: new Date(eff_date_raw),
+                version: version
+            });
+        }
+    });
+    if (dataList.length === 0) {
+    	document.getElementById('loadingModal').style.display = 'none';
+       $.toast({
+            heading: 'Warning',
+            text: 'No valid data to submit.',
+            icon: 'warning',
+            showHideTransition: 'plain',
+            position: { left: 1600, top: 0 },
+            loaderBg: '#ffc107',
+            hideAfter: 4000
+        }); 
+        return;
+    }
+    $.ajax({
+        url: 'submitAllRates',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(dataList),
+        success: function () {
+        	document.getElementById('loadingModal').style.display = 'none';
+            $.toast({
+                heading: 'Success',
+                text: 'All rates submitted successfully!',
+                icon: 'success',
+                showHideTransition: 'plain',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#28a745',
+                hideAfter: 3000
+            }); 
+            document.getElementById("submitAllBtn").style.display = "none";
+            List();
+        },
+        error: function (xhr, status, error) {
+        	document.getElementById('loadingModal').style.display = 'none';
+            const errorMessage = xhr.responseText || "An error occurred while submitting rates.";
+            $.toast({
+                heading: 'Error',
+                text: errorMessage,
+                icon: 'error',
+                showHideTransition: 'plain',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#dc3545',
+                hideAfter: 5000
+            }); 
+        }
+    });
+}
+</script>
+<script>
+function formatDateToYYYYMMDD(dateStr) {
+    const parts = dateStr.split('-'); // dd-MM-yyyy
+    if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`; // yyyy-MM-dd
+    }
+    return dateStr;
+}
+let fetchedRowCount = 0;
+function addNewVersionRow(existingData = {}, isFetched = false) {
+    const tableBody = document.getElementById("rateTableBody");
+    if (!tableBody) {
+        console.error("rateTableBody not found.");
+        return;
+    }
+    const noRow = document.getElementById("noDataRow");
+    if (noRow) noRow.remove();
+    const today = new Date().toISOString().split("T")[0];
+    const formattedEffDate = existingData.eff_date ? DateToDDMMYYYY(existingData.eff_date) : '';
+    const formattedRateDate = existingData.rate_date ? DateToDDMMYYYY(existingData.rate_date) : '';
+    const row = document.createElement("tr");
+    if (Object.keys(existingData).length > 0) {
+        // Row with fetched data
+    	const statusText = existingData.entity_flg === "Y" ? "Verified" : "UnVerified";
+    	const statusColor = existingData.entity_flg === "Y" ? "green" : "red";
+    	const rate = existingData.rate != null
+    	  ? parseFloat(existingData.rate).toLocaleString('en-IN', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+    	  : '';
+    	const rawRate = existingData.rate != null ? parseFloat(existingData.rate).toFixed(4) : ''
+    	// ✅ Serial number = current row count + 1
+    	const srlNo = tableBody.querySelectorAll("tr").length + 1;
+    	row.innerHTML = `
+    		<td>${srlNo}</td>
+    	    <td><input type="text" class="form-control form-control-sm" name="rate_code_desc" value="${existingData.rate_code_desc || ''}" readonly></td>
+    	    <td><input type="text" class="form-control form-control-sm" name="rate_date" value="${formattedRateDate}" readonly></td>
+    	    <td><input type="text" class="form-control form-control-sm" name="eff_date" value="${formattedEffDate}" readonly></td>
+    	    <td><input type="text" class="form-control form-control-sm" name="version" value="${existingData.version || ''}" readonly></td>
+    	    <td><input type="text" class="form-control form-control-sm" name="fxd_crncy" value="${existingData.fxd_crncy || ''}" readonly></td>
+    	    <td><input type="text" class="form-control form-control-sm" name="var_crncy" value="${existingData.var_crncy || ''}" readonly></td>  
+    	    <!-- ✅ Editable rate input and hidden original rate -->
+    	    <td><input type="text" class="form-control form-control-sm text-end" name="rate" value="${rawRate}" style="text-align:right;" onblur="formatTolerance(this)" oninput="allowNumbersOnly(this)" >
+    	        <input type="hidden" name="original_rate" value="${rawRate}"></td>
+    	    <td style="color: ${statusColor};">${statusText}</td>
+    	    <td></td>
+    	    <td class="text-center">
+    	    <i class="fas fa-minus-circle text-danger" style="cursor:pointer;" onclick="removeVersionRow(this)"></i>
+    	</td>
+    	<td></td>
+    	`;
+
+    } else {
+        // Row with empty inputs (new row entry)
+        const version = 1;
+     // ✅ Serial number = current row count + 1
+        const srlNo = tableBody.querySelectorAll("tr").length + 1;
+        row.innerHTML = `	
+        	<td>${srlNo}</td>
+            <td>
+                <select class="form-control form-control-sm" name="rate_code_desc">
+                    <option value="">--Select--</option>
+                    <option value="R001">R001</option>
+                    <option value="R002">R002</option>
+                    <option value="R003">R003</option>
+                    <option value="R004">R004</option>
+                    <option value="R005">R005</option>
+                </select>
+            </td>
+            <td><input type="date" class="form-control form-control-sm" name="rate_date" value="${today}" readonly></td>
+            <td><input type="date" class="form-control form-control-sm" name="eff_date" max="${today}" value="${today}"></td>
+            <td class="version-col">${version}</td>
+            <td>
+                <select class="form-control form-control-sm" name="fxd_crncy" onchange="checkDuplicateCombination(this)">
+                    <option value="">--Select--</option>
+                   <option value="INR">INR</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="SCR">SCR</option>
+                <option value="MUR">MUR</option>
+                </select>
+            </td>
+            <td>
+                <select class="form-control form-control-sm" name="var_crncy" onchange="checkDuplicateCombination(this)">
+                    <option value="">--Select--</option>
+                    <option value="INR">INR</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="SCR">SCR</option>
+                <option value="MUR">MUR</option>
+                </select>
+            </td>
+            <td><input type="text" class="form-control form-control-sm" name="rate" id="rateInput"  style="text-align:right;" onblur="formatTolerance(this)" oninput="allowNumbersOnly(this)" ></td>
+            <td></td>
+            <td></td>
+            <td class="text-center">
+                <i class="fas fa-minus-circle text-danger" style="cursor:pointer;" onclick="removeRow(this)"></i>
+            </td>
+            <td></td>
+        `;
+    }
+    tableBody.appendChild(row);
+    if (typeof applyEffDatePicker === "function") {
+        applyEffDatePicker();
+    }
+}
+function removeVersionRow(btn) {
+    const row = btn.closest("tr");
+    row.remove();
+
+    const tableBody = document.getElementById("rateTableBody");
+    if (tableBody.children.length === 0) {
+        tableBody.innerHTML = `<tr id="noDataRow"><td colspan="12" class="text-center text-muted">No data available</td></tr>`;
+        document.getElementById("submitVersionsBtn").style.display = "none";
+    }
+}
+// 🔄 Fetch Today's Versions on "Add New Version" icon click
+function fetchAndShowVersions() {
+	document.getElementById('loadingModal').style.display = 'flex';
+    $.ajax({
+        url: 'getTodayVersions',
+        method: 'GET',
+        success: function (data) {
+        	document.getElementById('loadingModal').style.display = 'none';
+            console.log("Fetched data:", data);
+            // 🔒 Hide the static list
+            const initialList = document.getElementById("initialRateList");
+            if (initialList) initialList.style.display = "none";
+            // ✅ Show Submit button
+            document.getElementById("submitVersionsBtn").style.display = "inline-block";
+            if (data.length > 0) {
+                data.forEach(v => {
+                    addNewVersionRow(v, true); // fetched = true
+                });
+            } else {
+            	document.getElementById('loadingModal').style.display = 'none';
+               $.toast({
+                    heading: 'Info',
+                    text: "No today's records found. You can manually add.",
+                    icon: 'info',
+                    showHideTransition: 'plain',
+                    position: { left: 1600, top: 0 },
+                    loaderBg: '#17a2b8',
+                    hideAfter: 4000
+                }); 
+                addNewVersionRow(); // Add empty editable row
+            }
+            // ✅ Show green add icon
+            document.getElementById("addRowIcon").style.display = "inline-block";
+            // 🔒 Hide fetch icon
+            document.getElementById("fetchIcon").style.display = "none";
+            // ✅ Call this instead of resetAllIcons
+            handleSectionClick('version');
+        },
+        error: function () {
+        	document.getElementById('loadingModal').style.display = 'none';
+           $.toast({
+                heading: 'Error',
+                text: 'Failed to fetch version data.',
+                icon: 'error',
+                showHideTransition: 'plain',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#dc3545',
+                hideAfter: 5000
+            }); 
+        }
+    });
+}
+// ✅ Submit all rows (fetched + new)
+function formatDateToYYYYMMDD(dateStr) {
+    const parts = dateStr.split('-'); // expecting dd-MM-yyyy
+    if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`; // yyyy-MM-dd
+    }
+    return dateStr;
+}
+function parseFlexibleDate(dateStr) {
+    if (!dateStr) return null;
+
+    // If dateStr is in yyyy-MM-dd (new rows), return new Date directly
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return new Date(dateStr);
+    }
+
+    // If dateStr is in dd-MM-yyyy (fetched rows), convert it
+    if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
+        const [dd, mm, yyyy] = dateStr.split('-');
+        return new Date(`${yyyy}-${mm}-${dd}`);
+    }
+
+    // Fallback
+    return new Date(dateStr);
+}
+function submitAllVersions() {
+	document.getElementById('loadingModal').style.display = 'flex';
+    const tableBody = document.getElementById("rateTableBody");
+    const rows = tableBody.querySelectorAll("tr");
+    const versionList = [];
+    // ✅ Serial number = current row count + 1
+    const srlNo = tableBody.querySelectorAll("tr").length + 1;
+    rows.forEach(row => {
+        if (row.id === "noDataRow") return;
+        const rateInput = row.querySelector('[name="rate"]');
+        const originalRateInput = row.querySelector('[name="original_rate"]');
+        const rate = rateInput?.value?.trim();
+        const originalRate = originalRateInput?.value?.trim();
+        const rate_code_desc_elem = row.querySelector('[name="rate_code_desc"]');
+        const rate_code_desc = rate_code_desc_elem?.value?.trim() || '';
+        const rate_code_desc_desc = rate_code_desc_elem?.tagName === 'SELECT'
+            ? rate_code_desc_elem.selectedOptions[0]?.text.trim()
+            : rate_code_desc_elem?.value?.trim();
+        const rate_date_raw = row.querySelector('[name="rate_date"]')?.value || row.querySelector('[name="date"]')?.value || '';
+        const eff_date_raw = row.querySelector('[name="eff_date"]')?.value || '';
+        const fxd_crncy = row.querySelector('[name="fxd_crncy"]')?.value?.trim() || '';
+        const var_crncy = row.querySelector('[name="var_crncy"]')?.value?.trim() || '';
+
+        // ✅ Skip row if rate not modified
+        if (rate === originalRate) return;
+        if (rate_code_desc && rate_date_raw && eff_date_raw && fxd_crncy && var_crncy && rate) {
+            const rate_date = parseFlexibleDate(rate_date_raw);
+            const eff_date = parseFlexibleDate(eff_date_raw);
+            versionList.push({
+                rate_code_desc,
+                rate_code_desc_desc,
+                fxd_crncy,
+                var_crncy,
+                rate: parseFloat(rate),
+                rate_date,
+                eff_date
+            });
+        }
+    });
+    if (versionList.length === 0) {
+    	document.getElementById('loadingModal').style.display = 'none';
+       $.toast({
+            heading: 'Info',
+            text: 'No modified rates to submit.',
+            icon: 'info',
+            showHideTransition: 'plain',
+            position: { left: 1600, top: 0 },
+            loaderBg: '#17a2b8',
+            hideAfter: 4000
+        });
+        return;
+    }
+    const submitBtn = document.getElementById("submitVersionsBtn");
+    submitBtn.disabled = true;
+    $.ajax({
+        url: 'submitVersions',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(versionList),
+        success: function () {
+        document.getElementById('loadingModal').style.display = 'none';
+          $.toast({
+                heading: 'Success',
+                text: 'Updated successfully!',
+                icon: 'success',
+                showHideTransition: 'plain',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#28a745',
+                hideAfter: 3000
+            });
+            document.getElementById("submitVersionsBtn").style.display = "none";
+            List();
+        },
+        error: function () {
+        	document.getElementById('loadingModal').style.display = 'none';
+            $.toast({
+                heading: 'Error',
+                text: 'Error submitting versions.',
+                icon: 'error',
+                showHideTransition: 'plain',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#dc3545',
+                hideAfter: 5000
+            }); 
+        },
+        complete: function () {
+            submitBtn.disabled = false;
+        }
+    });
+}
+</script>
+<script>
+	function DateToDDMMYYYY(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}-${month}-${year}`;
+}
+    document.addEventListener("DOMContentLoaded", function () {
+        const today = new Date().toISOString().split("T")[0];
+        document.getElementById("startDate").value = today;
+        filterRateListByDate(); // Load data for today on page load
+    });
+    function filterRateListByDate() {
+    	document.getElementById('loadingModal').style.display = 'flex';
+			const selectedDate = document.getElementById("startDate").value;
+			$.ajax({
+				url: './getVersionsByDate',
+				type: 'GET',
+				data: {selectedDate: selectedDate},
+				success: function (data) {
+					document.getElementById('loadingModal').style.display = 'none';
+					const tableBody = document.getElementById("initialRateList");
+					resetAllIcons();
+					tableBody.innerHTML = '';
+					if (data.length === 0) {
+						tableBody.innerHTML = `
+                    <tr id="noDataRow">
+                        <td colspan="12" class="text-center text-muted">No records found for the selected date.</td>
+                    </tr>`;
+						return;
+					}
+					data.forEach(rate => {
+	const statusColor = rate.entity_flg === 'Y' ? 'green' : 'red';
+	const statusText = rate.entity_flg === 'Y' ? 'Verified' : 'Unverified';
+
+	let statusCellHtml = `<td style="color: ${statusColor};">${statusText}</td>`;
+	
+	if (rate.entity_flg === 'N') {
+		statusCellHtml = `<td style="color: ${statusColor}; cursor: pointer;" 
+			title="Click to verify"
+			onclick="verifySubmit(this)"
+			data-unique_id="${rate.unique_id}"
+			data-entry_user="${rate.entry_user}"
+			data-verify_user="${rate.verify_user}"
+			data-modify_flg="${rate.modify_flg}"
+			data-login_user="${document.getElementById('login_user').value}"
+			data-formmode="VERIFY">
+			${statusText}
+		</td>`;
+	}
+	// ✅ Serial number = current row count + 1
+    const srlNo = tableBody.querySelectorAll("tr").length + 1;
+	const row = `
+	<tr>
+		<td>${srlNo}</td>
+		<td>${rate.rate_code_desc}</td>
+		<td>${DateToDDMMYYYY(rate.rate_date)}</td>
+		<td>${DateToDDMMYYYY(rate.eff_date)}</td>
+		<td>${rate.version}</td>
+		<td>${rate.fxd_crncy}</td>
+		<td>${rate.var_crncy}</td>
+		<td style="text-align:right;">${rate.rate != null ? parseFloat(rate.rate).toLocaleString('en-IN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : ''}</td>
+		${statusCellHtml}
+		<td></td>
+		<td></td>
+	</tr>
+	`;
+	tableBody.insertAdjacentHTML('beforeend', row);
+});
+				},
+				error: function (err) {
+					document.getElementById('loadingModal').style.display = 'none';
+					console.error("Error fetching rate list:", err);
+				}
+			});
+		}
+// Helper: format 'yyyy-MM-dd' → 'dd-MM-yyyy'
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${day}-${month}-${year}`;
+}
+function removeNoDataRow() {
+    const noDataRow = document.getElementById("noDataRow");
+    if (noDataRow) {
+        noDataRow.remove();
+    }
+}
+</script>
+<script>
+function uploadExcel() {
+	document.getElementById('loadingModal').style.display = 'flex';
+    const file = document.getElementById('excelInput').files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    $.ajax({
+        url: './uploadRateExcel',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+        	    document.getElementById('loadingModal').style.display = 'none';
+
+        	    if (response.status === "duplicate") {
+        	        $('#alertmsgpopup')
+        	            .text(`Duplicate found: ${response.addl.join(", ")}. Do you want to overwrite them?`)
+        	            .css("white-space", "nowrap");
+
+        	        // Save last file for retry
+        	        window.lastFile = file;
+        	        $('#datacancel').modal("show");
+        	        return;
+        	    }
+        	    if (response.status === "error") {
+        	        $.toast({
+        	            heading: 'Error',
+        	            text: response.message,
+        	            icon: 'error',
+        	            showHideTransition: 'plain',
+        	            position: 'mid-center',
+        	            loaderBg: '#dc3545',
+        	            hideAfter: 5000,
+        	            afterHidden: function () {
+    	                    location.reload();
+    	                }
+        	        });
+        	        return;
+        	    }
+        	    $.toast({
+                    heading: 'Success',
+                    text: response.message,
+                    icon: 'success',
+                    showHideTransition: 'plain',
+                    position: { left: 1600, top: 0 },
+                    loaderBg: '#28a745',
+                    hideAfter: 3000,
+                    afterHidden: function () {
+	                    location.reload();
+	                }
+                })
+
+        },
+        error: function (xhr) {
+        	document.getElementById('loadingModal').style.display = 'none';
+	           $.toast({
+	                heading: 'Error',
+	                text: 'Upload failed.',
+	                icon: 'error',
+	                showHideTransition: 'plain',
+	                position: { left: 1600, top: 0 },
+	                loaderBg: '#dc3545',
+	                hideAfter: 5000,
+	                afterHidden: function () {
+	                    location.reload();
+	                }
+	            }); 
+            console.error(xhr.responseText);
+        }
+    });
+}
+function deleteRecUpload(btn) {
+    $('#datacancel').modal('hide');
+    document.getElementById('loadingModal').style.display = 'flex';
+
+    const formData = new FormData();
+    formData.append("file", window.lastFile);
+    formData.append("overwrite", true); // ✅ overwrite flag
+
+    $.ajax({
+        url: './uploadRateExcel',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            document.getElementById('loadingModal').style.display = 'none';
+	           $.toast({
+	                heading: 'Success',
+	                text: response.message,
+	                icon: 'success',
+	                showHideTransition: 'plain',
+	                position: { left: 1600, top: 0 },
+	                loaderBg: '#28a745',
+	                hideAfter: 5000,
+	                afterHidden: function () {
+	                    location.reload();
+	                }
+	            }); 
+        },
+        error: function(xhr) {
+            document.getElementById('loadingModal').style.display = 'none';
+            $.toast({
+                heading: 'Error',
+                text: 'Overwrite failed.',
+                icon: 'error',
+                showHideTransition: 'plain',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#dc3545',
+                hideAfter: 5000,
+                afterHidden: function () {
+                    location.reload();
+                }
+            }); 
+        }
+    });
+}
+</script>
+<script>
+function pexExcel() {
+	document.getElementById('loadingModal').style.display = 'flex';
+    const file = document.getElementById('pexInput').files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    $.ajax({
+        url: './uploadRatePex',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+        	    document.getElementById('loadingModal').style.display = 'none';
+
+        	    if (response.status === "duplicate") {
+        	        $('#alertpopup')
+        	            .text(`Duplicate found: ${response.addl.join(", ")}. Do you want to overwrite them?`)
+        	            .css("white-space", "nowrap");
+
+        	        // Save last file for retry
+        	        window.lastFile = file;
+        	        $('#pexcancel').modal("show");
+        	        return;
+        	    }
+        	    $.toast({
+                    heading: 'Success',
+                    text: response.message,
+                    icon: 'success',
+                    showHideTransition: 'plain',
+                    position: { left: 1600, top: 0 },
+                    loaderBg: '#28a745',
+                    hideAfter: 3000,
+                    afterHidden: function () {
+	                    location.reload();
+	                }
+                }) 
+
+        },
+        error: function (xhr) {
+        	document.getElementById('loadingModal').style.display = 'none';
+	           $.toast({
+	                heading: 'Error',
+	                text: 'Upload failed.',
+	                icon: 'error',
+	                showHideTransition: 'plain',
+	                position: { left: 1600, top: 0 },
+	                loaderBg: '#dc3545',
+	                hideAfter: 5000,
+	                afterHidden: function () {
+	                    location.reload();
+	                }
+	            }); 
+            console.error(xhr.responseText);
+        }
+    });
+}
+function deletePexUpload(btn) {
+    $('#pexcancel').modal('hide');
+    document.getElementById('loadingModal').style.display = 'flex';
+
+    const formData = new FormData();
+    formData.append("file", window.lastFile);
+    formData.append("overwrite", true); // ✅ overwrite flag
+
+    $.ajax({
+        url: './uploadRatePex',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            document.getElementById('loadingModal').style.display = 'none';
+	           $.toast({
+	                heading: 'Success',
+	                text: response.message,
+	                icon: 'success',
+	                showHideTransition: 'plain',
+	                position: { left: 1600, top: 0 },
+	                loaderBg: '#28a745',
+	                hideAfter: 5000,
+	                afterHidden: function () {
+	                    location.reload();
+	                }
+	            }); 
+        },
+        error: function(xhr) {
+            document.getElementById('loadingModal').style.display = 'none';
+            $.toast({
+                heading: 'Error',
+                text: 'Overwrite failed.',
+                icon: 'error',
+                showHideTransition: 'plain',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#dc3545',
+                hideAfter: 5000,
+                afterHidden: function () {
+                    location.reload();
+                }
+            }); 
+        }
+    });
+}
+</script>
+<script>
+function resetAllIcons() {
+    const iconIds = ['addRateIcon', 'fetchIcon', 'addRowIcon', 'fetchListIcon', 'addListRowIcon'];
+    iconIds.forEach(id => {
+        const icon = document.getElementById(id);
+        if (icon) {
+            icon.style.pointerEvents = "auto";
+            icon.style.opacity = "1";
+        }
+    });
+    const listTable = document.getElementById("initialRateList");
+    if (listTable) listTable.style.display = "";
+}
+function loadAndAddYesterdayList() {
+	document.getElementById('loadingModal').style.display = 'flex';
+	removeNoDataRow();
+	const tableBody = document.getElementById("rateTableBody");
+	const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+	$.ajax({
+    url: './getYesterdayVersions',
+    type: 'GET',
+    success: function (data) {
+    	document.getElementById('loadingModal').style.display = 'none';
+			tableBody.innerHTML = ''; // Clear old rows
+
+			if (data.length === 0) {
+				  $.toast({
+			            heading: 'Warning',
+			            text: 'No recent records found.',
+			            icon: 'warning',
+			            showHideTransition: 'plain',
+			            position: { left: 1600, top: 0 },
+			            loaderBg: '#ffc107',
+			            hideAfter: 6000
+			        }); 
+				  List();
+			}
+			data.forEach(item => {
+				// ✅ Fix: Use `item`, not `existingData`
+				const statusText = item.entity_flg === "Y" ? "Verified" : "UnVerified";
+				const statusColor = item.entity_flg === "Y" ? "green" : "red";
+
+				const formattedRate = item.rate != null 
+					? parseFloat(item.rate).toLocaleString('en-IN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) 
+					: '';
+				const row = document.createElement("tr");
+				// ✅ Serial number = current row count + 1
+			    const srlNo = tableBody.querySelectorAll("tr").length + 1;
+				row.innerHTML = `
+					<td>${srlNo}</td>
+					<td><input type="text" class="form-control form-control-sm" name="rate_code_desc" value="${item.rate_code_desc}" readonly></td>
+					<td><input type="date" class="form-control form-control-sm" name="rate_date" value="${new Date().toISOString().split("T")[0]}" readonly></td>
+					<td><input type="date" class="form-control form-control-sm" name="eff_date" value="${new Date().toISOString().split("T")[0]}" max="${new Date().toISOString().split("T")[0]}"></td>
+					<td><input type="text" class="form-control form-control-sm" name="version" value="1" readonly></td>
+					<td><input type="text" class="form-control form-control-sm" name="fxd_crncy" value="${item.fxd_crncy}" readonly></td>
+					<td><input type="text" class="form-control form-control-sm" name="var_crncy" value="${item.var_crncy}" readonly></td>
+					<td><input type="text" class="form-control form-control-sm text-end" name="rate" value="${item.rate}" style="text-align:right;" onblur="formatTolerance(this)" oninput="allowNumbersOnly(this)" ></td>
+					<td style="color: ${statusColor};">${statusText}</td>
+					<td></td>
+					<td></td>
+				`;
+				tableBody.appendChild(row);
+			});
+			document.getElementById("submitListBtn").style.display = "inline-block";
+			document.getElementById("fetchListIcon").style.display = "none";
+			document.getElementById("addListRowIcon").style.display = "inline-block";
+		},
+		error: function () {
+			document.getElementById('loadingModal').style.display = 'none';
+			alert("Failed to load yesterday’s records.");
+		}
+	});
+}
+function addNewListRow() {
+	removeNoDataRow();
+    const tableBody = document.getElementById("rateTableBody");
+    const noRow = document.getElementById("noDataRow");
+    if (noRow) noRow.remove();
+
+    const today = new Date().toISOString().split("T")[0];
+    const row = document.createElement("tr");
+    const version = 1;
+    // ✅ Serial number = current row count + 1
+    const srlNo = tableBody.querySelectorAll("tr").length + 1;
+    row.innerHTML = `
+    	<td>${srlNo}</td>
+        <td>
+            <select class="form-control form-control-sm" name="rate_code_desc">
+                <option value="">--Select--</option>
+                <option value="R001">R001</option>
+                <option value="R002">R002</option>
+                <option value="R003">R003</option>
+                <option value="R004">R004</option>
+                <option value="R005">R005</option>
+            </select>
+        </td>
+        <td><input type="date" class="form-control form-control-sm" name="rate_date" value="${today}" readonly></td>
+        <td><input type="date" class="form-control form-control-sm" name="eff_date" max="${today}" value="${today}"></td>
+        <td class="version-col">${version}</td>
+        <td>
+            <select class="form-control form-control-sm" name="fxd_crncy" onchange="checkDuplicateCombination(this)">
+                <option value="">--Select--</option>
+                <option value="INR">INR</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="SCR">SCR</option>
+                <option value="MUR">MUR</option>
+            </select>
+        </td>
+        <td>
+            <select class="form-control form-control-sm" name="var_crncy" onchange="checkDuplicateCombination(this)">
+                <option value="">--Select--</option>
+                <option value="INR">INR</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="SCR">SCR</option>
+                <option value="MUR">MUR</option>
+            </select>
+        </td>
+        <td><input type="text" class="form-control form-control-sm" name="rate" id="rateInput"  style="text-align:right;" onblur="formatTolerance(this)" oninput="allowNumbersOnly(this)" ></td>
+        <td></td>
+        <td></td>
+        <td class="text-center">
+            <i class="fas fa-minus-circle text-danger" style="cursor:pointer;" onclick="removeRow(this)"></i>
+        </td>
+    `;
+    tableBody.appendChild(row);
+    document.getElementById("submitListBtn").style.display = "inline-block"; // Show Submit button for list
+}
+function submitAllLists() {
+	document.getElementById('loadingModal').style.display = 'flex';
+    const tableBody = document.getElementById("rateTableBody");
+    const rows = tableBody.querySelectorAll("tr");
+    const listData = [];
+    rows.forEach(row => {
+        const rate_code_desc_elem = row.querySelector('[name="rate_code_desc"]');
+        const rate_code_desc = rate_code_desc_elem?.value?.trim();
+        const rate_code_desc_desc = rate_code_desc_elem?.selectedOptions?.[0]?.text?.trim() || rate_code_desc || '';
+
+        const rate_date_raw = row.querySelector('[name="rate_date"]')?.value || '';
+        const eff_date_raw = row.querySelector('[name="eff_date"]')?.value || '';
+        const fxd_crncy = row.querySelector('[name="fxd_crncy"]')?.value?.trim() || '';
+        const var_crncy = row.querySelector('[name="var_crncy"]')?.value?.trim() || '';
+        const rate = row.querySelector('[name="rate"]')?.value?.trim() || '';
+
+        if (rate_code_desc && rate_date_raw && eff_date_raw && fxd_crncy && var_crncy && rate) {
+            listData.push({
+                rate_code_desc,
+                rate_code_desc_desc,
+                rate_date: formatToYYYYMMDD(rate_date_raw),
+                eff_date: formatToYYYYMMDD(eff_date_raw),
+                fxd_crncy,
+                var_crncy,
+                rate: parseFloat(rate)
+            });
+        }
+    });
+    if (listData.length === 0) {
+    	document.getElementById('loadingModal').style.display = 'none';
+       $.toast({
+            heading: 'Warning',
+            text: 'No valid data to submit.',
+            icon: 'warning',
+            showHideTransition: 'plain',
+            position: { left: 1600, top: 0 },
+            loaderBg: '#ffc107',
+            hideAfter: 4000
+        });
+        return;
+    }
+    $.ajax({
+        url: './submitLists',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(listData),
+        success: function () {
+        	document.getElementById('loadingModal').style.display = 'none';
+            $.toast({
+                heading: 'Success',
+                text: 'List submitted successfully.',
+                icon: 'success',
+                showHideTransition: 'plain',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#28a745',
+                hideAfter: 3000
+            }) 
+            List();
+            document.getElementById("submitListsBtn").style.display = "none";
+            document.getElementById("addListRowIcon").style.display = "none";
+            document.getElementById("rateTableBody").innerHTML = `
+                <tr id="noDataRow">
+                    <td colspan="12" class="text-center text-muted">No data available</td>
+                </tr>`;   
+        },
+        error: function () {
+        	document.getElementById('loadingModal').style.display = 'none';
+            $.toast({
+                heading: 'Error',
+                text: 'Error submitting list.',
+                icon: 'error',
+                showHideTransition: 'plain',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#dc3545',
+                hideAfter: 5000
+            });
+        }
+    });
+}
+function formatToYYYYMMDD(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        // Already in yyyy-MM-dd?
+        if (parts[0].length === 4) return dateStr;
+        return `${parts[2]}-${parts[1]}-${parts[0]}`; // Convert dd-MM-yyyy ➝ yyyy-MM-dd
+    }
+    return dateStr;
+}
+</script>
+<script>
+	function handleSectionClick(activeSection) {
+    const listTable = document.getElementById("initialRateList");
+    if (listTable) listTable.style.display = "none";
+
+    const sections = {
+        rate: ['addRateIcon'],
+        version: ['fetchIcon', 'addRowIcon'],
+        list: ['fetchListIcon', 'addListRowIcon']
+    };
+
+    const allIcons = ['addRateIcon', 'fetchIcon', 'addRowIcon', 'fetchListIcon', 'addListRowIcon'];
+    allIcons.forEach(iconId => {
+        const icon = document.getElementById(iconId);
+        if (icon) {
+            icon.style.pointerEvents = "none";
+            icon.style.opacity = "0.5";
+        }
+    });
+
+    if (sections[activeSection]) {
+        sections[activeSection].forEach(iconId => {
+            const icon = document.getElementById(iconId);
+            if (icon) {
+                icon.style.pointerEvents = "auto";
+                icon.style.opacity = "1";
+            }
+        });
+    }
+}
+function verifySubmit(a) {
+	document.getElementById('loadingModal').style.display = 'flex';
+    event.preventDefault();
+    const unique_id = a.getAttribute("data-unique_id");
+    const entryuser = a.getAttribute("data-entry_user");
+    const loginuser = a.getAttribute("data-login_user");
+    // ❌ Prevent same user from verifying (Maker-Checker Rule)
+    if (loginuser === entryuser) {
+       document.getElementById('loadingModal').style.display = 'none';
+       $.toast({
+            heading: 'Error',
+            text: 'Same user cannot verify this entry.',
+            icon: 'error',
+            position: { left: 1600, top: 0 },
+            loaderBg: '#ffc107',
+            hideAfter: 4000
+        }); 
+        return; // ❗ Stop execution
+    }
+    // ✅ Proceed with AJAX verification
+    $.ajax({
+        url: './verifyRate',
+        type: 'POST',
+        data: { unique_id: unique_id },
+        success: function (responseText) {
+        	document.getElementById('loadingModal').style.display = 'none';
+            const isFailure = responseText.includes("Same user") || responseText.includes("not found");
+            $.toast({
+                heading: isFailure ? 'Error' : 'Success',
+                text: responseText,
+                icon: isFailure ? 'error' : 'success',
+                position: { left: 1600, top: 0 },
+                loaderBg: isFailure ? '#dc3545' : '#28a745',
+                hideAfter: 4000
+            }); 
+            if (!isFailure) {
+                filterRateListByDate(); // 🔄 Refresh only if verified
+            }
+        },
+        error: function () {
+        	document.getElementById('loadingModal').style.display = 'none';
+            $.toast({
+                heading: 'Error',
+                text: 'Verification request failed.',
+                icon: 'error',
+                position: { left: 1600, top: 0 },
+                loaderBg: '#dc3545',
+                hideAfter: 4000
+            }); 
+        }
+    });
+}
+/*  format for decimal*/
+function formatTolerance(input) {
+    let value = parseFloat(input.value.replace(/,/g, ''));
+    if (!isNaN(value)) {
+        input.value = value.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    }
+}
+function allowNumbersOnly(input) {
+    // Remove anything except digits and a single period
+    input.value = input.value
+        .replace(/[^\d.]/g, '')        // Remove non-digits/non-period
+        .replace(/(\..*)\./g, '$1');   // Allow only one period
+}
+</script>
+<script>
+	function adjustHeight() {
+		const cardBody = document.getElementById("cardBody");
+		const viewportHeight = window.innerHeight;
+		cardBody.style.maxHeight = `${viewportHeight * 0.82}px`; // Adjust 80% of the viewport height
+	}
+
+	window.addEventListener("resize", adjustHeight);
+	document.addEventListener("DOMContentLoaded", adjustHeight);
+</script>
+</head>
+<title>BRECON</title>
+<body>
+<div th:insert="XBRLHeaderMenu :: header"></div>
+<!-- --------------------------------------------------------------------User List Starts----------------------------------------------------- -->
+<div class="container-fluid py-5">
+	<div class="row justify-content-center">
+		<div class="col-lg-10">
+			<div th:if="${formmode}=='list'">
+				<div class="card shadow-lg border-0" style="border-radius: 16px;">
+						<div class="card-header d-flex align-items-center justify-content-between"
+							style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+
+							<h4 class="text-white m-0 d-flex align-items-center mx-auto">
+								<i class="fas fa-percent mr-2" style="color: lightblue;"></i>
+								Rate Maintenance&nbsp; <input type="date" id="startDate"
+									name="startDate" class="datepicker text-right"
+									onchange="filterRateListByDate()" />
+							</h4>
+
+							<!-- Upload Dropdown aligned to the right -->
+							<li class="nav-item dropdown list-unstyled m-0"><a href="#"
+								class="dropdown-toggle text-white" data-bs-toggle="dropdown">
+									<i class="fas fa-upload text-white" style="cursor: pointer;"
+									title="Upload"></i>
+							</a>
+								<ul class="dropdown-menu dropdown-menu-end">
+									<li><a class="dropdown-item" href="#"
+										onclick="document.getElementById('excelInput').click()"
+										title="Upload Excel"> Upload Excel </a></li>
+									<li><a class="dropdown-item" href="#"
+										onclick="document.getElementById('pexInput').click()"
+										title="Upload By Pex"> Upload By Pex </a></li>
+								</ul></li>
+
+							<!-- Hidden Inputs -->
+							<input type="file" id="excelInput" accept=".xlsx"
+								style="display: none" onchange="uploadExcel()" /> <input
+								type="file" id="pexInput" accept=".xlsx" style="display: none"
+								onchange="pexExcel()" /> <input type="hidden" id="login_user"
+								th:value="${loginuser}" />
+						</div>
+
+						<div class="card-body p-2" >
+						<div class="table-responsive" id="cardBody">
+							<table class="table table-bordered table-hover table-sm"
+								style="font-family: Verdana; font-size: 13px;">
+								<thead class="thead-light" style="background-color: #e9ecf0;">
+									<tr>
+										<th style="width:4%">Srl No</th>
+										<th style="width:6%">Rate Desc</th>
+										<th style="width:7%">Date</th>
+										<th style="width:8%">Effective Date</th>
+										<th style="width:5%">Version</th>
+										<th style="width:8%">Fxd Crncy</th>
+										<th style="width:10%">Var Crncy</th>
+										<th>Rate</th>
+										<th>Status</th>
+										<!-- Rate Section -->
+										<th>
+											Add New Rate
+											<i class="fas fa-plus-circle text-primary ml-2" id="addRateIcon"
+												onclick="handleSectionClick('rate'); addNewRateRow()" style="cursor: pointer;"></i>
+										</th>
+										
+										<!-- Version Section -->
+										<!-- <th>
+											Add New Version
+											<i class="fas fa-plus-circle text-primary" id="fetchIcon"
+												onclick="handleSectionClick('version'); fetchAndShowVersions()" style="cursor: pointer;"></i>
+										
+											<i class="fas fa-plus-circle text-success ml-2" id="addRowIcon" onclick="addNewVersionRow()"
+												style="cursor: pointer; display: none;"></i>
+										</th> -->
+										
+										<!-- List Section -->
+										<th>
+											Add New List
+											<i class="fas fa-plus-circle text-primary ml-2" id="fetchListIcon"
+												onclick="handleSectionClick('list'); loadAndAddYesterdayList()" style="cursor: pointer;"></i>
+										
+											<i class="fas fa-plus-circle text-success ml-2" id="addListRowIcon" onclick="addNewListRow()"
+												style="cursor: pointer; display: none;"></i>
+										</th>
+										</tr>
+								</thead>
+								<tbody id="initialRateList">
+									<!-- Populated by JS on page load and on date change -->
+									<tr id="noDataRow">
+										<td colspan="12" class="text-center text-muted">Loading...</td>
+									</tr>
+								</tbody>
+								<!-- Additional dynamic version rows -->
+								<tbody id="rateTableBody"></tbody>
+								</table>
+						</div>
+					</div>
+					<!-- Footer Buttons -->
+					<div class="card-footer bg-white text-center p-1"
+						style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+						<button type="button" class="btn btn-outline-dark me-3" onclick="home()"
+							style="border-radius: 6px;"><i class="fas fa-home me-1"></i> Home</button>
+						<!-- Submit All Button (hidden by default) -->
+						<button type="button" id="submitAllBtn" class="btn btn-outline-dark me-3"
+							style="display:none;border-radius: 6px;" onclick="submitAllRates()">
+							<i class="fas fa-upload me-1"></i> Submit</button>
+						<button type="button" id="submitVersionsBtn" class="btn btn-outline-dark me-3"
+							onclick="submitAllVersions()" style="display:none; border-radius: 6px;">
+							<i class="fas fa-upload me-1"></i> Submit</button>
+						<!-- List Submit Button -->
+						<button type="button" id="submitListBtn" class="btn btn-outline-dark me-3" style="display:none; border-radius: 6px;"
+							onclick="submitAllLists()">
+							<i class="fas fa-upload me-1"></i> Submit</button>
+						<button type="button" class="btn btn-outline-dark me-3" onclick="back()"
+							style="border-radius: 6px;"><i class="fas fa-angle-left me-1"></i> Back</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="datacancel" style="background: #000000b0;"
+		role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable"
+			role="document">
+			<div class="modal-content">
+				<!-- Modal Body -->
+				<div class="modal-body">
+					<h5  id="alertmsgpopup" style="font-size: 17px; color: black; padding: 15px;"></h5>
+				</div>
+				<!-- Modal Footer -->
+				<div style="padding: 10px; text-align: center;">
+					<button type="button" class="btn btn-outline-dark me-3"
+						style="font-size: 16px;"  onclick="location.reload();">Cancel</button>
+					<button type="button" class="btn btn-outline-dark me-3" id="refDelete"
+						style="font-size: 16px;" onclick="deleteRecUpload(this);"
+						th:attr="data-formmode=delete">Confirm  , OverWrite</button>
+				</div>
+			</div>
+		</div>
+	</div>
+<!-- Modal -->
+<div class="modal fade" id="pexcancel" style="background: #000000b0;"
+		role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable"
+			role="document">
+			<div class="modal-content">
+				<!-- Modal Body -->
+				<div class="modal-body">
+					<h5  id="alertpopup" style="font-size: 17px; color: black; padding: 15px;"></h5>
+				</div>
+				<!-- Modal Footer -->
+				<div style="padding: 10px; text-align: center;">
+					<button type="button" class="btn btn-outline-dark me-3"
+						style="font-size: 16px;"  onclick="location.reload();">Cancel</button>
+					<button type="button" class="btn btn-outline-dark me-3" id="refDelete"
+						style="font-size: 16px;" onclick="deletePexUpload(this);"
+						th:attr="data-formmode=delete">Confirm  , OverWrite</button>
+				</div>
+			</div>
+		</div>
+	</div>
+<!-- --------------------------------------------------------------------end----------------------------------------------------- -->
+</body>
+</html>

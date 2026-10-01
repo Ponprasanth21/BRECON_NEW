@@ -1,0 +1,1221 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+
+<!-- 
+CREATED BY	: AISHWARYA
+CREATED ON	: 13.06.2025
+PURPOSE		: ACCESS AND ROLE
+ -->
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<script src="/BRECON/js/jquery.min.js"></script>
+	<script src="/BRECON/js/jquery-ui.min.js"></script>
+	<style>
+		/* Match list screen font style and size */
+		.card,
+		.card-body,
+		.form-group,
+		.form-control,
+		.btn,
+		label {
+			font-family: Arial, sans-serif;
+			font-size: 14px;
+		}
+
+		.card-header h5,
+		.card-header h4 {
+			font-weight: bold;
+			font-size: 16px;
+		}
+
+		.form-control-sm {
+			font-size: 14px;
+		}
+
+		.btn-sm {
+			font-size: 13px;
+		}
+
+		#menucontent p {
+			line-height: 1.5;
+			/* or adjust as needed */
+			font-size: 15px;
+			/* optional: reduce font size if needed */
+			margin: 0;
+			/* remove extra spacing between lines */
+		}
+	</style>
+	<style>
+		.btns {
+			float: right;
+			margin: 5px;
+		}
+
+		td {
+			padding: 0.30rem !important;
+		}
+
+		.col-sm-5 {
+			padding-bottom: 15px;
+		}
+
+		.list-body {
+			padding: 0px;
+		}
+
+		.error {
+			color: red;
+			padding-left: 10px;
+		}
+
+		.formline {
+			padding-bottom: 5px;
+		}
+
+		.btn-primary {
+			background-color: #E77400;
+			border-color: #0c0c0c;
+		}
+
+		.btn-primary:not (:disabled):not (.disabled).active,
+		.btn-primary:not (:disabled):not (.disabled):active,
+		.show>.btn-primary.dropdown-toggle {
+			color: #fff;
+			background-color: #cc000000;
+			border-color: #161617;
+		}
+
+		#finusertb {
+			width: 460px;
+		}
+
+		.dataTables_wrapper .dataTables_paginate .paginate_button {
+			padding: 0px;
+		}
+	</style>
+	<style>
+		.valids {
+			color: green;
+		}
+
+		.invalids {
+			color: red;
+		}
+	</style>
+	<style>
+		.dataTables_wrapper {
+			width: 100% !important;
+		}
+
+		table.dataTable {
+			width: 100% !important;
+		}
+
+		.user-profile-wrapper {
+			width: 100%;
+			padding: 0 20px;
+			/* optional spacing */
+		}
+
+		/* Expand the card or box */
+		.card {
+			width: 100% !important;
+		}
+
+		/* Make table fill full width */
+		table.dataTable {
+			width: 100% !important;
+		}
+
+		/* Optional: make header also full width */
+		.user-profile-wrapper {
+			width: 100%;
+		}
+	</style>
+	<script th:inline="javascript">
+		function home() {
+			location.href = 'Dashboard'
+		}
+
+		function back() {
+			window.history.back();
+		}
+
+		function submitform(a) {
+			document.getElementById('loadingModal').style.display = 'flex'; 
+			var role_id = document.getElementById("role_id").value.trim();
+			var role_desc = document.getElementById("role_desc").value.trim();
+			var permissions = document.getElementById("permissions").value.trim();
+			console.log("permissions" + permissions);
+			var work_class = document.getElementById("work_class").value.trim();
+			var log = document.getElementById("log").innerText.trim();
+
+			if (role_id === '' || role_desc === '' || permissions === '' || work_class === '' || log === '') {
+				$.toast({
+					heading: 'Warning',
+					text: 'All mandatory fields must be filled.',
+					icon: 'warning',
+					position: {left: 1600, top: 0},
+					hideAfter: 2000
+				});
+				return;
+			}
+
+			// First check role ID and role desc in sequence
+			$.ajax({
+				url: './ApiRoleId',
+				data: {role_id: role_id},
+				type: 'GET',
+				success: function (responseText) {
+					document.getElementById('loadingModal').style.display = 'none';
+					if (responseText.length > 0 && responseText[0] === role_id) {
+						$.toast({
+							heading: 'Warning',
+							text: 'Same Role ID exists.',
+							icon: 'warning',
+							position: {left: 1600, top: 0},
+							hideAfter: 2000
+						});
+						return;
+					} else {
+						document.getElementById('loadingModal').style.display = 'none';
+						// If role ID is fine, check role desc
+						$.ajax({
+							url: './ApiRoleDesc',
+							data: {role_desc: role_desc},
+							type: 'GET',
+							success: function (responseText) {
+								if (responseText.length > 0 && responseText[0] === role_desc) {
+									$.toast({
+										heading: 'Warning',
+										text: 'Same Role Description exists.',
+										icon: 'warning',
+										position: {left: 1600, top: 0},
+										hideAfter: 2000
+									});
+
+									return;
+								} else {
+									document.getElementById('loadingModal').style.display = 'none';
+									// Both checks passed — submit the form
+									submitAccessRoleForm(a, role_id);
+								}
+							},
+							error: ajaxErrorHandler
+							
+						});
+					}
+				},
+				error: ajaxErrorHandler
+			});
+
+			function ajaxErrorHandler(xhr, status, error) {
+				document.getElementById('loadingModal').style.display = 'none';
+				var errorMessage = xhr.responseText || "An error occurred while processing your request. Please try again.";
+				$.toast({
+					heading: 'Error',
+					text: errorMessage,
+					icon: 'error',
+					showHideTransition: 'plain',
+					position: {
+						left: 1600,
+						top: 0
+					},
+					loaderBg: '#dc3545',
+					hideAfter: 5000
+				});
+			}
+
+			function submitAccessRoleForm(a, role_id) {
+				var finalVar = [];
+
+				// Utility function to check main modules
+				function checkAndPush(id, label) {
+					var isChecked = document.querySelector("#" + id + ":checked");
+					var val = isChecked ? 'Y' : 'N';
+					if (val === 'Y') finalVar.push(label);
+					return val;
+				}
+				let items = document.querySelectorAll("#log h4");
+
+				// Convert NodeList to array and extract text
+				let values = Array.from(items).map(h4 => h4.textContent.trim());
+
+				// Join with commas
+				let commaSeparated = values.join(",");
+
+				// ✅ Main modules
+				var adminValue = checkAndPush("Admin", "Admin");
+				var BRF_ReportsValue = checkAndPush("BRF_Reports", "BRF_Reports");
+				var Basel_ReportsValue = checkAndPush("Basel_Reports", "Basel_Reports");
+				var ArchivalValue = checkAndPush("Archival", "Archival");
+				var Audit_InquiriesValue = checkAndPush("Audit_Inquiries", "Audit_Inquiries");
+				var RBR_ReportsValue = checkAndPush("RBR_Reports", "RBR_Reports");
+				var VAT_LedgerValue = checkAndPush("VAT_Ledger", "VAT_Ledger");
+				var Invoice_DataValue = checkAndPush("Invoice_Data", "Invoice_Data");
+
+				// ✅ Submodules (collect dynamically)
+				$(".submodule:checked").each(function () {
+					finalVar.push($(this).val());  // add submodule label
+				});
+
+				var formmode = a.getAttribute("data-formmode");
+				var finalString = commaSeparated;
+				// ✅ Submit URL includes all main + submodules
+				var url = "./createAccessRole?formmode=" + encodeURIComponent(formmode)
+					+ "&adminValue=" + adminValue
+					+ "&BRF_ReportsValue=" + BRF_ReportsValue
+					+ "&Basel_ReportsValue=" + Basel_ReportsValue
+					+ "&ArchivalValue=" + ArchivalValue
+					+ "&Audit_InquiriesValue=" + Audit_InquiriesValue
+					+ "&RBR_ReportsValue=" + RBR_ReportsValue
+					+ "&VAT_LedgerValue=" + VAT_LedgerValue
+					+ "&Invoice_DataValue=" + Invoice_DataValue
+					+ "&finalString=" + encodeURIComponent(finalString);
+
+				console.log(finalString)
+
+
+				// 🔍 Debug log all sending data
+				console.log("=== Sending Data ===");
+				console.log("Form Mode:", formmode);
+				console.log("Admin:", adminValue);
+				console.log("BRF_Reports:", BRF_ReportsValue);
+				console.log("Basel_Reports:", Basel_ReportsValue);
+				console.log("Archival:", ArchivalValue);
+				console.log("Audit_Inquiries:", Audit_InquiriesValue);
+				console.log("RBR_Reports:", RBR_ReportsValue);
+				console.log("VAT_Ledger:", VAT_LedgerValue);
+				console.log("Invoice_Data:", Invoice_DataValue);
+				console.log("Selected Submodules:", finalVar);
+				console.log("Final String (Modules List):", finalString);
+				console.log("Final URL:", url);
+
+				$("#IPSAccessRole").attr('action', url);
+
+				var options = {
+					success: function (responseText) {
+						$.toast({
+							heading: 'Added!',
+							text: 'Addition Completed',
+							icon: 'success',
+							showHideTransition: 'plain',
+							position: {left: 1600, top: 0},
+							loaderBg: '#376275',
+							hideAfter: 3000
+						});
+
+						setTimeout(function () {
+							location.href = 'AccessandRoles?formmode=list';
+						}, 3000);
+					}
+				};
+				$("#IPSAccessRole").ajaxSubmit(options);
+			}
+		}
+		function submitedit(a) {
+		    document.getElementById('loadingModal').style.display = 'flex'; 
+		    var finalVar = [];
+
+		    // Collect all checked checkboxes (parent + submodules)
+		    document.querySelectorAll("input[type=checkbox]:checked").forEach(function (chk) {
+		        finalVar.push(chk.value);
+		    });
+
+		    // build params for parent values if backend expects them separately
+		    var adminValue = document.querySelector("#Admin:checked") ? 'Y' : 'N';
+		    var BRF_ReportsValue = document.querySelector("#BRF_Reports:checked") ? 'Y' : 'N';
+		    var Basel_ReportsValue = document.querySelector("#Basel_Reports:checked") ? 'Y' : 'N';
+		    var ArchivalValue = document.querySelector("#Archival:checked") ? 'Y' : 'N';
+		    var Audit_InquiriesValue = document.querySelector("#Audit_Inquiries:checked") ? 'Y' : 'N';
+		    var RBR_ReportsValue = document.querySelector("#RBR_Reports:checked") ? 'Y' : 'N';
+		    var VAT_LedgerValue = document.querySelector("#VAT_Ledger:checked") ? 'Y' : 'N';
+		    var Invoice_DataValue = document.querySelector("#Invoice_Data:checked") ? 'Y' : 'N';
+
+		    var formmode = a.getAttribute("data-formmode");
+		    var finalString = finalVar.join(',');
+
+		    var url = "./createAccessRole?formmode=" + formmode
+		        + "&adminValue=" + adminValue
+		        + "&BRF_ReportsValue=" + BRF_ReportsValue
+		        + "&Basel_ReportsValue=" + Basel_ReportsValue
+		        + "&ArchivalValue=" + ArchivalValue
+		        + "&Audit_InquiriesValue=" + Audit_InquiriesValue
+		        + "&RBR_ReportsValue=" + RBR_ReportsValue
+		        + "&VAT_LedgerValue=" + VAT_LedgerValue
+		        + "&Invoice_DataValue=" + Invoice_DataValue
+		        + "&finalString=" + finalString;
+
+		    $("#IPSAccessRole").attr('action', url);
+		    var options = {
+		        success: showResponse
+		    };
+		    $("#IPSAccessRole").ajaxSubmit(options);
+
+		    function showResponse(responseText, statusText, xhr, $form) {
+		        document.getElementById('loadingModal').style.display = 'none';
+
+		        if (responseText.trim() === "No Modification done") {
+		            $.toast({
+		                heading: 'Info',
+		                text: 'No Modification Done',
+		                icon: 'info',
+		                showHideTransition: 'plain',
+		                loaderBg: '#376275',
+		                hideAfter: 3000,
+		                position: 'bottom-right'
+		            });
+		        } else {
+		            $.toast({
+		                heading: 'Updated!',
+		                text: 'Updation Completed',
+		                icon: 'success',
+		                showHideTransition: 'plain',
+		                loaderBg: '#376275',
+		                hideAfter: 3000,
+		                position: 'bottom-right'
+		            });
+
+		            setTimeout(function () {
+		                location.href = 'AccessandRoles?formmode=list';
+		            }, 3000);
+		        }
+		    }
+		}
+		function verifySubmit(a) {
+			document.getElementById('loadingModal').style.display = 'flex'; 
+			var entryuser = a.getAttribute("data-entry_user");
+			var modifyuser = a.getAttribute("data-modify_user");
+			var formmode = a.getAttribute("data-formmode");
+			var loginuser = /*[[${session.USERID}]]*/ 'null';  // Thymeleaf substitution
+
+			var url = "./createAccessRole?formmode=" + formmode;
+			$("#IPSAccessRole").attr('action', url);
+
+			var options = {
+				success: showResponse
+			};
+
+			$("#IPSAccessRole").ajaxSubmit(options);
+
+			function showResponse(responseText, statusText, xhr, $form) {
+				document.getElementById('loadingModal').style.display = 'none';
+				$.toast({
+					heading: 'Verified!',
+					text: 'Verification completed!',
+					icon: 'success',
+					position: {
+						left: 1600,
+						top: 0
+					},
+					loaderBg: '#4CAF50',
+					hideAfter: 3000
+				});
+
+				setTimeout(function () {
+					location.href = 'AccessandRoles?formmode=list';
+				}, 3100);
+			}
+		}
+		function deleteSubmit(a) {
+			document.getElementById('loadingModal').style.display = 'flex'; 
+			var formmode = a.getAttribute("data-formmode");
+			var url = "./createAccessRole?formmode=" + formmode;
+
+			$("#IPSAccessRole").attr('action', url);
+
+			var options = {
+				success: showResponse
+			};
+
+			$("#IPSAccessRole").ajaxSubmit(options);
+			function showResponse(responseText, statusText, xhr, $form) {
+				document.getElementById('loadingModal').style.display = 'none';
+				$.toast({
+					heading: 'Deleted!',
+					text: 'Deletion completed!.',
+					icon: 'success',
+					position: {
+						left: 1600,
+						top: 0
+					},
+					loaderBg: '#4CAF50', // optional: green loader bar for success
+					hideAfter: 3000
+				});
+				setTimeout(function () {
+					location.href = 'AccessandRoles?formmode=list';
+				}, 3100);
+			};
+		};
+	</script>
+	<script>
+		function addrole(a) {
+			location.href = 'AccessandRoles?formmode=add';
+		}
+		function edit_btn_submit(a) {
+			var srlno = a.getAttribute("data-role_id");
+			location.href = 'AccessandRoles?formmode=edit&userid=' + srlno;
+		}
+
+		function list() {
+			location.href = 'AccessandRoles?formmode=list';
+		}
+		function view_btn_submit(a) {
+			var srlno = a.getAttribute("data-role_id");
+			location.href = 'AccessandRoles?formmode=view&userid=' + srlno;
+		}
+
+		function verify_btn_submit(a) {
+			var srlno = a.getAttribute("data-role_id");
+			location.href = 'AccessandRoles?formmode=verify&userid=' + srlno;
+
+		}
+		function delete_btn_submit(a) {
+			var rollID = a.getAttribute("data-role_id");
+			location.href = 'AccessandRoles?formmode=delete&userid=' + rollID;
+		}
+
+		function camelCaseToTitle(camelCase) {
+			return camelCase.replace(/([A-Z])/g, ' $1').replace(/^./,
+				function (str) {
+					return str.toUpperCase();
+				});
+		}
+
+		function getvalue() {
+			var data = "";
+			document.getElementById('log').innerHTML = "";
+			var selected = [];
+			// Loop through ALL checked checkboxes (main + submodules)
+			$('#finusers :checkbox:checked').each(function () {
+				var text = $(this).val();
+				var id = $(this).attr("id");
+
+				$('#log').show();
+				$('#menucontent').hide();
+
+				// Collect selected values
+				selected.push(text);
+
+				// Show checked modules/submodules
+				data += "<h4 style='line-height: 0.8; font-size: 15px;'>" +
+					text + "</h4>";
+			});
+			// Update preview
+			$('#log').append(data);
+			console.log(data)
+
+			// Update hidden input for backend
+			$('#menulist').val(selected.join(","));
+		}
+
+		// When parent is clicked, toggle all children
+		$(document).on("change", ".parent-check", function () {
+			var group = $(this).data("group");
+			$("." + group).prop("checked", this.checked);
+		});
+
+		// When submodule is manually unchecked/checked, update parent
+		$(document).on("change", ".submodule", function () {
+			var group = $(this).attr("class").split(" ").filter(c => c.endsWith("-group"))[0];
+			var parent = $(".parent-check[data-group='" + group + "']");
+
+			// If all submodules checked -> parent checked, else unchecked
+			var allChecked = $("." + group).length === $("." + group + ":checked").length;
+			parent.prop("checked", allChecked);
+		});
+
+		$('#finusers').on('shown.bs.modal', function () {
+			// 1. Clear all checks first
+			$('#finusers input[type="checkbox"]').prop('checked', false);
+
+			// 2. Read hidden input value
+			var menulist = $("#menulist").val();
+			if (!menulist) return; // nothing to pre-check
+
+			// 3. Split values
+			var modules = menulist.split(",");
+
+			// 4. Loop and check boxes
+			modules.forEach(function (module) {
+				module = module.trim();
+
+				// Select checkbox where value matches exactly
+				$("#finusers input[type='checkbox'][value='" + module + "']").prop('checked', true);
+			});
+
+			// 5. Re-sync parent-child states
+			$(".parent-check").each(function () {
+				var group = $(this).data("group");
+				var allChecked = $("." + group).length === $("." + group + ":checked").length;
+				$(this).prop("checked", allChecked);
+			});
+		});
+	</script>
+
+	<script th:inline="javascript">
+		//<![CDATA[
+		const IPSAccessRole = /*[[${IPSAccessRole}]]*/
+			console.log("Menus from backend:", IPSAccessRole);
+		//]]>
+	</script>
+</head>
+<title>BRECON</title>
+
+<body>
+	<div th:insert="XBRLHeaderMenu :: header"></div>
+	<!-- -------------------User List Starts----------------------------------------------------- -->
+	<div class="container-fluid py-5">
+		<div class="row justify-content-center">
+			<div class="col-md-10">
+				<div class="card shadow-lg border-0" style="border-radius: 16px;">
+					<div th:if="${formmode}=='list'">
+						<div class="card" style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+							<div class="card-header text-center"
+								style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+								<h4 class="text-white m-0">
+									<i class="fas fa-shield-alt mr-2" style="color: lightblue;"></i>
+									Access and Roles &nbsp; <i class="fas fa-user-plus" onclick="addrole();"></i>
+								</h4>
+							</div>
+
+							<div class="card-body p-2">
+								<div class="table-responsive">
+									<table class="table table-bordered table-hover table-sm"
+										style="font-family: Verdana; font-size: 13px;">
+										<thead class="thead-light" style="background-color: #e9ecf0;">
+											<tr class="text-left">
+												<th style="width:5%">Role Id</th>
+												<th style="width:9%">Role Description</th>
+												<th style="width:6%">Work Class</th>
+												<th>Menu List</th>
+												<th>Status</th>
+												<th>Select</th>
+											</tr>
+										</thead>
+										<tbody>
+											<!-- Loop over getAll -->
+											<tr th:each="item : ${AccessandRoles.tempRoles}" class="text-left userlist"
+												th:attr="data-userid=${item.role_id}" th:id="${item.role_id}">
+												<td th:text="${item?.role_id}" onclick="view_btn_submit(this)"
+													th:attr="data-role_id=${item.role_id}" style="color: #376275;"></td>
+												<td th:text="${item?.role_desc}"></td>
+												<th:block th:switch="${item?.work_class}">
+													<td th:case="'M'">Maker</td>
+													<td th:case="'C'">Checker</td>
+													<td th:case="*">-</td>
+												</th:block>
+												<td th:text="${item?.menulist}"></td>
+												<th:block th:switch="${item?.entity_flg}">
+													<td th:case="'Y'" style="color: green;">Verified</td>
+													<td th:case="'N'" style="color: red;">UnVerified</td>
+												</th:block>
+												<td class="text-center">
+													<i class="fas fa-edit"
+														style="font-size: 13px; color: #376275; cursor: pointer;"
+														title="Modify" th:if="${item?.entity_flg} == 'Y'"
+														th:attr="data-role_id=${item.role_id}"
+														onclick="edit_btn_submit(this)"></i>
+													<i class="fas fa-check-circle me-1"
+														style="font-size: 13px; color: #376275; cursor: pointer;"
+														title="Verify"
+														th:if="${item?.entity_flg} == 'N' and ${item?.entry_user} != ${emp_id}"
+														th:attr="data-role_id=${item.role_id}"
+														onclick="verify_btn_submit(this)"></i>
+													<i class="fas fa-trash"
+														style="font-size: 13px; color: #376275; cursor: pointer;"
+														title="Delete" th:if="${item?.entity_flg} == 'N'"
+														th:attr="data-role_id=${item.role_id}"
+														onclick="delete_btn_submit(this)"></i>
+												</td>
+											</tr>
+
+											<!-- Loop over rules -->
+											<tr th:each="rule : ${AccessandRoles.mainRoles}" class="text-left userlist"
+												th:attr="data-userid=${rule.role_id}" th:id="${rule.role_id}">
+												<td th:text="${rule?.role_id}" onclick="view_btn_submit(this)"
+													th:attr="data-role_id=${rule.role_id}" style="color: #376275;"></td>
+												<td th:text="${rule?.role_desc}"></td>
+												<th:block th:switch="${rule?.work_class}">
+													<td th:case="'M'">Maker</td>
+													<td th:case="'C'">Checker</td>
+													<td th:case="*">-</td>
+												</th:block>
+												<td th:text="${rule?.menulist}"></td>
+												<th:block th:switch="${rule?.entity_flg}">
+													<td th:case="'Y'" style="color: green;">Verified</td>
+													<td th:case="'N'" style="color: red;">UnVerified</td>
+												</th:block>
+												<td class="text-center">
+													<i class="fas fa-edit"
+														style="font-size: 13px; color: #376275; cursor: pointer;"
+														title="Modify" th:if="${rule?.entity_flg} == 'Y'"
+														th:attr="data-role_id=${rule.role_id}"
+														onclick="edit_btn_submit(this)"></i>
+													<i class="fas fa-check-to-slot me-1"
+														style="font-size: 13px; color: #376275; cursor: pointer;"
+														title="Verify"
+														th:if="${item?.entity_flg} == 'N' and ${item?.entry_user} != ${emp_id}"
+														th:attr="data-role_id=${rule.role_id}"
+														onclick="verify_btn_submit(this)"></i>
+													<i class="fas fa-trash"
+														style="font-size: 13px; color: #376275; cursor: pointer;"
+														title="Delete" th:if="${rule?.entity_flg} == 'N'"
+														th:attr="data-role_id=${rule.role_id}"
+														onclick="delete_btn_submit(this)"></i>
+												</td>
+											</tr>
+										</tbody>
+
+									</table>
+								</div>
+							</div>
+							<div class="card-footer bg-white text-center p-1"
+								style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+								<button type="button" class="btn btn-outline-dark me-3" onclick="home()"
+									style="border-radius: 6px;">
+									<i class="fas fa-home me-1"></i> Home
+								</button>
+								<button type="button" class="btn btn-outline-dark me-3" onclick="back()"
+									style="border-radius: 6px;">
+									<i class="fas fa-angle-left me-1"></i> Back
+								</button>
+							</div>
+						</div>
+					</div>
+					<!------------------------------ ADD, DELETE, VIEW, VERIFY, EDIT-------------------------------------->
+					<div
+						th:if="${formmode}=='edit' OR ${formmode}=='add' OR ${formmode}=='delete' OR ${formmode}=='view' OR ${formmode}=='verify'">
+						<div class="card" style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+							<!-- Header -->
+							<div class="card-header text-center"
+								style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+								<h4 class="text-white m-0">
+									<i class="fas fa-shield-alt mr-2" style="color: lightblue;"></i>
+									<span th:if="${formmode}=='add'">Access and Roles - Add</span>
+									<span th:if="${formmode}=='edit'">Access and Roles- Edit</span>
+									<span th:if="${formmode}=='verify'">Access and Roles - Verify</span>
+									<span th:if="${formmode}=='view'">Access and Roles - View</span>
+									<span th:if="${formmode}=='delete'">Access and Roles - Delete</span>
+								</h4>
+							</div>
+							<!-- Form -->
+							<form action="#" th:object="${IPSAccessRole}" method="post" autocomplete="off"
+								id="IPSAccessRole">
+								<div class="card-body p-3">
+									<div class="row formline">
+										<label class="col-sm-2">Role Id <b style="color: red;">*</b></label>
+										<div class="col-sm-2" th:if="${formmode}=='add'">
+											<input type="text" id="role_id" name="role_id"
+												class="form-control form-control-sm"
+												oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')" />
+										</div>
+
+										<div class="col-sm-2"
+											th:if="${formmode}=='edit' OR ${formmode}=='view'OR ${formmode}=='verify' OR ${formmode}=='delete'">
+											<input type="text" id="role_id" th:value="*{role_id}" th:field="*{role_id}"
+												class="form-control form-control-sm" readonly />
+										</div>
+										<div class="col-sm-2"></div>
+										<label class="col-sm-2">Role Description <b style="color: red;">*</b></label>
+										<div class="col-sm-2">
+											<input th:if="${formmode}=='add'" type="text" id="role_desc"
+												name="role_desc" class="form-control form-control-sm"
+												oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')" />
+											<input
+												th:if="${formmode}=='edit' OR ${formmode}=='view' OR ${formmode}=='verify'  OR ${formmode}=='delete'"
+												type="text" id="role_desc" th:value="*{role_desc}"
+												oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')"
+												th:field="*{role_desc}" class="form-control form-control-sm"
+												th:readonly="${formmode}=='view' OR ${formmode}=='verify'  OR ${formmode}=='delete'" />
+										</div>
+									</div>
+									<div class="row formline">
+										<label class="col-sm-2">Permissions <b style="color: red;">*</b></label>
+										<div class="col-sm-2" th:if="${formmode}=='add'">
+											<select id="permissions" name="permissions"
+												class="form-control form-control-sm" autocomplete="off" required>
+												<option >Select</option>
+												<option value="R">Read</option>
+												<option value="W">Write</option>
+											</select>
+										</div>
+										<div class="col-sm-2"
+											th:if="${formmode}=='edit'OR ${formmode}=='verify'  OR ${formmode}=='delete'">
+											<select id="permissions" name="permissions"
+												class="form-control form-control-sm" th:value="*{permissions}"
+												th:field="*{permissions}"
+												th:readonly="${formmode}=='verify'  OR ${formmode}=='delete'"
+												autocomplete="off" required>
+												<option value="O">Select</option>
+												<option value="R">Read</option>
+												<option value="W">Write</option>
+											</select>
+										</div>
+
+										<div class="col-sm-2" th:if="${formmode}=='view' ">
+											<input type="text" id="permissions"
+											       th:value="${IPSAccessRole.permissions == 'R' ? 'Read' 
+											                : (IPSAccessRole.permissions == 'W' ? 'Write' 
+											                : IPSAccessRole.permissions)}"
+											       class="form-control form-control-sm"
+											       readonly/>
+
+
+											<!--<input type="text" id="permissions" class="form-control form-control-sm"
+												th:value="${IPSAccessRole.permissions=='W'} ? 'Write' : 'Read'"
+												readonly>-->
+										</div>
+										<div class="col-sm-2"></div>
+
+										<label class="col-sm-2">Remarks</label>
+										<div class="col-sm-2" th:if="${formmode}=='edit'">
+											<input th:value="${domain_id}" id="domain_id" th:field="*{domain_id}"
+												oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')"
+												class="form-control form-control-sm" required />
+										</div>
+										<div class="col-sm-2" th:if=" ${formmode}=='add'">
+											<input id="domain_id" name="domain_id" class="form-control form-control-sm"
+												oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')"
+												required />
+										</div>
+										<div class="col-sm-2"
+											th:if="${formmode}=='view'OR ${formmode}=='verify' OR ${formmode}=='delete'">
+											<input th:value="${domain_id}" id="domain_id" th:field="*{domain_id}"
+												class="form-control form-control-sm" readonly />
+										</div>
+									</div>
+									<div class="row formline">
+										<label class="col-sm-2">Work Class <b style="color: red;">*</b></label>
+										<div class="col-sm-2"
+											th:if="${formmode}=='edit'OR ${formmode}=='verify'  OR ${formmode}=='delete'">
+											<select id="work_class" class="form-control form-control-sm"
+												th:value="*{work_class}" th:field="*{work_class}" onchange="roledesc();"
+												autocomplete="off" required
+												th:readonly="${formmode}=='verify'  OR ${formmode}=='delete'">
+												<option value="">Select</option>
+												<option value="M">Maker</option>
+												<option value="C">Checker</option>
+											</select>
+										</div>
+										<div class="col-sm-2" th:if="${formmode}=='add'">
+											<select id="work_class" class="form-control form-control-sm"
+												name="work_class" onchange="roledesc();" autocomplete="off" required>
+												<option value="">Select</option>
+												<option value="M">Maker</option>
+												<option value="C">Checker</option>
+											</select>
+										</div>
+										<div class="col-sm-2" th:if="${formmode}=='view'">
+											<input type="text" id="work_class" class="form-control form-control-sm"
+												th:value="${IPSAccessRole.work_class=='M'} ? 'Maker' : 'Checker'"
+												readonly />
+										</div>
+										<div class="col-sm-2"></div>
+										<label class="col-sm-2">Menu List <b style="color: red;">*</b></label>
+										<div class="col-sm-2">
+											<div id="log"
+												style="display: none; color: black; font-size: 12px; line-height: 0.5 !important;">
+											</div>
+											<div th:if="${formmode}=='edit' OR ${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='delete'"
+												id="menucontent">
+												<p id="menuValue"
+													th:each="message:${#strings.arraySplit(IPSAccessRole.menulist, ',')}"
+													th:text="${message}"></p>
+											</div>
+										</div>
+										<div class="col-sm-2">
+											<a th:if="${formmode}=='add' OR ${formmode}=='edit'" href="#"><i
+													class="fas fa-search searchico" data-toggle="modal"
+													data-target="#finusers" id="iconacc"></i></a>
+										</div>
+									</div>
+									<div class="modal fade" id="finusers">
+										<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+											<div class="modal-content"
+												style="border: 2px solid #376275; border-radius: 8px;">
+
+												<!-- Modal Header -->
+												<div class="modal-header"
+													style="background-color: #376275; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+													<h5 class="modal-title text-white font-weight-bold">Menu
+														List</h5>
+													<button type="button" class="close text-white" data-dismiss="modal"
+														aria-label="Close" style="font-size: 1.5rem;">
+														<span aria-hidden="true">&times;</span>
+													</button>
+												</div>
+
+												<!-- Modal Body -->
+												<div class="modal-body" style="max-height: 300px; overflow-y: auto">
+													<!-- 🔹 Admin Section -->
+
+													<div class="form-check">
+														<input class="form-check-input" type="checkbox" id="dashboard"
+															name="dashboard" value="Dashboard" data-group="admin-group"
+															th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Dashboard')}" />
+														<label class="form-check-label fw-bold"
+															for="dashboard">Dashboard</label>
+													</div>
+													<div class="form-check">
+														<input class="form-check-input parent-check" type="checkbox"
+															id="admin_parent" name="admin" value="Admin"
+															data-group="admin-group"
+															th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Admin')}" />
+														<label class="form-check-label fw-bold"
+															for="admin_parent">Admin</label>
+													</div>
+													<div class="ml-4">
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule admin-group"
+																id="admin_user_profile" value="User Profile"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('User Profile')}" />
+															<label class="form-check-label"
+																for="admin_user_profile">User Profile</label>
+														</div>
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule admin-group"
+																id="admin_access_roles" value="Access Roles"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Access Roles')}" />
+															<label class="form-check-label"
+																for="admin_access_roles">Access Roles</label>
+														</div>
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule admin-group"
+																id="bankbranchmaster" value="Bankbranchmaster"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Bankbranchmaster')}" />
+															<label class="form-check-label" for="bankbranchmaster">Bank
+																and Branch Master</label>
+														</div>
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule admin-group"
+																id="referencecode" value="Referencecode"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Referencecode')}" />
+															<label class="form-check-label"
+																for="referencecode">Reference Code</label>
+														</div>
+													</div>
+
+													<!-- 🔹 Audit Inquiries Section -->
+													<div class="form-check mt-3">
+														<input class="form-check-input parent-check" type="checkbox"
+															id="audit_inquiries_parent" name="audit_inquiries"
+															value="Audit Inquiries" data-group="audit-group"
+															th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Audit Inquiries')}" />
+														<label class="form-check-label fw-bold"
+															for="audit_inquiries_parent">Audit Inquiries</label>
+													</div>
+													<div class="ml-4">
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule audit-group"
+																id="audit_inquiries_user_audit" value="User Level Audit"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('User Level Audit')}" />
+															<label class="form-check-label"
+																for="audit_inquiries_user_audit">User Level
+																Audit</label>
+														</div>
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule audit-group"
+																id="audit_inquiries_service_audit"
+																value="Service Level Audit"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Service Level Audit')}" />
+															<label class="form-check-label"
+																for="audit_inquiries_service_audit">Service Level
+																Audit</label>
+														</div>
+													</div>
+
+													<!-- 🔹 Credit Card Section -->
+													<div class="form-check mt-3">
+														<input class="form-check-input parent-check" type="checkbox"
+															id="credit_card_parent" name="credit_card"
+															value="Credit Card" data-group="credit-group"
+															th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Credit Card')}" />
+														<label class="form-check-label fw-bold"
+															for="credit_card_parent">Credit Card</label>
+													</div>
+													<div class="ml-4">
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule credit-group"
+																id="credit_card_upload" value="CR Upload"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('CR Upload')}" />
+															<label class="form-check-label" for="credit_card_upload">Cr
+																Upload</label>
+														</div>
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule credit-group"
+																id="credit_card_recon"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('CR Recon Process')}"
+																value="CR Recon Process" />
+															<label class="form-check-label" for="credit_card_recon">Cr
+																Recon Process</label>
+														</div>
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule credit-group"
+																id="credit_card_report" value="CR Report"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('CR Report')}" />
+															<label class="form-check-label" for="credit_card_report">Cr
+																Report</label>
+														</div>
+													</div>
+
+													<!-- 🔹 Debit Card Section -->
+													<div class="form-check mt-3">
+														<input class="form-check-input parent-check" type="checkbox"
+															id="debit_card_parent" name="debit_card" value="Debit Card"
+															data-group="debit-group"
+															th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Debit Card')}" />
+														<label class="form-check-label fw-bold"
+															for="debit_card_parent">Debit Card</label>
+													</div>
+													<div class="ml-4">
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule debit-group"
+																id="debit_card_upload" value="DR Upload"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('DR Upload')}" />
+															<label class="form-check-label" for="debit_card_upload">Dr
+																Upload</label>
+														</div>
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule debit-group"
+																id="debit_card_recon" value="DR Recon Process"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('DR Recon Process')}" />
+															<label class="form-check-label" for="debit_card_recon">Dr
+																Recon Process</label>
+														</div>
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule debit-group"
+																id="debit_card_report"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('DR Report')}"
+																value="DR Report" />
+															<label class="form-check-label" for="debit_card_report">Dr
+																Report</label>
+														</div>
+													</div>
+
+													<!-- 🔹 UPI Section -->
+													<div class="form-check mt-3">
+														<input class="form-check-input parent-check" type="checkbox"
+															id="upi_parent" name="upi" value="UPI"
+															th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('UPI')}"
+															data-group="upi-group" />
+														<label class="form-check-label fw-bold"
+															for="upi_parent">UPI</label>
+													</div>
+													<div class="ml-4">
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule upi-group"
+																id="upi_upload"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('UPI Upload')}"
+																value="UPI Upload" />
+															<label class="form-check-label" for="upi_upload">Upi
+																Upload</label>
+														</div>
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule upi-group"
+																id="upi_recon" value="UPI Recon Process"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('UPI Recon Process')}" />
+															<label class="form-check-label" for="upi_recon">Upi Recon
+																Process</label>
+														</div>
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule upi-group"
+																id="upi_report" value="UPI Report"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('UPI Report')}" />
+															<label class="form-check-label" for="upi_report">Upi
+																Report</label>
+														</div>
+													</div>
+
+													<!-- 🔹 Recon Parameter Section -->
+													<div class="form-check mt-3">
+														<input class="form-check-input parent-check" type="checkbox"
+															id="recon_parameter_parent" name="recon_parameter"
+															value="Recon Parameter" data-group="recon-group"
+															th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Recon Parameter')}" />
+														<label class="form-check-label fw-bold"
+															for="recon_parameter_parent">Recon Parameter</label>
+													</div>
+													<div class="ml-4">
+														<!--<div class="form-check">
+																											<input type="checkbox"
+																												class="form-check-input submodule recon-group"
+																												id="param_check" value="Parameter">
+																											<label class="form-check-label"
+																												for="param_check">Parameter</label>
+																										</div>
+																										<div class="form-check">
+																											<input type="checkbox"
+																												class="form-check-input submodule recon-group"
+																												id="account_check" value="Account">
+																											<label class="form-check-label"
+																												for="account_check">Account</label>
+																										</div>
+																										<div class="form-check">
+																											<input type="checkbox"
+																												class="form-check-input submodule recon-group"
+																												id="accountmaster_check" value="Account Master">
+																											<label class="form-check-label"
+																												for="accountmaster_check">Account Master</label>
+																										</div>
+																										<div class="form-check">
+																											<input type="checkbox"
+																												class="form-check-input submodule recon-group"
+																												id="ruleengine_check" value="Rule Engine">
+																											<label class="form-check-label" for="ruleengine_check">Rule
+																												Engine</label>
+																										</div>
+																										<div class="form-check">
+																											<input type="checkbox"
+																												class="form-check-input submodule recon-group"
+																												id="followup_check" value="Follow Up">
+																											<label class="form-check-label" for="followup_check">Follow
+																												Up</label>
+																										</div>
+																										<div class="form-check">
+																											<input type="checkbox"
+																												class="form-check-input submodule recon-group"
+																												id="reconops_check" value="Reconciliation Operations">
+																											<label class="form-check-label"
+																												for="reconops_check">Reconciliation Operations</label>
+																										</div>
+																										<div class="form-check">
+																											<input type="checkbox"
+																												class="form-check-input submodule recon-group"
+																												id="reconreport_check" value="Reconciliation Report">
+																											<label class="form-check-label"
+																												for="reconreport_check">Reconciliation Report</label>
+																										</div>-->
+														<div class="form-check">
+															<input type="checkbox"
+																class="form-check-input submodule recon-group"
+																id="ratemaintenance_check"
+																th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Rate Maintenance')}"
+																value="Rate Maintenance" />
+															<label class="form-check-label"
+																for="ratemaintenance_check">Rate Maintenance</label>
+														</div>
+													</div>
+
+													<!-- 🔹 Print Queue Section -->
+													<div class="form-check mt-3">
+														<input class="form-check-input parent-check" type="checkbox"
+															id="print_queue_parent" name="print_queue"
+															value="Print Queue" data-group="print-group"
+															th:checked="${IPSAccessRole != null and IPSAccessRole.menulist != null and IPSAccessRole.menulist.contains('Print Queue')}" />
+														<label class="form-check-label fw-bold"
+															for="print_queue_parent">Print Queue</label>
+													</div>
+												</div>
+
+												<!-- Modal Footer -->
+												<div class="modal-footer justify-content-end"
+													style="background-color: #f1f3f5; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+													<button type="button" class="btn btn-outline-dark me-3"
+														data-dismiss="modal" onclick="getvalue();">
+														<i class="fas fa-upload me-1"></i> Submit
+													</button>
+												</div>
+											</div>
+										</div>
+									</div>
+
+								</div>
+								<!-- Footer -->
+								<div class="card-footer text-center p-2"
+									style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+									<button type="button" class="btn btn-outline-dark me-3" onclick="home();">
+										<i class="fas fa-home me-1"></i> Home
+									</button>
+
+									<button th:if=" ${formmode}=='add'" type="button" class="btn btn-outline-dark me-3"
+										form="IPSAccessRole" th:attr="data-formmode=${formmode}"
+										onclick="submitform(this);">
+										<i class="fas fa-upload me-1"></i> &nbsp;Submit
+									</button>
+
+									<button th:if="${formmode}=='edit' " type="button" class="btn btn-outline-dark me-3"
+										form="IPSAccessRole" th:attr="data-formmode=${formmode}"
+										onclick="submitedit(this);">
+										<i class="fas fa-upload me-1"></i> &nbsp;Submit
+									</button>
+
+									<button th:if="${formmode}=='verify'" type="button"
+										class="btn btn-outline-dark me-3" form="IPSAccessRole"
+										th:attr="data-formmode='verify',data-entry_user=${IPSAccessRole.entry_user},data-modify_user=${IPSAccessRole.modify_user}"
+										onclick="verifySubmit(this);">
+										<i class="fas fa-check-circle"></i> Verify
+									</button>
+
+									<button th:if="${formmode}=='delete'" type="button"
+										class="btn btn-outline-dark me-3" form="IPSAccessRole"
+										th:attr="data-formmode='delete',data-entry_user=${IPSAccessRole.entry_user},data-modify_user=${IPSAccessRole.modify_user}"
+										onclick="deleteSubmit(this);">
+										<i class="fas fa-trash-alt me-1"></i>&nbsp; Delete
+									</button>
+
+									<button type="button" class="btn btn-outline-dark me-3" onclick="back();">
+										<i class="fas fa-angle-left me-1"></i> &nbsp;Back
+									</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!------------------------------------------------------------------------ modal ------------------------------------------------------------------->
+	<div class="modal fade" id="datadelete">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body" style="margin-top: 8px; text-align: center; color: #f15362;">
+					<button type="button" class="close" data-dismiss="modal">×</button>
+					Are you Sure want to delete?
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" onclick="submitformdelete(this);"
+						th:attr="data-formmode=delete">Submit</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!------------------------------------------------------------------------ modal1 ------------------------------------------------------------------->
+	<div class="modal fade" id="formmsg">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body" style="margin-top: 8px; text-align: center; color: aliceblue;">
+					<button type="button" class="close" data-dismiss="modal">×</button>
+					<a th:value="${msg}"></a>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" onclick="submitformdelete(this);"
+						th:attr="data-formmode=delete">Submit</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!------------------------------------------------------------------------ end ------------------------------------------------------------------->
+</body>
+
+</html>

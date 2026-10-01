@@ -1,0 +1,762 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" th:fragment="header">
+
+<head>
+<title>BRECON</title>
+<link rel="stylesheet" href="/BRECON/css/bootstrap.min.css">
+<link rel="stylesheet" href="/BRECON/css/fontawesome.min.css">
+<link rel="stylesheet" href="/BRECON/css/jquery-ui.min.css">
+<link rel="stylesheet" href="/BRECON/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="/BRECON/css/dataTables.bootstrap4.min.css">
+<link rel="stylesheet" href="/BRECON/css/fontawesome.min.css">
+
+<script src="/BRECON/js/jquery.min.js"></script>
+<script src="/BRECON/js/popper.min.js"></script>
+<script src="/BRECON/js/bootstrap.min.js"></script>
+<script src="/BRECON/js/jquery-ui.min.js"></script>
+<script src="/BRECON/js/jquery.form.min.js"></script>
+<script src="/BRECON/js/jquery.validate.min.js"></script>
+<script src="/BRECON/js/jquery.dataTables.min.js"></script>
+<script src="/BRECON/js/dataTables.bootstrap4.min.js"></script>
+<!-- TOAST -->
+<link rel="stylesheet" th:href="@{/css/jquery.toast.min.css}">
+<script th:src="@{/js/jquery.toast.min.js}"></script>
+<style>
+/* Global Font */
+body {
+	font-family: 'Nunito', sans-serif;
+	font-size: 18px;
+	font-weight: 400;
+}
+
+/* Navbar Styling */
+.navbar {
+	background: #323f48;
+	border-bottom: 2px solid #323f48;
+	-webkit-backdrop-filter: blur(8px);
+	backdrop-filter: blur(8px);
+	border: #323f48;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.10);
+	height: 95px;
+	display: flex;
+	align-items: center;
+	border-radius: 0 !important;
+	padding: 0 20px;
+	position: relative;
+	z-index: 10000;
+}
+
+.first-layer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 100%;
+}
+
+.left-group {
+	display: flex;
+	align-items: center;
+	gap: 40px;
+}
+
+.nav-links {
+	display: flex;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.nav-item {
+	margin: 0 10px;
+	position: relative;
+}
+
+.nav-links>.nav-item>a, .nav-links>.nav-item>.dropdown-toggle {
+	color: #F5FAFF;
+	padding: 14px 18px;
+	text-decoration: none;
+	display: block;
+	font-family: Calibri;
+	font-weight: bold;
+	transition: background 0.2s, color 0.2s;
+	border-radius: 6px;
+	position: relative;
+	overflow: hidden;
+}
+
+.nav-links>.nav-item>a:hover, .nav-links>.nav-item>.dropdown-toggle:hover
+	{
+	background: rgba(27, 145, 174, 0.25);
+	color: #FFF;
+}
+
+.user-profile {
+	margin-right: 20px;
+}
+
+.logo {
+	border-radius: 40px;
+	padding: 8px 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.logo:hover {
+	transform: scale(1.05);
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.logo img {
+	height: 42px;
+	vertical-align: middle;
+	filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+	transition: transform 0.3s ease;
+}
+
+.logo img:hover {
+	transform: rotate(-2deg) scale(1.08);
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+	display: none;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	min-width: 170px;
+	background: rgba(255, 255, 255, 0.5) !important;
+	border-radius: 10px;
+	/* 	box-shadow: 0 8px 36px rgba(27, 145, 174, 0.08);
+	 */
+	box-shadow: 0 8px 36px rgba(174, 27, 41, 0.5) !important;
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+	/* SOLUTION: ensure always on top */
+	z-index: 99999;
+	margin-top: 4px;
+	border: 1px solid rgba(27, 145, 174, 0.13);
+	padding: 10px;
+}
+
+.dropdown-menu li {
+	margin-bottom: 5px;
+}
+
+.dropdown-menu li:last-child {
+	margin-bottom: 0;
+}
+
+.dropdown-menu a {
+	color: #163760 !important;
+	padding: 12px 20px;
+	display: block;
+	border-radius: 6px;
+	background: transparent;
+	position: relative;
+	overflow: hidden;
+	font-weight: bold !important;
+	transition: background 0.2s, color 0.2s;
+}
+
+.dropdown-menu a:hover {
+	background: rgba(27, 145, 174, 0.17);
+	color: #ff0000 !important;
+}
+
+/* Navbar dropdown hover behavior */
+.nav-item.dropdown {
+	position: relative;
+}
+
+.nav-item.dropdown:hover>.dropdown-menu {
+	display: block;
+	opacity: 1;
+	visibility: visible;
+	transform: translateY(0);
+}
+
+/* Dropdown menu hidden state */
+.dropdown-menu {
+	display: block;
+	opacity: 0;
+	visibility: hidden;
+	transform: translateY(10px);
+	transition: all 0.25s ease;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	min-width: 180px;
+	background: rgba(255, 255, 255, 0.07);
+	backdrop-filter: blur(16px);
+	border-radius: 10px;
+	border: 1px solid rgba(27, 145, 174, 0.13);
+	box-shadow: 0 8px 36px rgba(27, 145, 174, 0.08);
+	z-index: 1000;
+	padding: 10px 0;
+}
+
+/* Dropdown links */
+.dropdown-menu li a {
+	color: #163760 !important;
+	padding: 10px 20px;
+	display: block;
+	font-weight: bold;
+	text-decoration: none;
+	border-radius: 6px;
+	white-space: nowrap;
+	/* Prevent text from wrapping */
+	position: relative;
+	background: transparent;
+	transition: background 0.2s ease, color 0.2s ease;
+}
+
+/* Hover styling for dropdown items */
+.dropdown-menu li a:hover {
+	background: rgba(27, 145, 174, 0.17);
+	color: #f00 !important;
+	/* RED on hover */
+}
+
+/* Shine effect */
+.dropdown-menu li a::before {
+	content: '';
+	position: absolute;
+	left: -60%;
+	top: 0;
+	width: 60%;
+	height: 100%;
+	background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%,
+		rgba(255, 255, 255, 0.55) 60%, rgba(255, 255, 255, 0) 100%);
+	transform: skewX(-30deg);
+	transition: left 0.8s cubic-bezier(0.3, 0.35, 0.3, 1);
+	pointer-events: none;
+}
+
+.dropdown-menu li a:hover::before {
+	left: 120%;
+}
+
+/* Shine Effect */
+/* Basic link styling */
+.shine-effect {
+	position: relative;
+	display: inline-block;
+	padding: 10px 20px;
+	color: #fff;
+	text-decoration: none;
+	overflow: hidden;
+	z-index: 1;
+}
+
+/* Shine effect layer */
+.shine-effect::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -75%;
+	width: 50%;
+	height: 100%;
+	background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%,
+		rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 100%);
+	transform: skewX(-20deg);
+	z-index: 2;
+	pointer-events: none;
+}
+
+/* Move the shine across on hover */
+.shine-effect:hover::before {
+	left: 130%;
+	transition: left 0.6s ease-in-out;
+}
+
+.nav-links>.nav-item>a:hover::before, .dropdown-menu li a:hover::before
+	{
+	left: 120%;
+	transition: left 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Utility */
+ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+a {
+	text-decoration: none !important;
+}
+
+.form-control:focus, .btn-primary.focus, .btn-primary:focus {
+	box-shadow: unset !important;
+	outline: none;
+}
+
+.modal-backdrop {
+	width: 200vw;
+	height: 200vh;
+}
+
+html {
+	zoom: 0.8;
+}
+
+label {
+	text-align: left;
+}
+
+.error {
+	color: red;
+	padding-left: 10px;
+}
+
+#loadingContent img {
+	width: 100px;
+	height: 100px;
+	margin-bottom: 10px;
+}
+
+#loadingModal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: none;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 9999;
+	backdrop-filter: blur(5px);
+}
+
+#loadingContent {
+	text-align: center;
+	background-color: none;
+	z-index: 10000;
+}
+</style>
+<script type="text/javascript">
+		document.addEventListener("DOMContentLoaded", function () {
+			let menuTimeout;
+			// Function to show menu
+			function showMenu(menu) {
+				clearTimeout(menuTimeout);
+				menu.style.display = "block";
+			}
+
+			// Function to hide menu with delay
+			function hideMenu(menu) {
+				menuTimeout = setTimeout(() => {
+					menu.style.display = "none";
+				}, 200); // 200ms delay
+			}
+
+			// Handle main dropdown menu hover (e.g., "Orders")
+			const mainMenus = document.querySelectorAll('.nav-item.dropdown');
+			mainMenus.forEach(menu => {
+				menu.addEventListener("mouseenter", function () {
+					let dropdownMenu = this.querySelector(".dropdown-menu");
+					if (dropdownMenu) showMenu(dropdownMenu);
+				});
+				menu.addEventListener("mouseleave", function () {
+					let dropdownMenu = this.querySelector(".dropdown-menu");
+					if (dropdownMenu) hideMenu(dropdownMenu);
+				});
+			});
+
+			// Handle submenus inside dropdown (e.g., "Purchase", "Sale")
+			const submenus = document.querySelectorAll('.dropdown-submenu');
+			submenus.forEach(submenu => {
+				submenu.addEventListener("mouseenter", function () {
+					let subMenuElement = this.querySelector(".dropdown-menu");
+					if (subMenuElement) showMenu(subMenuElement);
+				});
+				submenu.addEventListener("mouseleave", function () {
+					let subMenuElement = this.querySelector(".dropdown-menu");
+					if (subMenuElement) hideMenu(subMenuElement);
+				});
+			});
+
+			// Close menus when clicking outside
+			document.addEventListener("click", function (e) {
+				if (!e.target.closest(".dropdown")) {
+					document.querySelectorAll('.dropdown-menu').forEach(menu => {
+						menu.style.display = "none";
+					});
+				}
+			});
+		});
+	</script>
+<script type="text/javascript">
+		/*<![CDATA[*/
+		/* Re-Direction Functionality */
+		function contentLoad(a) {
+			document.getElementById('loadingModal').style.display = 'flex'; // Show the loading modal
+			location.href = "/BRECON/" + a.id;
+		}
+		/* LogOut Functionality */
+		function logout() {
+			$("#datalogout").modal("toggle");
+		}
+		function logoutfunc() {
+			location.href = "/ERP/logoutsub";
+		}
+		function popupmodel(a) {
+			$("#processModal").modal("toggle");
+		}
+		// Logout toggle function
+		function toggleLogout() {
+			let logoutMenu = document.getElementById("logout");
+			if (logoutMenu) {
+				logoutMenu.classList.toggle("hidden");
+			}
+		}
+	</script>
+
+<script>
+		document.addEventListener("DOMContentLoaded", function () {
+			let navLinks = document.querySelectorAll(".nav-second-level .nav-link");
+			let dashboardLink = document.getElementById("Dashboard");
+			// Check if the reset flag is present
+			let resetMenu = document.body.getAttribute("data-reset-menu");
+			if (resetMenu === "true") {
+				// Remove active class from all menu items
+				navLinks.forEach(item => item.classList.remove("active"));
+				// Set only Dashboard as active
+				if (dashboardLink) {
+					dashboardLink.classList.add("active");
+				}
+				// Clear localStorage to prevent old selections from persisting
+				localStorage.setItem("activeMenu", "Dashboard");
+			}
+		});
+		document.addEventListener("DOMContentLoaded", function () {
+			let navLinks = document.querySelectorAll(".nav-second-level .nav-link");
+			let homeButton = document.querySelector(".home-button");
+			// Retrieve last clicked menu item from localStorage
+			let activeMenu = localStorage.getItem("activeMenu");
+			if (activeMenu) {
+				let activeElement = document.getElementById(activeMenu);
+				if (activeElement) {
+					activeElement.classList.add("active");
+					let parentMenu = activeElement.closest(".collapse");
+					while (parentMenu) {
+						parentMenu.classList.add("show");
+						let parentLink = document.querySelector(`[data-target="#${parentMenu.id}"]`);
+						if (parentLink) {
+							parentLink.setAttribute("aria-expanded", "true");
+						}
+						parentMenu = parentMenu.parentElement.closest(".collapse");
+					}
+				}
+			}
+			// Add click event listeners to menu items
+			navLinks.forEach(function (link) {
+				link.addEventListener("click", function () {
+					// Remove active class from all links
+					navLinks.forEach(item => item.classList.remove("active"));
+					// Add active class to the clicked link
+					this.classList.add("active");
+					// Store the clicked menu ID in localStorage
+					localStorage.setItem("activeMenu", this.id);
+				});
+			});
+		});
+
+		// Function to Reset Active Menu and Set Dashboard Active
+		function setDashboardActive() {
+			let navLinks = document.querySelectorAll(".nav-second-level .nav-link");
+			// Remove active class from all links
+			navLinks.forEach(item => item.classList.remove("active"));
+			// Set "Dashboard" as active
+			let dashboardLink = document.getElementById("Dashboard");
+			if (dashboardLink) {
+				dashboardLink.classList.add("active");
+				localStorage.setItem("activeMenu", "Dashboard");
+			}
+		}
+		//inventories..
+		document.addEventListener("DOMContentLoaded", function () {
+			// Handle Inventory menu click separately
+			let inventoryMenu = document.getElementById("Inventory_po");
+			if (inventoryMenu) {
+				inventoryMenu.addEventListener("click", function () {
+					// Remove highlight from all menus
+					document.querySelectorAll(".nav-item .nav-link").forEach(link => {
+						link.classList.remove("active");
+					});
+					// Highlight the clicked Inventory menu
+					inventoryMenu.classList.add("active");
+					// Remove active state from localStorage for other menus
+					localStorage.removeItem("activeMenu");
+					localStorage.removeItem("activeModule");
+				});
+				// If Inventory menu is active (from localStorage or page load), keep it highlighted
+				let activeModule = localStorage.getItem("activeModule");
+				if (activeModule === "Inventory_po") {
+					inventoryMenu.classList.add("active");
+				}
+			}
+		});
+
+
+		function cancelformLogout(a) {
+			$("#cancelformLogout").modal("toggle");
+		}
+
+		function clickPhoto1(a) {
+			var userid = document.getElementById("userid").textContent;
+			$.ajax({
+				type: 'GET',
+				url: "./getUserBlobImage/" + encodeURIComponent(userid),
+				success: function (response) {
+					if (response && response.length > 100) { // Quick check for valid base64 length
+						const imageSrc = "data:image/jpeg;base64," + response; // Use 'image/png' if your image is PNG
+						$('#doc_image').attr('src', imageSrc);
+						$('#imageshow').modal('show');
+					} else {
+						showImageLoadError();
+					}
+				},
+				error: function () {
+					showImageLoadError();
+				}
+			});
+
+			function showImageLoadError() {
+				$('#myModalpopup1').modal("toggle");
+				$('#myModalpopup1 .modal-body').text(
+					"Failed to load the image. Please try again later.");
+			}
+
+		}
+
+		function closeimage() {
+			$('#imageshow').modal('hide');
+		}
+	</script>
+<!-- for table  -->
+
+<script th:inline="javascript">
+		//<![CDATA[
+		const menus = /*[[${menus}]]*/ null;
+		const reportList = /*[[${reportList}]]*/ null;
+			
+		//]]>
+	</script>
+<script>
+function openusermanual() {
+    var url = /*[[@{/document/Recon_User_Manual.pdf}]]*/ "/BRECON/document/Recon_User_Manual.pdf";
+    var pageNum = 1;
+    window.open(url + "#page=" + pageNum, "_blank",
+                "width=600,height=500");
+}
+</script>
+</head>
+<body>
+	<!------------------------------------------------------------------- User List ------------------------------------------------------>
+	<nav class="navbar blur-border">
+	    <!-- Top Header -->
+	    <div class="first-layer">
+	        <!-- Left: Logo and Menu -->
+	        <div class="left-group">
+	            <!-- Logo -->
+	            <div class="logo">
+	                <img th:src="@{/images/Bornfire.png}"    alt="BRECON Logo">
+	                 <span style="color:white; font-weight:bold; font-size:22px;">RECON</span>
+	            </div>
+	            <!-- Menu -->
+	  <ul class="nav-links">
+    <!-- Dashboard -->
+    <li class="nav-item" th:if="${menus.contains('Dashboard')}">
+        <a href="#" id="Dashboard" onclick="contentLoad(this)" class="shine-effect">Home</a>
+    </li>
+
+    <!-- Admin -->
+    <li class="nav-item dropdown" th:if="${menus.contains('Admin')}">
+        <a href="#" class="dropdown-toggle shine-effect">Admin</a>
+        <ul class="dropdown-menu">
+            <li th:if="${menus.contains('User Profile')}">
+                <a href="#" onclick="contentLoad(this)" id="UserProfile">User Profile</a>
+            </li>
+            <li th:if="${menus.contains('Access Roles')}">
+                <a href="#" onclick="contentLoad(this)" id="AccessandRoles">Access and Role</a>
+            </li>
+            <li th:if="${menus.contains('Bankbranchmaster')}">
+                <a id="BankBranchMaster" href="#" onclick="contentLoad(this)">Bank and Branch Master</a>
+            </li>
+            <li th:if="${menus.contains('Referencecode')}">
+                <a href="#" onclick="contentLoad(this)" id="refcode">Reference Code</a>
+            </li>
+        </ul>
+    </li>
+
+    <!-- Audit Inquiries -->
+    <li class="nav-item dropdown" th:if="${menus.contains('Audit Inquiries')}">
+        <a href="#" class="dropdown-toggle shine-effect">Audit Inquiries</a>
+        <ul class="dropdown-menu">
+            <li th:if="${menus.contains('User Level Audit')}">
+                <a href="#" onclick="contentLoad(this)" id="User_Audit">User Level Audit</a>
+            </li>
+            <li th:if="${menus.contains('Service Level Audit')}">
+                <a href="#" onclick="contentLoad(this)" id="Audits">Service Level Audit</a>
+            </li>
+        </ul>
+    </li>
+
+    <!-- Credit Card -->
+    <li class="nav-item dropdown" th:if="${menus.contains('Credit Card')}">
+        <a href="#" class="dropdown-toggle shine-effect">Credit Card</a>
+        <ul class="dropdown-menu">
+            <li th:if="${menus.contains('CR Upload')}">
+                <a href="#" onclick="contentLoad(this)" id="Credit_Upload">Upload</a>
+            </li>
+            <li th:if="${menus.contains('CR Recon Process')}">
+                <a href="#" onclick="contentLoad(this)" id="CrRecon_pros">Recon Process</a>
+            </li>
+            <li th:if="${menus.contains('CR Report')}">
+                <a href="#" onclick="contentLoad(this)" id="Report_Cr">Report</a>
+            </li>
+            
+            <li th:if="${menus.contains('CR Report')}">
+                <a href="#" onclick="contentLoad(this)" id="BulkReportCR">Bulk Report</a>
+            </li>
+        </ul>
+    </li>
+
+    <!-- Debit Card -->
+    <li class="nav-item dropdown" th:if="${menus.contains('Debit Card')}">
+        <a href="#" class="dropdown-toggle shine-effect">Debit Card</a>
+        <ul class="dropdown-menu">
+            <li th:if="${menus.contains('DR Upload')}">
+                <a href="#" onclick="contentLoad(this)" id="Debit_Upload">Upload</a>
+            </li>
+            <li th:if="${menus.contains('DR Recon Process')}">
+                <a href="#" onclick="contentLoad(this)" id="DrRecon_pros">Recon Process</a>
+            </li>
+            <li th:if="${menus.contains('DR Report')}">
+                <a href="#" onclick="contentLoad(this)" id="Report_Dr">Report</a>
+            </li>
+        </ul>
+    </li>
+    <li class="nav-item dropdown" th:if="${menus.contains('UPI')}"><a href="#"
+						class="dropdown-toggle shine-effect">UPI Debit Card</a>
+						<ul class="dropdown-menu">
+							<li th:if="${menus.contains('UPI Upload')}"><a href="#" onclick="contentLoad(this)" id="Upi_Debit_Upload">Upload</a></li>
+							<li th:if="${menus.contains('UPI Recon Process')}"><a href="#" onclick="contentLoad(this)" id="UpiRecon_pros">Recon Process</a></li>
+					    	<li th:if="${menus.contains('UPI Report')}"><a href="#" onclick="contentLoad(this)" id="Report_UPI">Report</a></li>
+							
+						</ul>
+					</li>
+					<li class="nav-item dropdown" th:if="${menus.contains('Recon Parameter')}"><a href="#"
+						class="dropdown-toggle shine-effect">RECON Parameter</a>
+						<ul class="dropdown-menu">
+				<!-- 		<li><a href="#" onclick="contentLoad(this)" id="Parameter">Parameter</a></li>
+						
+							<li><a href="#" onclick="contentLoad(this)" id="Account">Account</a></li>
+							<li><a href="#" onclick="contentLoad(this)"
+								id="AccountMaster">Account Master</a></li>
+							<li><a href="#" onclick="contentLoad(this)" id="Rule_engine">Rule Engine</a></li>
+							<li><a href="#" onclick="contentLoad(this)" id="Follow_up">Follow Up</a></li>
+						
+							<li><a href="#" onclick="contentLoad(this)" id="Recon_oper">Reconciliation Operations</a></li>
+							<li><a href="#" onclick="contentLoad(this)" id="Recon_rep">Reconciliation Report</a></li> -->
+							<li th:if="${menus.contains('Rate Maintenance')}"><a href="#" onclick="contentLoad(this)" id="Rate_main">Rate Maintenance</a></li>
+						</ul></li>
+
+    <!-- Print Queue -->
+    <li class="nav-item" th:if="${menus.contains('Print Queue')}">
+        <a href="#" id="PrintQueue" onclick="contentLoad(this)" class="shine-effect">Print Queue</a>
+    </li>
+    
+     <li class="nav-item" th:if="${menus.contains('Print Queue')}">
+        <a href="#" id="DeleteReport" onclick="contentLoad(this)" class="shine-effect">Delete Report</a>
+    </li>
+</ul>
+
+	        </div>
+	
+	        <!-- Right: User Profile -->
+	        <div class="user-profile">
+	            <button type="button" class="btn btn-default" id="userdtl"
+	                style="margin-top: 5px; color: white" onclick="clickPhoto1(this)">
+	                <p id="userid" hidden th:text="${session.USERID}"></p>
+	                <i class="fas fa-user-tie">
+	                    <font style="font-family: Calibri;" th:text="'  ' + ${session.USERNAME}"> Abdul Halith</font>
+	                </i>
+	              </button>
+				<!-- Button with icon -->
+				<button type="button" class="btn btn-default" id="manualBtn"
+					style="margin-top: 5px; color: white" onclick="openusermanual()">
+					<i class="fas fa-question-circle pl-3" title="Manual"></i>
+				</button>
+				<button type="button" class="btn btn-default" id="userdtl"
+	                style="margin-top: 5px; color: white">
+	                  <i class="fas fa-sign-out-alt pl-3" id="logout" onclick="cancelformLogout(this)" ></i>
+	                </button>
+	        </div>
+	    </div>
+	</nav>
+</body>
+<!------------------------------------------------------------------- Loading Modal ------------------------------------------------------>
+<div id="loadingModal" style="display: none;">
+	<div id="loadingContent">
+		<img th:src=@{/images/Loading.gif} alt="Loading...">
+	</div>
+</div>
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="cancelformLogout" style="background: #000000b0;" role="dialog"
+	aria-labelledby="deleteModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+		<div class="modal-content">
+
+			<!-- Modal Header -->
+
+
+			<!-- Modal Body -->
+			<div class="modal-body">
+				<h5 style="font-size: 17px; color: black; padding: 15px;">Are
+					you sure you want to Logout?</h5>
+			</div>
+			<!-- Modal Footer -->
+			<div style="padding: 10px; text-align: center;">
+				<button type="button" class="btn btn-outline-dark me-3" style="font-size: 16px;"
+					onclick="$('#cancelformLogout').modal('hide')">Cancel</button>
+				<button type="button" class="btn btn-outline-dark me-3" id="logout" style="font-size: 16px;"
+					onclick="contentLoad(this);" th:attr="data-formmode=delete">Yes, Logout</button>
+			</div>
+
+		</div>
+	</div>
+</div>
+<!-- TO SHOW IMAGE -->
+<div class="modal fade" id="imageshow" data-backdrop="static" data-keyboard="false" style="padding-bottom: 10%;"
+	onclick="closeimage()">
+	<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+		<div class="modal-content w-50">
+			<div class="modal-body" style="text-align: center; position: relative;">
+				<!-- 	<span class="closedoc" id="closeModaldoc" data-dismiss="modal"
+						style="position: absolute; top: 10px; right: 20px; cursor: pointer; font-size: 24px; color: red;">&times;</span> -->
+				<img class="img-responsive" id="doc_image" style="max-height: 200px; width: 100%;">
+			</div>
+			<!-- <button type="button" class="btn btn-xs " data-dismiss="modal">Close</button> -->
+		</div>
+	</div>
+</div>
+<div class="modal fade" id="alert">
+	<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-body" style="text-align: center; font-size: 16px;">
+				<p id="alertmsg"></p>
+				<button type="button" class="btn btn-sm  mx-1" style="background-color: #376275; color: white;"
+					data-dismiss="modal" onclick="home();">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+<!------------------------------------------------------------------- End ------------------------------------------------------>
+
+</html>

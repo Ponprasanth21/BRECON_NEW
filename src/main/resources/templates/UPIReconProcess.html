@@ -1,0 +1,753 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+<!-- 
+CREATED BY	: Aishwarya V
+CREATED ON	: 28.08.2025
+PURPOSE		: SCREEN DESIGN AND FUNCTIONALITY
+VERSION     : 01
+ -->
+ <!-- 
+CREATED BY	: Aishwarya V
+CREATED ON	: 28.08.2025
+PURPOSE		: TBODY COLUMNS CHANGES
+VERSION     : 01
+ -->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/BRECON/js/jquery.min.js"></script>
+<script src="/BRECON/js/jquery-ui.min.js"></script>
+<style>
+/* Match list screen font style and size */
+.card, .card-body, .form-group, .form-control, .btn, label {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+}
+
+.card-header h5, .card-header h4 {
+	font-weight: bold;
+	font-size: 16px;
+}
+
+.form-control-sm {
+	font-size: 14px;
+}
+
+.btn-sm {
+	font-size: 13px;
+}
+</style>
+<style>
+.btns {
+	float: right;
+	margin: 5px;
+}
+
+td {
+	padding: 0.30rem !important;
+}
+
+.col-sm-5 {
+	padding-bottom: 15px;
+}
+
+.list-body {
+	padding: 0px;
+}
+
+.error {
+	color: red;
+	padding-left: 10px;
+}
+
+.formline {
+	padding-bottom: 0px;
+}
+
+.btn-primary {
+	background-color: #E77400;
+	border-color: #0c0c0c;
+}
+
+.btn-primary:not (:disabled ):not (.disabled ).active, .btn-primary:not
+	 (:disabled ):not (.disabled ):active, .show>.btn-primary.dropdown-toggle
+	{
+	color: #fff;
+	background-color: #cc000000;
+	border-color: #161617;
+}
+
+#finusertb {
+	width: 460px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+	padding: 0px;
+}
+</style>
+<style>
+.valids {
+	color: green;
+}
+
+.invalids {
+	color: red;
+}
+input[type="text"] {
+    position: relative;
+    z-index: 9999; /* bring datepicker to front */
+}
+
+</style>
+<style>
+.custom-file-label {
+	display: inline-block;
+	padding: 6px 12px;
+	cursor: pointer;
+	background-color: #376275; /* Your desired color */
+	color: white;
+	border-radius: 4px;
+}
+
+.custom-file-label:hover {
+	background-color: #274b5a;
+}
+</style>
+<style>
+.dataTables_wrapper {
+	width: 100% !important;
+}
+
+table.dataTable {
+	width: 100% !important;
+}
+
+.user-profile-wrapper {
+	width: 100%;
+	padding: 0 20px; /* optional spacing */
+}
+/* Expand the card or box */
+.card {
+	width: 100% !important;
+}
+
+/* Make table fill full width */
+table.dataTable {
+	width: 100% !important;
+}
+
+/* Optional: make header also full width */
+.user-profile-wrapper {
+	width: 100%;
+}
+
+#loadingModal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(255, 255, 255, 0.2);
+	/* Light semi-transparent white */
+	backdrop-filter: blur(5px); /* Keeps the blur effect */
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 9999;
+}
+#loadingContent {
+	text-align: center;
+	background-color: transparent; /* Keep loader background transparent */
+	z-index: 10000;
+}
+
+.dynamic-table-scroll {
+    overflow-y: auto;
+    overflow-x: auto;
+}
+</style>
+<script th:inline="javascript">
+	function home() {
+		location.href = 'Dashboard'
+	}
+	function back() {
+		window.history.back();
+	}
+	function adjustTableHeights() {
+	    const scrollSections = document.querySelectorAll(".dynamic-table-scroll");
+	    const headerHeight = document.querySelector(".navbar")?.offsetHeight || 0;
+	    const footerHeight = document.querySelector("footer")?.offsetHeight || 0;
+	    const availableHeight = window.innerHeight - headerHeight - footerHeight - 100; 
+
+	    scrollSections.forEach(div => {
+	        div.style.maxHeight = `${availableHeight / scrollSections.length}px`; 
+	    });
+	}
+
+	window.addEventListener("resize", adjustTableHeights);
+	window.addEventListener("load", adjustTableHeights);
+
+
+</script>
+<script>
+$(function () {
+    $("#fromDate").datepicker({
+    	maxDate : new Date(),
+        changeMonth: true,
+        changeYear: true,
+        dateFormat: "dd-mm-yy"
+    }).datepicker("setDate", new Date()); 
+});
+</script>
+<script>
+function ProceedSubmit() {
+    document.getElementById('loadingModal').style.display = 'flex';
+
+    const sourceChecked = document.querySelectorAll(
+        'input[name="selectReconSource"]:checked'
+    );
+    const destChecked = document.querySelectorAll(
+        'input[name="selectReconDest"]:checked'
+    );
+
+    const sourceREFs = Array.from(sourceChecked).map(cb => cb.value);
+    const destREFs   = Array.from(destChecked).map(cb => cb.value);
+    const fromDate = document.getElementById("fromDate").value;
+
+    // ❌ Nothing selected
+    if (sourceREFs.length === 0 && destREFs.length === 0) {
+        document.getElementById('loadingModal').style.display = 'none';
+        $.toast({
+            heading: 'Reconciliation Info',
+            text: 'Please select Source or Destination',
+            icon: 'info',
+            position: 'top-right',
+            hideAfter: 3000
+        });
+        return;
+    }
+
+    // 1️⃣ BOTH Source & Destination selected (MATCHING)
+    if (
+        sourceREFs.length === 1 &&
+        destREFs.length === 1 &&
+        sourceREFs[0] === destREFs[0]
+    ) {
+        $.ajax({
+            url: './UPIReconProcess',
+            type: 'POST',
+            data: { ref: sourceREFs[0] },
+            success: function (responseText) {
+                document.getElementById('loadingModal').style.display = 'none';
+                $.toast({
+                    heading: 'Reconciliation Completed',
+                    text: responseText,
+                    icon: 'success',
+                    position: 'bottom-right',
+                    hideAfter: 3000
+                });
+                setTimeout(() => {
+                    FilterDate();
+                }, 3100);
+            },
+            error: function (xhr) {
+                document.getElementById('loadingModal').style.display = 'none';
+                $.toast({
+                    heading: 'Error',
+                    text: xhr.responseText || 'UPI reconciliation failed',
+                    icon: 'error',
+                    position: 'top-right',
+                    hideAfter: 3000
+                });
+            }
+        });
+        return;
+    }
+
+    // 2️⃣ ONLY SOURCE selected
+    if (sourceREFs.length === 1 && destREFs.length === 0) {
+        $.ajax({
+            url: './UPIReconSourceOnly?fromDate=' + fromDate,
+            type: 'POST',
+            data: { ref: sourceREFs[0] },
+            success: function (responseText) {
+                document.getElementById('loadingModal').style.display = 'none';
+                $.toast({
+                    heading: 'Source Reconciled',
+                    text: responseText,
+                    icon: 'success',
+                    position: 'bottom-right',
+                    hideAfter: 3000
+                });
+                setTimeout(() => {
+                    FilterDate();
+                }, 3100);
+            }
+        });
+        return;
+    }
+
+    // 3️⃣ ONLY DESTINATION selected
+    if (sourceREFs.length === 0 && destREFs.length === 1) {
+        $.ajax({
+            url: './UPIReconDestOnly?fromDate=' + fromDate,
+            type: 'POST',
+            data: { ref: destREFs[0] },
+            success: function (responseText) {
+                document.getElementById('loadingModal').style.display = 'none';
+                $.toast({
+                    heading: 'Destination Reconciled',
+                    text: responseText,
+                    icon: 'success',
+                    position: 'bottom-right',
+                    hideAfter: 3000
+                });
+                setTimeout(() => {
+                    FilterDate();
+                }, 3100);
+            }
+        });
+        return;
+    }
+
+    // ❌ Invalid combination
+    document.getElementById('loadingModal').style.display = 'none';
+    $.toast({
+        heading: 'Reconciliation Info',
+        text: 'Invalid selection',
+        icon: 'warning',
+        position: 'top-right',
+        hideAfter: 3000
+    });
+}
+</script>
+<script>
+    function selectOnlyOne(checkbox, groupName) {
+        const checkboxes = document.getElementsByName(groupName);
+        checkboxes.forEach(cb => {
+            if (cb !== checkbox) cb.checked = false;
+        });
+    }
+    function FilterDate(){
+    	 document.getElementById('loadingModal').style.display = 'flex';
+    	var date = document.getElementById("fromDate").value;
+    	$.ajax({
+    		url : './UPIFilter?Date=' + date,
+    		type : 'GET',
+    		success : function(response, statusText, xhr) {
+    			 document.getElementById('loadingModal').style.display = 'none';
+    			   $("#tbodyreconmain").empty();
+    	            $("#tbodyreconsource").empty();
+    	            $("#tbodyrecondest").empty();
+    	            
+    	            if (response.maintable && response.maintable.length > 0) {
+    	                response.maintable.forEach(function(item) {
+    	                    $("#tbodyreconmain").append(
+    	                        '<tr class="text-left">' +
+    	                            '<td>' + (item.d_refnum ?? '') + '</td>' +
+    	                            '<td>' + (item.s_trn_dt ? formatDate(item.s_trn_dt) : '') + '</td>' +
+    	                            '<td>' + (item.d_transaction_currency ?? '') + '</td>' +
+    	                            '<td class="text-right">' + (item.d_transaction_amount != null ? formatNumber(item.d_transaction_amount) : '') + '</td>' +
+    	                            '<td>' + (item.d_trn_country ?? '') + '</td>' +
+    	                        '</tr>'
+    	                    );
+    	                });
+    	            } else {
+    	                $("#tbodyreconmain").append(
+    	                    '<tr class="text-center">' +
+    	                        '<td colspan="5">No Data Found</td>' +
+    	                    '</tr>'
+    	                );
+    	            }
+
+
+    	            // Append Unmatched Source
+    	  if (response.sourceListUnmatched && response.sourceListUnmatched.length > 0) {
+        response.sourceListUnmatched.forEach(function(item) {
+            $("#tbodyreconsource").append(
+                '<tr>' +
+                    '<td>' + (item.addl3 ?? '') + '</td>' +
+                    '<td>' + (item.trn_dt ? formatDate(item.trn_dt) : '') + '</td>' +
+                    '<td>' + (item.value_dt ? formatDate(item.value_dt) : '') + '</td>' +
+                    '<td class="text-right">' + (item.cr_mov != null ? formatNumber(item.cr_mov) : '') + '</td>' +
+                    '<td>' + (item.ctry ?? '') + '</td>' +
+                    '<td class="text-center">' +
+                        '<input type="checkbox" name="selectReconSource" onclick="selectOnlyOne(this, \'selectReconSource\')" value="' + (item.addl3 ?? '') + '" />' +
+                    '</td>' +
+                '</tr>'
+            );
+        });
+    } else {
+        $("#tbodyreconsource").append(
+            '<tr class="text-center">' +
+                '<td colspan="6">No Data Found</td>' +
+            '</tr>'
+        );
+    }
+
+    // Append Unmatched Destination
+    if (response.destinList && response.destinList.length > 0) {
+        response.destinList.forEach(function(item) {
+            $("#tbodyrecondest").append(
+                '<tr>' +
+                    '<td>' + (item.refnum ?? '') + '</td>' +
+                    '<td>' + (item.transaction_date ? formatDate(item.transaction_date) : '') + '</td>' +
+                    '<td>' + (item.transaction_currency ?? '') + '</td>' +
+                    '<td class="text-right">' + (item.transaction_amount != null ? formatNumber(item.transaction_amount) : '') + '</td>' +
+                    '<td>' + (item.trn_country ?? '') + '</td>' +
+                    '<td class="text-cntry">' +
+                        '<input type="checkbox" name="selectReconDest" onclick="selectOnlyOne(this, \'selectReconDest\')" value="' + (item.refnum ?? '') + '" />' +
+                    '</td>' +
+                '</tr>'
+            );
+        });
+    } else {
+        $("#tbodyrecondest").append(
+            '<tr class="text-center">' +
+                '<td colspan="6">No Data Found</td>' +
+            '</tr>'
+        );
+    }
+    		},
+    		error : function(xhr, status, error) {
+    			 document.getElementById('loadingModal').style.display = 'none';
+    			var errorMessage = xhr.responseText
+    					|| "An error occurred while processing your request. Please try again.";
+    			$("#alertmsg").text(errorMessage);
+    			$('#alert').modal("toggle");
+    		}
+    	}); 
+    }
+    function RefreshSubmit() {
+    	 document.getElementById('loadingModal').style.display = 'flex';
+    	$.ajax({
+    		url : './UPICheckREF',
+    		type : 'GET',
+    		success : function(responseText, statusText, xhr) {
+    			if(responseText ==='Noreturn'){
+    				 $('#alertmsg').text("No Matching Records found for the Selected Date");
+		             $('#alert').modal("toggle");
+    			}else{
+    				$.ajax({
+    					url : './UPIRefershProcess',
+    					type : 'GET',
+    					success : function(responseText, statusText, xhr) {
+    						 document.getElementById('loadingModal').style.display = 'none';
+    						 $('#alertmsg').html(responseText);
+    			             $('#alert').modal("toggle");
+    					},
+    					error : function(xhr, status, error) {
+    						var errorMessage = xhr.responseText
+    								|| "An error occurred while processing your request. Please try again.";
+    						$("#alertmsg").text(errorMessage);
+    						$('#alert').modal("toggle");
+    					}
+    				});
+    			}
+    	
+    		},
+    		error : function(xhr, status, error) {
+    			 document.getElementById('loadingModal').style.display = 'none';
+    			var errorMessage = xhr.responseText
+    					|| "An error occurred while processing your request. Please try again.";
+    			$("#alertmsg").text(errorMessage);
+    			$('#alert').modal("toggle");
+    		}
+    	}); 
+    }
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        var date = new Date(dateStr);
+        var day = String(date.getDate()).padStart(2,'0');
+        var month = String(date.getMonth()+1).padStart(2,'0');
+        var year = date.getFullYear();
+        return day + '-' + month + '-' + year;
+    }
+
+    // Helper to format numbers with 4 decimal places
+    function formatNumber(num) {
+    if (!num) return '0.00';
+    return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+</script>
+<script>
+function submitform() {
+    const recon_process_date = document.getElementById("fromDate").value;
+    const type = 'UPI';
+
+    if (!recon_process_date) {
+        alert("Please select a date before downloading the report.");
+        return;
+    }
+
+    // Show loading modal
+    document.getElementById('loadingModal').style.display = 'flex';
+
+    // ✅ Correct URL format
+    const downloadUrl = `ReconProcessDownload?recon_process_date=${encodeURIComponent(recon_process_date)}&type=${encodeURIComponent(type)}`;
+
+    // Trigger the file download
+    window.location.href = downloadUrl;
+
+    // Hide the loading modal after a short delay
+    setTimeout(() => {
+        document.getElementById('loadingModal').style.display = 'none';
+    }, 2000);
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* Toggle all filter rows at once */
+    document.querySelector('.btn-filter').addEventListener('click', function () {
+        const filterRows = ['filterRow', 'filterRow1', 'filterRow2'];
+        filterRows.forEach(id => {
+            const row = document.getElementById(id);
+            if (row) {
+                row.style.display = row.style.display === 'none' ? '' : 'none';
+            }
+        });
+    });
+
+    /* Column filtering */
+    document.querySelectorAll('.column-filter').forEach(input => {
+        input.addEventListener('keyup', function () {
+
+            const filters = document.querySelectorAll('.column-filter');
+            const rows = document.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                let showRow = true;
+
+                filters.forEach(filter => {
+                    const colIndex = filter.dataset.col;
+                    const filterValue = filter.value.toLowerCase();
+                    const cell = row.cells[colIndex];
+
+                    if (cell && !cell.textContent.toLowerCase().includes(filterValue)) {
+                        showRow = false;
+                    }
+                });
+
+                row.style.display = showRow ? '' : 'none';
+            });
+        });
+    });
+});
+</script>
+</head>
+<title>BRECON</title>
+<body>
+<div th:insert="XBRLHeaderMenu :: header"></div>
+<!-- --------------------------------------------------------------------- List Starts----------------------------------------------------- -->
+	<div class="container-fluid py-5">
+		<div class="row justify-content-center">
+			<div class="col-md-10">
+				<div class="card shadow-lg border-0" style="border-radius: 16px;">
+					<!-- Unified Header -->
+					<div
+						class="card-header d-flex align-items-center position-relative"
+						style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+						<!-- Centered Title -->
+						<h4 class="text-white m-0 text-center position-absolute w-100"
+							style="left: 0;">
+							<i class="fas fa-sync-alt mr-2" style="color: lightblue;"></i>UPI
+							Debit Reconciliation Process
+						</h4>
+						<!-- Right: Date Inputs + Refresh -->
+						<div class="d-flex align-items-center ml-auto">
+							<input type="text" id="fromDate" onchange="FilterDate()"
+								class="form-control form-control-sm mr-2" style="width: 120px;" />
+
+<i class="fas fa-filter text-white btn btns btn-filter"></i>
+
+							<button type="button"
+								class="btn btn-sm  text-white d-flex align-items-center justify-content-center"
+								title="Refresh" onclick="RefreshSubmit()"
+								style="width: 32px; height: 32px; border-radius: 50%;">
+								<i class="fas fa-sync-alt"></i>
+							</button>
+							
+							<!-- Download Button -->
+							<button type="button"
+								class="btn btn-sm text-white d-flex align-items-center justify-content-center ml-2"
+								title="Download Report" onclick="submitform()"
+								style="width: 32px; height: 32px; border-radius: 50%;">
+								<i class="fas fa-download"></i>
+							</button>
+						</div>
+					</div>
+					<!-- Split Upload Area -->
+					<div class="card-body ">
+						<div class="table-responsive">
+							<div class="upload-section flex-fill p-2">
+								<h6 class="text-center mb-3">
+									<strong>Matched Records</strong>
+								</h6>
+								  <div class="dynamic-table-scroll">
+									<table class="table table-bordered table-hover table-sm"
+										style="font-family: Verdana; font-size: 13px;">
+										<thead class="thead-light" style="background-color: #e9ecf0;">
+											<tr>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Refnum</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Tran Date</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Tran Cur</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Tran Amt</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Country Name</th>
+											</tr>
+											<tr id="filterRow" style="display:none;">
+        <th><input type="text" class="column-filter" data-col="0" placeholder="Filter Refnum"></th>
+        <th><input type="text" class="column-filter" data-col="1" placeholder="Filter Date"></th>
+        <th><input type="text" class="column-filter" data-col="2" placeholder="Filter Cur"></th>
+        <th><input type="text" class="column-filter" data-col="3" placeholder="Filter Amt"></th>
+        <th><input type="text" class="column-filter" data-col="4" placeholder="Filter Country"></th>
+    </tr>
+											
+										</thead>
+										<tbody id="tbodyreconmain">
+											<tr th:if="${#lists.isEmpty(Recon)}">
+												<td colspan="5"
+													class="text-center  font-weight-bold">No
+													Data Found</td>
+													</tr>
+											<tr th:each="list1 : ${Recon}" class="text-left">
+												<td th:text="${list1.d_refnum}"></td>
+												<td th:text="${#dates.format(list1.s_trn_dt, 'dd-MM-yyyy')}"></td>
+												<td th:text="${list1.d_transaction_currency}"></td>
+												<td th:text="${#numbers.formatDecimal(list1.d_transaction_amount, 1, 'COMMA', 2, 'POINT')}" class="text-right"></td>
+												<td th:text="${list1.d_trn_country}"></td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+						<div class="d-flex flex-row gap-3 justify-content-between">
+							<!-- Unmatched Source Record -->
+							<div class="flex-fill p-3" style="min-width: 48%;">
+								<h6 class="text-center mb-3">
+									<strong>UnMatched Source Record</strong>
+								</h6>
+								   <div class="dynamic-table-scroll">
+									<table class="table table-bordered table-hover table-sm"
+										 style="font-family: Verdana; font-size: 13px; table-layout: fixed; width: 100%;"> 
+										<thead class="thead-light">
+											<tr>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Refnum</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Tran Date</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Tran Desc</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Cr Org</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Country</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2; text-align: center">Select</th>
+											</tr>
+											    <tr id="filterRow1" style="display:none;">
+        <th><input type="text" class="column-filter" data-col="0" placeholder="Filter Refnum" style="width: 100%;"></th>
+        <th><input type="text" class="column-filter" data-col="1" placeholder="Filter Date" style="width: 100%;"></th>
+        <th><input type="text" class="column-filter" data-col="2" placeholder="Filter Desc" style="width: 100%;"></th>
+        <th><input type="text" class="column-filter" data-col="3" placeholder="Filter Cr Org" style="width: 100%;"></th>
+        <th><input type="text" class="column-filter" data-col="4" placeholder="Filter Country" style="width: 100%;"></th>
+        <th><input type="text" class="column-filter" data-col="5"  style="width: 100%;" disabled></th>
+    </tr>									
+										</thead>
+										<tbody id="tbodyreconsource">
+											<tr th:if="${#lists.isEmpty(SourceList)}">
+												<td colspan="6"
+													class="text-center  font-weight-bold">No
+													Data Found</td>
+													</tr>
+											<tr th:each="list : ${SourceList}" >
+												<td th:text="${list?.addl3}"></td>
+												<td th:text="${#dates.format(list?.trn_dt, 'dd-MM-yyyy')}"></td>
+												<td th:text="${list?.trn_desc}"></td>
+												<td th:text="${#numbers.formatDecimal(list?.cr_mov, 1, 'COMMA', 2, 'POINT')}" class="text-right"></td>
+												<td th:text="${list?.ctry}"></td>
+												<td class="text-center"><input type="checkbox"  
+													name="selectReconSource"  onclick="selectOnlyOne(this, 'selectReconSource')" th:value="${list?.addl3}" /></td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+							<!-- Unmatched Destination Record -->
+							<div class="flex-fill p-3" style="min-width: 48%;">
+								<h6 class="text-center mb-3">
+									<strong>UnMatched Destination Record</strong>
+								</h6>
+								  <div class="dynamic-table-scroll">
+									<table class="table table-bordered table-hover table-sm"
+										style="font-family: Verdana; font-size: 13px; table-layout: fixed; width: 100%;">
+										<thead class="thead-light">
+											<tr>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Refnum</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Tran Date</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Tran Cur</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Tran Amt</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2;">Country Name</th>
+												<th style="position: sticky; top: 0; background-color: #e9ecf0; z-index: 2; text-align: center">Select</th>
+											</tr>
+											    <tr id="filterRow2" style="display:none;">
+        <th><input type="text" class="column-filter" data-col="0" placeholder="Filter Refnum" style="width: 100%;"></th>
+        <th><input type="text" class="column-filter" data-col="1" placeholder="Filter Date" style="width: 100%;"></th>
+        <th><input type="text" class="column-filter" data-col="2" placeholder="Filter Cur" style="width: 100%;"></th>
+        <th><input type="text" class="column-filter" data-col="3" placeholder="Filter Amt" style="width: 100%;"></th>
+        <th><input type="text" class="column-filter" data-col="4" placeholder="Filter Country" style="width: 100%;"></th>
+        <th><input type="text" class="column-filter" data-col="5"  style="width: 100%;" disabled></th>
+    </tr>							
+										</thead>
+										<tbody id="tbodyrecondest">
+											<tr th:if="${#lists.isEmpty(DestinList)}">
+												<td colspan="6"
+													class="text-center  font-weight-bold">No
+													Data Found</td>
+													</tr>
+											<tr th:each="list : ${DestinList}" class="text-left">
+												<td th:text="${list?.refnum}"></td>
+												<td th:text="${#dates.format(list?.transaction_date, 'dd-MM-yyyy')}"></td>
+												<td th:text="${list?.transaction_currency}"></td>
+												<td th:text="${#numbers.formatDecimal(list?.transaction_amount, 1, 'COMMA', 2, 'POINT')}" class="text-right"></td>
+												<td th:text="${list?.trn_country}"></td>
+												<td class="text-center"><input type="checkbox"   onclick="selectOnlyOne(this, 'selectReconDest')"
+													align="center" name="selectReconDest" th:value="${list?.refnum}" /></td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="card-footer bg-white text-center"
+						style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+						<button type="button" class="btn btn-outline-dark me-3"
+							onclick="home()" style="border-radius: 6px;">
+							<i class="fas fa-home me-1"></i> Home
+						</button>
+						<button type="button" class="btn btn-outline-dark me-3"
+							onclick="ProceedSubmit()" style="border-radius: 6px;">
+							<i class="fas fa-upload me-1"></i> Proceed
+						</button>
+						<button type="button" class="btn btn-outline-dark me-3"
+							onclick="back()" style="border-radius: 6px;">
+							<i class="fas fa-angle-left me-1"></i> Back
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Footer Buttons -->
+	</div>
+<!----------------------------------------------------------------- Modal -------------------------------------------------------------->
+	<div class="modal fade" id="alert">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body" style="text-align: center; font-size: 16px;">
+					<p id="alertmsg"></p>
+					<button type="button" class="btn btn-sm  mx-1"
+						style="background-color: #376275; color: white;"
+						data-dismiss="modal" onclick="home();">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+<!----------------------------------------------------------------- End -------------------------------------------------------------->
+</body>
+</html>

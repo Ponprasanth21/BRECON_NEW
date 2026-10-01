@@ -1,0 +1,1507 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+
+<!-- 
+CREATED BY	: MANIVANNAN B
+CREATED ON	: 03.03.2026
+PURPOSE		: UPI BULK REPORT 
+VERSION     : 1.0
+ -->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="/BRECON/css/jquery.toast.min.css">
+
+<style>
+.btns {
+	float: right;
+	margin: 5px;
+}
+
+td {
+	padding: 0.30rem !important;
+}
+
+.col-sm-5 {
+	padding-bottom: 15px;
+}
+
+.list-body {
+	padding: 0px;
+}
+
+.container-manager {
+	padding-right: 43px;
+	padding-left: 15px;
+	margin-right: auto;
+	margin-left: 18.3%;
+	margin-top: 80px;
+}
+
+.error {
+	color: red;
+	padding-left: 10px;
+}
+
+.formline {
+	padding-bottom: 5px;
+}
+
+.btn-primary {
+	background-color: #2c4e5e;
+	border-color: white;
+}
+
+.btn-primary:not (:disabled ):not (.disabled ).active, .btn-primary:not
+	 (:disabled ):not (.disabled ):active, .show>.btn-primary.dropdown-toggle
+	{
+	color: #fff;
+	background-color: #cc000000;
+	border-color: #161617;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+	padding: 0px;
+}
+
+.valids {
+	color: green;
+}
+
+.invalids {
+	color: red;
+}
+</style>
+<style>
+.dataTables_wrapper {
+	width: 100% !important;
+}
+
+table.dataTable {
+	width: 100% !important;
+}
+
+.user-profile-wrapper {
+	width: 100%;
+	padding: 0 20px; /* optional spacing */
+}
+/* Expand the card or box */
+.card {
+	width: 100% !important;
+}
+/* Make table fill full width */
+table.dataTable {
+	width: 100% !important;
+}
+/* Optional: make header also full width */
+.user-profile-wrapper {
+	width: 100%;
+}
+/* Match list screen font style and size */
+.card, .card-body, .form-group, .form-control, .btn, label {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+}
+
+.card-header h5, .card-header h4 {
+	font-weight: bold;
+	font-size: 16px;
+}
+
+.no-border {
+	border: none !important;
+}
+
+.form-control-sm {
+	font-size: 14px;
+}
+
+.btn-sm {
+	font-size: 13px;
+}
+
+.table-black td, .table-black th, .table-black {
+	border: 1px solid black !important;
+	border-collapse: collapse;
+}
+
+tr.no-border th {
+	border: none !important;
+}
+#cardBody {
+  max-height: calc(100vh - 250px); /* adjusts based on viewport */
+  overflow-y: auto;               /* vertical scrollbar only when needed */
+}
+</style>
+<script th:inline="javascript">
+	function home() {
+		location.href = 'Dashboard'
+	}
+	function back() {
+		window.history.back();
+	}
+	
+</script>
+<script>
+function SubmitReport() {
+    const curr = document.getElementById("Cur").value;
+    const reconfromDate = document.getElementById("RECONFromDate").value;
+    const recontoDate = document.getElementById("RECONToDate").value;
+    const type = 'UPI';
+    //alert(curr);
+
+    // Convert YYYY-MM-DD → DD-MM-YYYY
+    const [year, month, day] = reconfromDate.split("-");
+    const formattedDatefrom = `${day}-${month}-${year}`;
+     
+    const [year1, month1, day1] = recontoDate.split("-");
+    const formattedDateto = `${day1}-${month1}-${year1}`;
+        	   const Url = 'getReconDateCredit' +
+               '?curr=' + encodeURIComponent(curr) +
+               '&type=' + encodeURIComponent(type) +
+               '&recon_from_date=' + encodeURIComponent(formattedDatefrom) + 
+               '&recon_to_date=' + encodeURIComponent(formattedDateto)  ;
+               if(curr === '' || reconfromDate ===''|| recontoDate ===''){
+               	 $.toast({
+       	            heading: 'Warning',
+       	            text: 'All mandatory fields must be filled.',
+       	            icon: 'warning',
+       	            position: { left: 1600, top: 0 },
+       	            hideAfter: 3000
+       	        });
+       	
+               } else{
+                   $.ajax({
+                       url: Url,
+                       type: 'GET',
+                       success: function (data) {
+                           $('#loader').modal('hide');
+
+                           if (data !== "No Data Found") {   // ✅ If found
+                               if (curr === "USD") {
+                                   location.href = 'Report_UPIBulk?formmode=ReportUSD&curr=' + curr +
+                                   '&ReconFromDate=' + formattedDatefrom +  '&ReconToDate=' + formattedDateto + '&type=' + type;
+                               } else if (curr === "MUR") {
+                                   location.href = 'Report_UPIBulk?formmode=ReportMUR&curr=' + curr +
+                                   '&ReconFromDate=' + formattedDatefrom +  '&ReconToDate=' + formattedDateto + '&type=' + type;
+                               }else if (curr === "MARKUP") {
+                            	   const filetype = 'EXCEL';
+                            	    $('#loader').modal('show');
+                            	    // Build download URL
+                            	    const downloadUrl = 'ReconDownload' +
+                            	        '?Cur=' + encodeURIComponent("MARKUP") +
+                            	        '&type=' + encodeURIComponent("UPI") +
+                            	        '&filetype=' + encodeURIComponent(filetype) +
+                            	        '&recon_date=' + encodeURIComponent(reconDate) + '&report=' + encodeURIComponent("");
+                            	    // Use window.location to trigger download
+                            	    window.location.href = downloadUrl;
+                            	    $('#loader').modal('hide');
+                               }
+                           } else {
+                           	
+                           	 $.toast({
+                    	            heading: 'Warning',
+                    	            text: 'Oops! No records matched your search..',
+                    	            icon: 'warning',
+                    	            position: { left: 1600, top: 0 },
+                    	            hideAfter: 3000
+                    	        });
+
+                           }
+                       },
+                       error: function (jqXHR, textStatus, errorThrown) {
+                           $('#loader').modal('hide');
+                           console.error('Download error:', textStatus, errorThrown, jqXHR);
+
+                           let errorMessage = 'An error occurred while downloading the file. Please try again.';
+                           if (jqXHR.response) {
+                               const reader = new FileReader();
+                               reader.onload = function () {
+                                   errorMessage = reader.result;
+                                   showResultModal('Error', errorMessage);
+                               };
+                               reader.onerror = function () {
+                                   showResultModal('Error', 'An unknown error occurred during download.');
+                               };
+                               reader.readAsText(jqXHR.response);
+                               return;
+                           }
+                           showResultModal('Error', errorMessage);
+                       }
+                   });
+                   
+           } 
+   
+}
+function submitform(element) {
+	var report = element.id; 
+	//alert(report);
+	const curr = new URLSearchParams(window.location.search).get("curr");
+	   const reconfromDate = document.getElementById("RECONFromDate").value;
+	    const recontoDate = document.getElementById("RECONToDate").value;
+	    // Convert YYYY-MM-DD → DD-MM-YYYY
+	    const [year, month, day] = reconfromDate.split("-");
+	    const formattedDatefrom = `${day}-${month}-${year}`;
+	     
+	    const [year1, month1, day1] = recontoDate.split("-");
+	    const formattedDateto = `${day1}-${month1}-${year1}`;
+  // alert(curr);
+  // alert(formattedDate);
+    const type ="UPI";
+    if(curr === '' || reconfromDate ===''|| recontoDate ===''){
+        alert("Please select a date.");
+        return;
+    }
+
+    const filetype = 'EXCEL';
+
+    $('#loader').modal('show');
+
+    // Build download URL
+    const downloadUrl = 'ReconDownloadBulk' +
+        '?Cur=' + encodeURIComponent(curr) +
+        '&type=' + encodeURIComponent(type) +
+        '&filetype=' + encodeURIComponent(filetype) +
+        '&recon_from_date=' + encodeURIComponent(ReconFromDate) + '&recon_to_date=' + encodeURIComponent(ReconToDate) +  '&report=' + encodeURIComponent(report);
+
+    // Use window.location to trigger download
+    window.location.href = downloadUrl;
+
+    $('#loader').modal('hide');
+}
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    ["nostroFormUSD", "nostroFormMUR"].forEach(id => {
+        const form = document.getElementById(id);
+        if (form) {
+            form.querySelectorAll("input, select, textarea").forEach(input =>
+                input.dataset.originalValue = (input.value || "").trim()
+            );
+        }
+    });
+});
+
+function showToast1(heading, text, icon, modal, success = false) {
+    if (modal) modal.style.display = 'none';
+
+    // Show toast
+    $.toast({
+        heading,
+        text,
+        icon,
+        showHideTransition: 'plain',
+        position: { right: 20, top: '45%' },
+        loaderBg:
+            icon === 'error' ? '#dc3545' :
+            icon === 'warning' ? '#f0ad4e' :
+            icon === 'info' ? '#5bc0de' :
+            '#376275'
+    });
+
+    // ✅ On success, show toast → then go back
+    if (icon === 'success') {
+        setTimeout(() => {
+            // Add flag to sessionStorage before going back
+            sessionStorage.setItem('reloadOnBack', 'true');
+            history.back();
+        }, 3000); // Wait 3s before navigating back
+    }
+}
+window.addEventListener('pageshow', () => {
+    if (sessionStorage.getItem('reloadOnBack') === 'true') {
+        sessionStorage.removeItem('reloadOnBack');
+        location.reload();
+    }
+});
+function showToast(heading, text, icon, modal, success = false) {
+    if (modal) modal.style.display = 'none';
+    $.toast({
+        heading,
+        text,
+        icon,
+        showHideTransition: 'plain',
+        position: { right: 20, top: '45%' },
+        loaderBg:
+            icon === 'error' ? '#dc3545' :
+            icon === 'warning' ? '#f0ad4e' :
+            icon === 'info' ? '#5bc0de' :
+            '#376275'
+    });
+    if (success) {
+        setTimeout(() => {
+        	location.reload();
+        }, 3000);
+    }
+}
+</script>
+</head>
+<title>BRECON</title>
+<body>
+	<div th:insert="XBRLHeaderMenu :: header"></div>
+	<!-----------------------------------------------------------------------User List Starts------------------------------------------------------->
+	<div class="container-fluid py-5">
+		<div class="row justify-content-center">
+			<div class="col-lg-10">
+				<div class="card shadow-lg border-0" style="border-radius: 16px;"
+					th:if="${formmode}=='list'">
+					<!-- Header -->
+					<div class="card-header text-center"
+						style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px; position: relative;">
+						<!-- Centered title -->
+						<h4 class="text-white m-0 text-center">
+							<i class="fas fa-clipboard-list mr-2" style="color: lightblue;"></i>
+							Recon Report
+						</h4>
+					</div>
+					<!-- Form Body -->
+					<form action="#" th:object="${userProfile}" method="post"
+						autocomplete="off" id="userProfile">
+						<div class="card-body p-3">
+							<!-- Form Fields -->
+							<div class="form-group">
+								<div class="row formline mb-2">
+									<div class="col-sm-2">
+										<label for="Cur">Cur</label>
+									</div>
+									<div class="col-sm-2">
+										<select id="Cur" class="form-control form-control-sm"
+											autocomplete="off">
+											<option value="">Select</option>
+											<option value="MUR">MUR</option>
+											<option value="USD">USD</option>
+											 
+										</select>
+									</div>
+									 
+									<div class="col-sm-2">
+										<label for="Date">Recon From Date</label>
+									</div>
+									<div class="col-sm-2">
+										<input type="Date" id="RECONFromDate" name="Date"
+											class="form-control form-control-sm" />
+									</div>
+									 
+									<div class="col-sm-2">
+										<label for="Date">Recon To Date</label>
+									</div>
+									<div class="col-sm-2">
+										<input type="Date" id="RECONToDate" name="Date"
+											class="form-control form-control-sm" />
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- Footer Buttons -->
+						<div class="card-footer bg-white text-center p-1"
+							style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="home()" style="border-radius: 6px;">
+								<i class="fas fa-home me-1"></i> Home
+							</button>
+							<button type="button" class="btn btn-outline-dark me-3"
+								form="IPSAccessRole" th:attr="data-formmode=${formmode}"
+								onclick="SubmitReport();">
+								<i class="fas fa-upload me-1"></i> &nbsp;Submit
+							</button>
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="back()" style="border-radius: 6px;">
+								<i class="fas fa-angle-left me-1"></i> Back
+							</button>
+						</div>
+					</form>
+				</div>
+				<!--end-->
+				<!--Report -USD Start -->
+				<div class="card shadow-lg border-0" style="border-radius: 16px;"
+					th:if="${formmode == 'ReportUSD' or formmode == 'ModiReportUSD'}">
+					<!-- Header -->
+					<div class="card-header" style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px; position: relative;">
+
+						<div class="d-flex justify-content-between align-items-center">
+							<!-- Centered title -->
+							<h4 class="text-white m-0 text-center flex-grow-1">
+								<i class="fas fa-wallet" style="color: lightblue;"></i> Recon Summary
+								Report - USD
+							</h4>
+
+							<i class="fas fa-edit text-white p-1" style="cursor: pointer;" th:if="${formmode == 'ReportUSD' && report?.entity_flg == 'Y'}"
+								title="Modify" onclick="ModUsd()"></i>
+							<!-- Conditional section for Download or Verification -->
+							<div th:if="${report?.entity_flg == 'N'}">
+								<!-- If flg = 'Y' → show the "Unverified record found" message -->
+								<div class="d-flex align-items-center text-warning fw-bold"
+									style="gap: 10px;">
+									<i class="fas fa-exclamation-triangle">Unverified record
+										found</i>
+									<!-- Action buttons -->
+									<li class="fas fa-check-circle"
+										style="color: lightgreen; cursor: pointer;"
+										onclick="verifyNostro()" title="Verify"></li>
+									<li class="fas fa-times me-1"
+										style="color: red; cursor: pointer;" onclick="cancelVerify()"
+										title="Cancel"></li>
+								</div>
+							</div>
+
+							<!-- If flg ≠ 'Y' → show the Download dropdown -->
+							<li class="nav-item dropdown"
+								style="list-style: none; padding-left: 0;"
+								th:if="${report?.entity_flg!= 'N'}"><a href="#"
+								class="dropdown-toggle text-white"> <i
+									class="fas fa-download text-white" style="cursor: pointer;"
+									title="Download"></i>
+							</a>
+								<ul class="dropdown-menu">
+									<li><a href="#" id="SUMMARY" onclick="submitform(this)">Summary</a></li>
+									<li><a href="#" id="DETAIL" onclick="submitform(this)">Detail</a></li>
+								</ul></li>
+						</div>
+					</div>
+					<!-- Form Body -->
+					<form action="#" id="nostroFormUSD" method="post" autocomplete="off">
+						<input type="hidden" name="currency" th:value="${report?.currency}"> 
+						<input type="hidden" name="recon_date" th:value="${report?.recon_date}">
+						<input type="hidden" id="loginUser" th:value="${session.USERID}">
+						<input type="hidden" id="modifyUser" th:value="${report?.modify_user}">
+							
+						<div class="card-body p-3">
+							<div class="table-responsive" id="cardBody">
+								<table
+									class="table table-bordered table-hover table-sm table-black"
+									style="font-family: Verdana; font-size: 13px;">
+									<thead>
+										<tr>
+											<th style="border: none !important;">UPI Debit card USD
+												Settlement</th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important; text-align: right"
+												th:text="${#dates.format(report?.recon_date, 'dd-MM-yyyy')}"></th>
+
+										</tr>
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">ATM</th>
+										</tr>
+										<!-- <tr>
+											<th>DR/CR</th>
+											<th>Account Name</th>
+											<th>GL No</th>
+											<th class="text-right">Amount</th>
+											<th>Currency</th>
+										</tr> -->
+									</thead>
+									<th:block th:each="report : ${report}" th:if="${report.entity_flg=='Y'}">
+									<tbody>
+										<tr>
+											<td>D</td>
+											<td>INTERMEDIARY</td>
+											<td>24024010</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.atm_intermdiary,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>I. FEE</td>
+											<td>42631012</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.atm_ifee,1,'COMMA',2,'POINT')}"></td>
+											<td>R</td>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>S. FEE</td>
+											<td>42631011</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.atm_sfee,1,'COMMA',2,'POINT')}"></td>
+											<td>R</td>
+										</tr>
+										<tr>
+											<td>C</td>
+											<td>PAYABLE</td>
+											<td>24021000</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.atm_payable,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+                                        	<!-- ATM ENUIRY  -->
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">ATM
+											INQUIRY</th>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>I. FEE</td>
+										<td>42631012</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_ifee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>S. FEE</td>
+										<td>42631011</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_sfee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>PAYABLE</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_payable,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+										<!-- POS -->
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">POS</th>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>INTERMEDIARY</td>
+											<td>24024010</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.pos_intermdiary,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<tr>
+											<td>C</td>
+											<td>I. FEE</td>
+											<td>30603811</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.pos_ifee,1,'COMMA',2,'POINT')}"></td>
+											<td>R</td>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>S. FEE</td>
+											<td>42631011</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.pos_sfee,1,'COMMA',2,'POINT')}"></td>
+											<td></td>
+										</tr>
+										<tr>
+											<td>C</td>
+											<td>PAYABLE</td>
+											<td>24021000</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.pos_payable,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<!-- NOSTRO -->
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">NOSTRO
+												SCB USD</th>
+										</tr>
+
+										<tr th:if="${formmode}=='ReportUSD'">
+											<td>D</td>
+											<td>UPI Card Payable</td>
+											<td>24021000</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.nostro_upi_cardpay,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<tr th:if="${formmode}=='ReportUSD'">
+											<td>C</td>
+											<td>SCB USD</td>
+											<td>002901001292201</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.nostro_scb,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<tr th:if="${formmode}=='ReportUSD'">
+											<td>C</td>
+											<td>UPI Card Receivable Account</td>
+											<td>12921010</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.nostro_upi_cardrev,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+
+										<tr th:if="${formmode}=='ModiReportUSD'">
+											<td>D</td>
+											<td>UPI Card Payable</td>
+											<td>24021000</td>
+											<td><input type="number" min="0"
+												name="nostro_upi_cardpay" style="text-align: right;"
+												th:value="${report?.nostro_upi_cardpay}"
+												class="form-control form-control-sm text-end"></td>
+											<td>NR</td>
+										</tr>
+										<tr th:if="${formmode}=='ModiReportUSD'">
+											<td>C</td>
+											<td>SCB USD</td>
+											<td>002901001292201</td>
+											<td><input type="number" style="text-align: right;"
+												min="0" name="nostro_scb" th:value="${report?.nostro_scb}"
+												class="form-control form-control-sm text-end"></td>
+											<td>NR</td>
+										</tr>
+										<tr th:if="${formmode}=='ModiReportUSD'">
+											<td>C</td>
+											<td>UPI Card Receivable Account</td>
+											<td>12921010</td>
+											<td><input type="number" min="0"
+												name="nostro_upi_cardrev" style="text-align: right;"
+												th:value="${report?.nostro_upi_cardrev}"
+												class="form-control form-control-sm text-end"></td>
+											<td>NR</td>
+										</tr>
+										<!-- EPOS -->
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">EPOS</th>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>INTERMEDIARY</td>
+											<td>24024010</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.epos_intermdiary,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<tr>
+											<td>C</td>
+											<td>I. FEE</td>
+											<td>30603811</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.epos_ifee,1,'COMMA',2,'POINT')}"></td>
+											<td>R</td>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>S. FEE</td>
+											<td>42631011</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.epos_sfee,1,'COMMA',2,'POINT')}"></td>
+											<td>R</td>
+										</tr>
+										<tr>
+											<td>C</td>
+											<td>PAYABLE</td>
+											<td>24021000</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.epos_payable,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										
+										<!-- MUR - USD -->
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">MUR - USD</th>
+										</tr>
+										<tr th:if="${formmode} == 'ReportUSD'">
+											<td colspan="2">AMOUNT</td>
+											<td class="text-right" colspan="3"
+											th:text="${#numbers.formatDecimal(report?.amount,1,'COMMA',2,'POINT')}"></td>
+										</tr>
+										<tr th:if="${formmode} == 'ModiReportUSD'">
+											<td colspan="2">AMOUNT</td>
+											<td colspan="3"><input type="number" min="0"
+												name="amount" id="amount" th:value="${report?.amount}"
+												class="form-control form-control-sm"
+												style="text-align: right;"></td>
+										</tr>
+									</tbody>
+									</th:block>		
+									<tbody th:each="report : ${report1}">
+										<tr>
+											<td>D</td>
+											<td>INTERMEDIARY</td>
+											<td>24024010</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.atm_intermdiary,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>I. FEE</td>
+											<td>42631012</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.atm_ifee,1,'COMMA',2,'POINT')}"></td>
+											<td>R</td>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>S. FEE</td>
+											<td>42631011</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.atm_sfee,1,'COMMA',2,'POINT')}"></td>
+											<td>R</td>
+										</tr>
+										<tr>
+											<td>C</td>
+											<td>PAYABLE</td>
+											<td>24021000</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.atm_payable,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+											<!-- ATM ENUIRY  -->
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">ATM
+											INQUIRY</th>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>I. FEE</td>
+										<td>42631012</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_ifee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>S. FEE</td>
+										<td>42631011</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_sfee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>PAYABLE</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_payable,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+										<!-- POS -->
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">POS</th>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>INTERMEDIARY</td>
+											<td>24024010</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.pos_intermdiary,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<tr>
+											<td>C</td>
+											<td>I. FEE</td>
+											<td>30603811</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.pos_ifee,1,'COMMA',2,'POINT')}"></td>
+											<td>R</td>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>S. FEE</td>
+											<td>42631011</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.pos_sfee,1,'COMMA',2,'POINT')}"></td>
+											<td></td>
+										</tr>
+										<tr>
+											<td>C</td>
+											<td>PAYABLE</td>
+											<td>24021000</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.pos_payable,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<!-- NOSTRO -->
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">NOSTRO
+												SCB USD</th>
+										</tr>
+										<tr th:if="${formmode}=='ReportUSD'">
+											<td>D</td>
+											<td>UPI Card Payable</td>
+											<td>24021000</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.nostro_upi_cardpay,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<tr th:if="${formmode}=='ReportUSD'">
+											<td>C</td>
+											<td>SCB USD</td>
+											<td>002901001292201</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.nostro_scb,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<tr th:if="${formmode}=='ReportUSD'">
+											<td>C</td>
+											<td>UPI Card Receivable Account</td>
+											<td>12921010</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.nostro_upi_cardrev,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+
+										<tr th:if="${formmode}=='ModiReportUSD'">
+											<td>D</td>
+											<td>UPI Card Payable</td>
+											<td>24021000</td>
+											<td><input type="number" min="0"
+												name="nostro_upi_cardpay" style="text-align: right;"
+												th:value="${report?.nostro_upi_cardpay}"
+												class="form-control form-control-sm text-end"></td>
+											<td>NR</td>
+										</tr>
+										<tr th:if="${formmode}=='ModiReportUSD'">
+											<td>C</td>
+											<td>SCB USD</td>
+											<td>002901001292201</td>
+											<td><input type="number" style="text-align: right;"
+												min="0" name="nostro_scb" th:value="${report?.nostro_scb}"
+												class="form-control form-control-sm text-end"></td>
+											<td>NR</td>
+										</tr>
+										<tr th:if="${formmode}=='ModiReportUSD'">
+											<td>C</td>
+											<td>UPI Card Receivable Account</td>
+											<td>12921010</td>
+											<td><input type="number" min="0"
+												name="nostro_upi_cardrev" style="text-align: right;"
+												th:value="${report?.nostro_upi_cardrev}"
+												class="form-control form-control-sm text-end"></td>
+											<td>NR</td>
+										</tr>
+										<!-- EPOS -->
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">EPOS</th>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>INTERMEDIARY</td>
+											<td>24024010</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.epos_intermdiary,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										<tr>
+											<td>C</td>
+											<td>I. FEE</td>
+											<td>30603811</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.epos_ifee,1,'COMMA',2,'POINT')}"></td>
+											<td>R</td>
+										</tr>
+										<tr>
+											<td>D</td>
+											<td>S. FEE</td>
+											<td>42631011</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.epos_sfee,1,'COMMA',2,'POINT')}"></td>
+											<td>R</td>
+										</tr>
+										<tr>
+											<td>C</td>
+											<td>PAYABLE</td>
+											<td>24021000</td>
+											<td class="text-right"
+												th:text="${#numbers.formatDecimal(report?.epos_payable,1,'COMMA',2,'POINT')}"></td>
+											<td>NR</td>
+										</tr>
+										
+										<!-- MUR - USD -->
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">MUR - USD</th>
+										</tr>
+										<tr th:if="${formmode} == 'ReportUSD'">
+											<td colspan="2">AMOUNT</td>
+											<td class="text-right" colspan="3"
+											th:text="${#numbers.formatDecimal(report?.amount,1,'COMMA',2,'POINT')}"></td>
+										</tr>
+										<tr th:if="${formmode} == 'ModiReportUSD'">
+											<td colspan="2">AMOUNT</td>
+											<td colspan="3"><input type="number" min="0"
+												name="amount" id="amount" th:value="${report?.amount}"
+												class="form-control form-control-sm"
+												style="text-align: right;"></td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+						<!-- Footer Buttons -->
+						<div class="card-footer bg-white text-center p-1"
+							style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="home()" style="border-radius: 6px;">
+								<i class="fas fa-home me-1"></i> Home
+							</button>
+							<button type="button" class="btn btn-outline-dark me-3"
+								th:if="${formmode}=='ModiReportUSD'"
+								onclick="submitNostro(event)" style="border-radius: 6px;">
+								<i class="fas fa-upload me-1"></i> Submit
+							</button>
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="back()" style="border-radius: 6px;">
+								<i class="fas fa-angle-left me-1"></i> Back
+							</button>
+						</div>
+					</form>
+				</div>
+				<!-- start - mur -->
+				<div class="card shadow-lg border-0" style="border-radius: 16px;"
+					th:if="${formmode == 'ReportMUR' or formmode == 'ModiReportMUR'}">
+					<!-- Header -->
+					<div class="card-header"
+						style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px; position: relative;">
+
+						<div class="d-flex justify-content-between align-items-center">
+							<!-- Centered title -->
+							<h4 class="text-white m-0 text-center flex-grow-1">
+								<i class="fas fa-wallet" style="color: lightblue;"></i> Recon
+								Summary Report - MUR
+							</h4>
+							<i class="fas fa-edit text-white m-1" style="cursor: pointer;"
+								th:if="${formmode == 'ReportMUR' && report?.entity_flg == 'Y'}" title="Modify"
+								onclick="ModMur()"></i>
+							<!-- Conditional section for Download or Verification -->
+							<div th:if="${report?.entity_flg == 'N'}">
+								<!-- If flg = 'Y' → show the "Unverified record found" message -->
+								<div class="d-flex align-items-center text-warning fw-bold"
+									style="gap: 10px;">
+									<i class="fas fa-exclamation-triangle">Unverified record
+										found</i>
+									<!-- Action buttons -->
+									<li class="fas fa-check-circle"
+										style="color: lightgreen; cursor: pointer;"
+										onclick="verifyNostro()" title="Verify"></li>
+									<li class="fas fa-times me-1"
+										style="color: red; cursor: pointer;"
+										onclick="cancelVerify()" title="Cancel"></li>
+								</div>
+							</div>
+
+							<!-- If flg ≠ 'Y' → show the Download dropdown -->
+							<li class="nav-item dropdown"
+								style="list-style: none; padding-left: 0;"
+								th:if="${report?.entity_flg!= 'N'}"><a href="#"
+								class="dropdown-toggle text-white"> <i
+									class="fas fa-download text-white" style="cursor: pointer;"
+									title="Download"></i>
+							</a>
+								<ul class="dropdown-menu">
+									<li><a href="#" id="SUMMARY" onclick="submitform(this)">Summary</a></li>
+									<li><a href="#" id="DETAIL" onclick="submitform(this)">Detail</a></li>
+								</ul></li>
+						</div>
+					</div>
+					<form action="#" id="nostroFormMUR" method="post" autocomplete="off">
+					<input type="hidden" name="currency" th:value="${report?.currency}"> 
+						<input type="hidden" name="recon_date" th:value="${report?.recon_date}">
+						<input type="hidden" id="loginUser" th:value="${session.USERID}">
+						<input type="hidden" id="modifyUser" th:value="${report?.modify_user}">
+					<div class="card-body p-3">
+					 <div class="table-responsive" id="cardBody">
+							<table class="table table-bordered table-hover table-sm table-black"
+								style="font-family: Verdana; font-size: 13px;">
+								<thead>
+									<tr>
+										<th style="border: none !important;">UPI Debit card MUR
+											Settlement</th>
+										<th style="border: none !important;"></th>
+										<th style="border: none !important;"></th>
+										<th style="border: none !important;"></th>
+										<th style="border: none !important; text-align: right"
+											th:text="${#dates.format(report?.recon_date, 'dd-MM-yyyy')}"></th>
+
+									</tr>
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">ATM</th>
+									</tr>
+									<!-- <tr>
+											<th>DR/CR</th>
+											<th>Account Name</th>
+											<th>GL No</th>
+											<th class="text-right">Amount</th>
+											<th>Currency</th>
+										</tr> -->
+								</thead>
+								
+								<th:block th:each="report : ${report}" th:if="${report.entity_flg=='Y'}">
+								<tbody>
+									<tr>
+										<td>D</td>
+										<td>INTERMEDIARY</td>
+										<td>24024010</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_intermdiary,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>I. FEE</td>
+										<td>42631012</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_ifee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>S. FEE</td>
+										<td>42631011</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_sfee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>PAYABLE</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_payable,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<!-- ATM ENUIRY  -->
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">ATM
+											INQUIRY</th>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>I. FEE</td>
+										<td>42631012</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_ifee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>S. FEE</td>
+										<td>42631011</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_sfee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>PAYABLE</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_payable,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+										<!-- POS -->
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">POS</th>
+									</tr>
+
+									<tr>
+										<td>D</td>
+										<td>INTERMEDIARY</td>
+										<td>24024010</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.pos_intermdiary,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>I. FEE</td>
+										<td>30603811</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.pos_ifee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>S. FEE</td>
+										<td>42631011</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.pos_sfee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>PAYABLE</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.pos_payable,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+
+									<!-- NOSTRO -->
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">NOSTRO
+											SCB USD</th>
+									</tr>
+
+									<tr th:if="${formmode}=='ReportMUR'">
+										<td>D</td>
+										<td>UPICard Payable</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.nostro_mastercard,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<tr th:if="${formmode}=='ReportMUR'">
+										<td>C</td>
+										<td>MCB MUR A/c</td>
+										<td>002901000354005</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.nostro_mcb,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<tr th:if="${formmode}=='ReportMUR'">
+										<td>C</td>
+										<td>UPI Card Receivable Account</td>
+										<td>12921010</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.nostro_upi,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									
+									<tr th:if="${formmode} == 'ModiReportMUR'">
+											<td>D</td>
+											<td>UPI Card Payable</td>
+											<td>24021000</td>
+											<td><input type="number" min="0"
+												name="nostro_mastercard"
+												th:value="${report?.nostro_mastercard}"
+												class="form-control form-control-sm"
+												style="text-align: right;"></td>
+											<td>NR</td>
+										</tr>
+
+										<tr th:if="${formmode} == 'ModiReportMUR'">
+											<td>C</td>
+											<td>MCB MUR A/c</td>
+											<td>002901000354005</td>
+											<td><input type="number" min="0" name="nostro_mcb"
+												th:value="${report?.nostro_mcb}"
+												class="form-control form-control-sm"
+												style="text-align: right;"></td>
+											<td>NR</td>
+										</tr>
+
+										<tr th:if="${formmode} == 'ModiReportMUR'">
+											<td>C</td>
+											<td>UPI Card Receivable Account</td>
+											<td>12921010</td>
+											<td><input type="number" min="0" name="nostro_upi"
+												th:value="${report?.nostro_upi}"
+												class="form-control form-control-sm"
+												style="text-align: right;"></td>
+											<td>NR</td>
+										</tr>
+
+									<!-- EPOS -->
+
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">EPOS</th>
+									</tr>
+
+									<tr>
+										<td>D</td>
+										<td>INTERMEDIARY</td>
+										<td>24024010</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.epos_intermdiary,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>I. FEE</td>
+										<td>30603811</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.epos_ifee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>S. FEE</td>
+										<td>42631011</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.epos_sfee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>PAYABLE</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.epos_payable,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<!-- MUR - USD -->
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">MUR - USD</th>
+										</tr>
+										<tr th:if="${formmode} == 'ReportMUR'">
+											<td colspan="2">AMOUNT</td>
+											<td class="text-right" colspan="3"
+											th:text="${#numbers.formatDecimal(report?.amount,1,'COMMA',2,'POINT')}"></td>
+										</tr>
+										<tr th:if="${formmode} == 'ModiReportMUR'">
+											<td colspan="2">AMOUNT</td>
+											<td colspan="3"><input type="number" min="0"
+												name="amount" id="amount" th:value="${report?.amount}"
+												class="form-control form-control-sm"
+												style="text-align: right;"></td>
+										</tr>
+								</tbody>
+								</th:block>
+								
+								<tbody th:each="report : ${report1}">
+									<tr>
+										<td>D</td>
+										<td>INTERMEDIARY</td>
+										<td>24024010</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_intermdiary,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>I. FEE</td>
+										<td>42631012</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_ifee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>S. FEE</td>
+										<td>42631011</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_sfee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>PAYABLE</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_payable,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<!-- ATM ENUIRY  -->
+
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">ATM
+											INQUIRY</th>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>I. FEE</td>
+										<td>42631012</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_ifee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>S. FEE</td>
+										<td>42631011</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_sfee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>PAYABLE</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.atm_inquiry_payable,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+										<!-- POS -->
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">POS</th>
+									</tr>
+
+									<tr>
+										<td>D</td>
+										<td>INTERMEDIARY</td>
+										<td>24024010</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.pos_intermdiary,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>I. FEE</td>
+										<td>30603811</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.pos_ifee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>S. FEE</td>
+										<td>42631011</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.pos_sfee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>PAYABLE</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.pos_payable,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+
+									<!-- NOSTRO -->
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">NOSTRO
+											SCB USD</th>
+									</tr>
+
+									<tr th:if="${formmode}=='ReportMUR'">
+										<td>D</td>
+										<td>UPICard Payable</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.nostro_mastercard,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<tr th:if="${formmode}=='ReportMUR'">
+										<td>C</td>
+										<td>MCB MUR A/c</td>
+										<td>002901000354005</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.nostro_mcb,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<tr th:if="${formmode}=='ReportMUR'">
+										<td>C</td>
+										<td>UPI Card Receivable Account</td>
+										<td>12921010</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.nostro_upi,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									
+									<tr th:if="${formmode} == 'ModiReportMUR'">
+											<td>D</td>
+											<td>UPI Card Payable</td>
+											<td>24021000</td>
+											<td><input type="number" min="0"
+												name="nostro_mastercard"
+												th:value="${report?.nostro_mastercard}"
+												class="form-control form-control-sm"
+												style="text-align: right;"></td>
+											<td>NR</td>
+										</tr>
+
+										<tr th:if="${formmode} == 'ModiReportMUR'">
+											<td>C</td>
+											<td>MCB MUR A/c</td>
+											<td>002901000354005</td>
+											<td><input type="number" min="0" name="nostro_mcb"
+												th:value="${report?.nostro_mcb}"
+												class="form-control form-control-sm"
+												style="text-align: right;"></td>
+											<td>NR</td>
+										</tr>
+
+										<tr th:if="${formmode} == 'ModiReportMUR'">
+											<td>C</td>
+											<td>UPI Card Receivable Account</td>
+											<td>12921010</td>
+											<td><input type="number" min="0" name="nostro_upi"
+												th:value="${report?.nostro_upi}"
+												class="form-control form-control-sm"
+												style="text-align: right;"></td>
+											<td>NR</td>
+										</tr>
+
+									<!-- EPOS -->
+
+									<tr>
+										<th colspan="5" style="background-color: #D9E1F2;">EPOS</th>
+									</tr>
+
+									<tr>
+										<td>D</td>
+										<td>INTERMEDIARY</td>
+										<td>24024010</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.epos_intermdiary,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>I. FEE</td>
+										<td>30603811</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.epos_ifee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>D</td>
+										<td>S. FEE</td>
+										<td>42631011</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.epos_sfee,1,'COMMA',2,'POINT')}"></td>
+										<td></td>
+									</tr>
+									<tr>
+										<td>C</td>
+										<td>PAYABLE</td>
+										<td>24021000</td>
+										<td class="text-right"
+											th:text="${#numbers.formatDecimal(report?.epos_payable,1,'COMMA',2,'POINT')}"></td>
+										<td>NR</td>
+									</tr>
+									<!-- MUR - USD -->
+										<tr>
+											<th colspan="5" style="background-color: #D9E1F2;">MUR - USD</th>
+										</tr>
+										<tr th:if="${formmode} == 'ReportMUR'">
+											<td colspan="2">AMOUNT</td>
+											<td class="text-right" colspan="3"
+											th:text="${#numbers.formatDecimal(report?.amount,1,'COMMA',2,'POINT')}"></td>
+										</tr>
+										<tr th:if="${formmode} == 'ModiReportMUR'">
+											<td colspan="2">AMOUNT</td>
+											<td colspan="3"><input type="number" min="0"
+												name="amount" id="amount" th:value="${report?.amount}"
+												class="form-control form-control-sm"
+												style="text-align: right;"></td>
+										</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+					
+					<!-- Footer Buttons -->
+					<div class="card-footer bg-white text-center p-1"
+						style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+						<button type="button" class="btn btn-outline-dark me-3"
+							onclick="home()" style="border-radius: 6px;">
+							<i class="fas fa-home me-1"></i> Home
+						</button>
+						<button type="button" class="btn btn-outline-dark me-3" th:if="${formmode}=='ModiReportMUR'"
+							onclick="submitNostro(event)" style="border-radius: 6px;">
+							<i class="fas fa-upload me-1"></i> Submit
+						</button>
+						<button type="button" class="btn btn-outline-dark me-3"
+							onclick="back()" style="border-radius: 6px;">
+							<i class="fas fa-angle-left me-1"></i> Back
+						</button>
+					</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+<!----------------------------------------------------------------- Modal -------------------------------------------------------------->
+	<div class="modal fade" id="alert">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body" style="text-align: center; font-size: 16px;">
+					<p id="alertmsg"></p>
+					<button type="button" class="btn btn-sm  mx-1"
+						style="background-color: #376275; color: white;"
+						data-dismiss="modal" onclick="home();">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+<!-- --------------------------------------------------------------------end----------------------------------------------------- -->
+	<script>
+    // Set today's date as max (so user can only pick today or past dates)
+    document.getElementById("RECONDate").max = new Date().toISOString().split("T")[0];
+    </script>
+</body>
+</html>

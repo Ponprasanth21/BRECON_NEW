@@ -1,0 +1,542 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="text/javascript">
+$(document).ready(function () {
+    $('.dropdown, .dropdown-submenu').hover(function () {
+        $(this).children('.dropdown-menu').stop(true, true).delay(200).fadeIn(200);
+    }, function () {
+        $(this).children('.dropdown-menu').stop(true, true).delay(200).fadeOut(200);
+    });
+});
+</script>
+<style>
+
+.container-fluid {
+    width: 100%;
+    padding-right: 0px;
+    padding-left: 0px;
+    margin-right: auto;
+    margin-left: auto;
+}
+.container-manager {
+	padding-right: 47px;
+	padding-left: 132px;
+}
+
+.row {
+	display: -ms-flexbox;
+	display: flex;
+	-ms-flex-wrap: wrap;
+	flex-wrap: wrap;
+	margin-right: -103p;
+	margin-left: -104px;
+}
+
+
+
+.button-hover {
+    background-color: #f0f0f0;
+    padding:10px ;
+    border-radius: 10px;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.button-hover:hover {
+    transform: scale(1.1); /* Enlarge on hover */
+    
+    background-color: #acb9c9;
+    color: white;
+     /* Change background color on hover */
+/*     background-color: #d966ff; /* Change background color on hover */
+  /* Change text color on hover */
+}
+
+.button-hover span {
+    font-size: ;
+    font-weight: ;
+}
+
+.button-hover label {
+    font-size: 16px;
+}
+
+
+
+
+
+
+</style>
+<script th:inline="javascript">
+	/*<![CDATA[*/
+	function Yes() {
+		location.href = "./changePassword";
+	}
+	$(document).ready(function() {
+
+		var userdate = document.getElementById("pdate").value;
+		var userdate1 = userdate.split('-');
+		var date1 = userdate1[0];
+		var month1 = userdate1[1];
+
+		var year = userdate1[2];
+		let todays = new Date().toISOString().slice(0, 10);
+		const startDate = todays;
+		const endDate = userdate;
+
+		const diffInMs = new Date(endDate) - new Date(startDate)
+		const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+
+		if (diffInDays<=3 && diffInDays>0) {
+			$("#alert1").modal("toggle");
+		} else if (diffInDays == 0) {
+			$('#alert2').modal({
+				backdrop : 'static',
+				keyboard : false
+			}, 'show');
+			$("#alert2").modal("toggle");
+		}
+
+	});
+
+	/*>]]*/
+
+	function t() {
+
+		$.ajax({
+			type : 'get',
+			url : './t',
+
+			success : function(data) {
+
+				/*<![CDATA[*/
+
+				alert(data);
+			}
+
+		})
+
+	}
+</script>
+
+
+
+
+<script>
+	window.onload = function loadCharts() {
+		// Pie Chart
+		const pieCtx = document.getElementById('myPieChart').getContext('2d');
+		const pieChart = new Chart(pieCtx, {
+			type : 'line', // Corrected type to 'pie'
+			data : {
+				labels : [ "Raw Material", "Packing Material",
+						"Finished Goods", "Others" ],
+				datasets : [ {
+					
+					label : 'Product Status',
+					data : [ 65, 50, 75, 30 ],
+					backgroundColor : [ '#A7D8F5', // Light Blue
+					'#FFA3B5', // Light Pink
+					'#FFE79A', // Light Yellow
+					'#66B266' // Light Green
+					]
+				} ]
+			},
+			options : {
+				responsive : true,
+				maintainAspectRatio : false
+			}
+		});
+		
+		
+		
+		
+
+		const waterfallCtx = document.getElementById('myWaterfallChart').getContext('2d');
+		const barChart = new Chart(waterfallCtx, {
+		    type: 'bar',
+		    data: {
+		        labels: ["Purchase Order", "Purchase Invoice", "Sale Order", "Sale Invoice"],
+		        datasets: [
+		            {
+		                label: 'Inventory Status',
+		                data: [60,30,80,50], // Example waterfall data
+		                backgroundColor: ['#A7D8F5', '#FFA3B5', '#FFE79A', '#66B266'],
+		                borderColor: ['#2A7CC7', '#E54C60', '#D8B94B', '#347D34'],
+		                borderWidth: 2,
+		                borderRadius: 10, // Set border radius for rounded corners
+		                borderSkipped: false, // Avoid skipping borders for rounded effect
+		                barThickness: 35 // Set specific bar thickness (in pixels)
+		            },
+		            {
+		                label: 'Cumulative Values',
+		                data: [60,30,80,50], // Cumulative values for the line
+		                type: 'line', // Specify line type
+		                borderColor: '#0000FF', // Line color
+		                borderWidth: 2,
+		                fill: false, // No fill under the line
+		                tension: 0.4 // Smooth curve
+		            }
+		        ]
+		    },
+		    options: {
+		        responsive: true,
+		        maintainAspectRatio: false,
+		        scales: {
+		            x: {
+		                grid: {
+		                    display: true,
+		                    color: '#cccccc',
+		                    borderDash: [4, 4]
+		                },
+		                title: {
+		                    display: true,
+		                    text: 'Categories',
+		                    font: {
+		                        size: 14,
+		                        weight: 'bold'
+		                    }
+		                }
+		            },
+		            y: {
+		                beginAtZero: true,
+		                grid: {
+		                    display: true,
+		                    color: '#dddddd'
+		                },
+		                title: {
+		                    display: true,
+		                    text: 'Values',
+		                    font: {
+		                        size: 14,
+		                        weight: 'bold'
+		                    }
+		                }
+		            }
+		        },
+		        plugins: {
+		            legend: {
+		                display: true,
+		                position: 'top'
+		            },
+		            tooltip: {
+		                enabled: true
+		            }
+		        }
+		    }
+		});
+
+
+
+		// Function to update Bar Chart values
+		function putvalue(mydata,line) {
+			
+			if(mydata){
+			console.log("Updating bar chart with data:", mydata); // Debugging log
+			barChart.data.datasets[0].data = mydata;
+			barChart.data.datasets[1].data = mydata;
+			barChart.update();
+			}
+			
+			if(line){
+			pieChart.data.datasets[0].data = line;
+	        pieChart.update();
+			}
+		}
+
+		// Function to fetch details for the graph
+		function getdetailsforgraph() {
+			$
+					.ajax({
+						url : './getdetailsforgraph',
+						type : 'GET',
+						success : function(response) {
+							console.log("Response from server:", response); // Debugging log
+
+							// Extracting data and updating text fields
+							$('#purchaseorder').text(response.Purchaseorder);
+							$('#purchaseinvoice')
+									.text(response.purchaseinvoice);
+							$('#saleorder').text(response.saleorder);
+							$('#saleinvoice').text(response.saleinvoice);
+							$('#purchasereturn').text(response.purchasereturn);
+							$('#salereturn').text(response.salereturn);
+
+							// Prepare data for bar chart update
+							const graphData = [ response.Purchaseorder || 0,
+									response.purchaseinvoice || 0,
+									response.saleorder || 0,
+									response.saleinvoice || 0 ];
+							
+							const linechart=[response.RAWMATERIALS || 0,
+								response.PACKINGMATERIALS || 0,
+								response.FINISHEDGOODS || 0,
+								response.STOREANDSPARE || 0
+							]
+							
+							console.log("the line chart" + linechart)
+							
+
+							// Update the bar chart
+							putvalue(graphData,linechart);
+						},
+						error : function(xhr, status, error) {
+							console.error("Error fetching data:", error);
+						}
+					});
+		}
+
+		// Call the function to fetch data and update the graph
+		getdetailsforgraph();
+	};
+</script>
+
+
+
+<style>
+    .btn-custom {
+        padding: 5px 10px;
+        border: 2px solid #007BFF;
+        color: #007BFF;
+        background-color: white;
+        border-radius: 5px;
+        transition: 0.3s;
+    }
+
+    .btn-custom:hover {
+        color: white;
+        background-color: #007BFF;
+    }
+    .container {
+  display: flex;
+  justify-content: space-between;
+}
+
+.left, .right {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+    /* Default button styles */
+.switch-btn {
+  background-color: #f8f9fa; /* Default light background */
+  color: black;
+  transition: background-color 0.3s ease;
+}
+
+/* Active button styles */
+.switch-btn.active {
+  background-color: #A2ABD4; /* Highlight color */
+  color: white; /* Optional for better visibility */
+}
+    .table {
+    width: 100%;
+    margin-bottom: 1rem;
+    color: #354a5f;
+}
+    
+</style>
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+    const purchaseButton = document.getElementById('pur_id');
+    purchaseButton.style.backgroundColor = ''; // Corrected property name
+});
+
+
+
+
+function switchTable(type, event) {
+	  // Prevent default action (e.g., form submission)
+	  if (event) event.preventDefault();
+
+	  // Get references to the tables and buttons
+	  const purchaseTable = document.getElementById('dataTables_purchase');
+	  const saleTable = document.getElementById('dataTables_sale');
+	  const buttons = document.querySelectorAll('.switch-btn');
+	  const purchaseButton = document.getElementById('pur_id');
+
+	  // Toggle table visibility
+	  if (type === 'purchase') {
+	    purchaseTable.style.display = 'block';
+	    saleTable.style.display = 'none';
+	  } else if (type === 'sale') {
+	    saleTable.style.display = 'block';
+	    purchaseTable.style.display = 'none';
+	    purchaseButton.style.backgroundColor = '';
+	  }
+
+	  // Update button states
+	  buttons.forEach((button) => {
+	    if (button.dataset.type === type) {
+	      button.classList.add('active');
+	    } else {
+	      button.classList.remove('active');
+	    }
+	  });
+	}
+
+</script>
+
+
+
+
+<script>
+
+
+let currentPage = { purchase: 1, sale: 1 }; // Track pages for each table
+const rowsPerPage = 5;
+
+// Function to paginate a table
+function paginateTable(tableId) {
+    const tableBody = document.getElementById(`${tableId}Body`);
+    const rows = Array.from(tableBody.querySelectorAll('tr'));
+    const totalRows = rows.length;
+    const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+    // Determine current page for the table
+    const tableType = tableId.includes('purchase') ? 'purchase' : 'sale';
+    currentPage[tableType] = Math.max(1, Math.min(currentPage[tableType], totalPages));
+
+    // Show/hide rows based on the current page
+    rows.forEach((row, index) => {
+        row.style.display =
+            index >= (currentPage[tableType] - 1) * rowsPerPage && index < currentPage[tableType] * rowsPerPage
+                ? ''
+                : 'none';
+    });
+
+    // Update pagination controls
+    const pageIndicator = document.getElementById(`${tableType}PageIndicator`);
+    pageIndicator.innerText = `Page ${currentPage[tableType]} of ${totalPages}`;
+
+    // Enable/disable buttons
+    document.getElementById(`${tableType}PrevPage`).disabled = currentPage[tableType] === 1;
+    document.getElementById(`${tableType}NextPage`).disabled = currentPage[tableType] === totalPages;
+}
+
+// Event handlers for pagination buttons
+function prevPage(event, tableType) {
+    event.preventDefault();
+    if (currentPage[tableType] > 1) {
+        currentPage[tableType]--;
+        paginateTable(`dataTables_${tableType}`);
+    }
+}
+
+function nextPage(event, tableType) {
+    event.preventDefault();
+    const tableBody = document.getElementById(`dataTables_${tableType}Body`);
+    const totalRows = tableBody.querySelectorAll('tr').length;
+    const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+    if (currentPage[tableType] < totalPages) {
+        currentPage[tableType]++;
+        paginateTable(`dataTables_${tableType}`);
+    }
+}
+
+// Functions to switch tables
+function purc_table(event) {
+    event.preventDefault();
+    document.getElementById('dataTables_purchase').style.display = 'table';
+    document.getElementById('dataTables_sale').style.display = 'none';
+    document.getElementById('purchaseControls').style.display = 'block';
+    document.getElementById('saleControls').style.display = 'none';
+    paginateTable('dataTables_purchase'); // Apply pagination to Purchase table
+}
+
+function sale_table(event) {
+    event.preventDefault();
+    document.getElementById('dataTables_purchase').style.display = 'none';
+    document.getElementById('dataTables_sale').style.display = 'table';
+    document.getElementById('purchaseControls').style.display = 'none';
+    document.getElementById('saleControls').style.display = 'block';
+    paginateTable('dataTables_sale'); // Apply pagination to Sale table
+}
+
+// Initialize pagination on page load
+document.addEventListener('DOMContentLoaded', () => {
+    paginateTable('dataTables_purchase'); // Default to Purchase table
+    paginateTable('dataTables_sale'); // Initialize Sale table pagination
+});
+
+
+</script>
+<style>
+
+.blur-border {
+    width: 100%;
+    height: 100%;
+    border: 2px solid #5b708a; /* Define border */
+    box-shadow: 0px 0px 10px 4px #5b708a; /* Creates a blur effect */
+    border-radius: 5px; /* Optional: smooth corners */
+}
+
+</style>
+</head>
+<title>BRECON</title>
+<body>
+	<div th:insert="XBRLHeaderMenu :: header"></div>
+	<div class="container-manager">
+   </div>
+
+
+
+
+	<!--------------------------------------------------------- Password change modal------------------------------------------------ -->
+	<div class="modal fade" id="alert1">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="menu-header">
+					<h4 class="modal-title" style="text-align: center;">BORNFIRE
+						MANAGER</h4>
+
+				</div>
+				<br>
+				<div class="form-group">
+					<p style="margin-left: 120px;">Password Expiry Date :</p>
+					<p style="margin-top: -38px; margin-left: 290px;"
+						th:text="${#dates.format(RoleMenu?.passExpDate,'dd-MM-yyyy')}">
+				</div>
+				<div class="modal-body"
+					style="text-align: center; background-color: #c6ccd2">
+					<p id="alertmsg1" style="font-size: 16px; text-align: center">Do
+						You Want Change Password?</p>
+					<button type="button" class="btn btn-primary" data-dismiss="modal"
+						onclick="Yes(this);">Yes</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal"
+						onclick="">No</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="alert2">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="menu-header">
+					<h4 class="modal-title" style="text-align: center;">BORNFIRE
+						MANAGER</h4>
+
+				</div>
+				<br>
+				<div class="modal-body"
+					style="text-align: center; background-color: #c6ccd2">
+
+					<p id="alertmsg1" style="font-size: 16px; text-align: center">Change
+						Password</p>
+					<button type="button" class="btn btn-primary" data-dismiss="modal"
+						onclick="Yes(this);">OK</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

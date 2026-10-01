@@ -1,0 +1,916 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+<!-- 
+CREATED BY	: SURIYA K
+CREATED ON	: 11.08.2025
+PURPOSE		: SCREEN DESIGNS AND FUNCTION
+VERSION     : 1.0
+ -->
+ <!-- 
+CREATED BY	: SURIYA K
+CREATED ON	: 20.08.2025
+PURPOSE		: MUR AND USD REPORT
+VERSION     : 2.0
+ -->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="/BRECON/css/jquery.toast.min.css">
+
+<style>
+.btns {
+	float: right;
+	margin: 5px;
+}
+
+td {
+	padding: 0.30rem !important;
+}
+
+.col-sm-5 {
+	padding-bottom: 15px;
+}
+
+.list-body {
+	padding: 0px;
+}
+
+.container-manager {
+	padding-right: 43px;
+	padding-left: 15px;
+	margin-right: auto;
+	margin-left: 18.3%;
+	margin-top: 80px;
+}
+
+.error {
+	color: red;
+	padding-left: 10px;
+}
+
+.formline {
+	padding-bottom: 5px;
+}
+
+.btn-primary {
+	background-color: #2c4e5e;
+	border-color: white;
+}
+
+.btn-primary:not(:disabled ):not(.disabled ).active, .btn-primary:not(:disabled ):not(.disabled ):active, .show>.btn-primary.dropdown-toggle
+	{
+	color: #fff;
+	background-color: #cc000000;
+	border-color: #161617;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+	padding: 0px;
+}
+
+.valids {
+	color: green;
+}
+
+.invalids {
+	color: red;
+}
+</style>
+<style>
+.dataTables_wrapper {
+	width: 100% !important;
+}
+
+table.dataTable {
+	width: 100% !important;
+}
+
+.user-profile-wrapper {
+	width: 100%;
+	padding: 0 20px; /* optional spacing */
+}
+/* Expand the card or box */
+.card {
+	width: 100% !important;
+}
+/* Make table fill full width */
+table.dataTable {
+	width: 100% !important;
+}
+/* Optional: make header also full width */
+.user-profile-wrapper {
+	width: 100%;
+}
+/* Match list screen font style and size */
+.card, .card-body, .form-group, .form-control, .btn, label {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+}
+
+.card-header h5, .card-header h4 {
+	font-weight: bold;
+	font-size: 16px;
+}
+
+.no-border {
+	border: none !important;
+}
+
+.form-control-sm {
+	font-size: 14px;
+}
+
+.btn-sm {
+	font-size: 13px;
+}
+
+.table-black td, .table-black th, .table-black {
+	border: 1px solid black !important;
+	border-collapse: collapse;
+}
+
+tr.no-border th {
+	border: none !important;
+}
+</style>
+<script th:inline="javascript">
+	function home() {
+		location.href = 'Dashboard'
+	}
+	function back() {
+		window.history.back();
+	}
+</script>
+<script>
+
+function SubmitReport() {
+    const curr = document.getElementById("Cur").value;
+    const reconfromDate = document.getElementById("RECONFromDate").value;
+    const recontoDate = document.getElementById("RECONToDate").value;
+    const type = 'CREDIT';
+
+    // Convert YYYY-MM-DD → DD-MM-YYYY
+    const [year, month, day] = reconfromDate.split("-");
+    const formattedDatefrom = `${day}-${month}-${year}`;
+     
+    const [year1, month1, day1] = recontoDate.split("-");
+    const formattedDateto = `${day1}-${month1}-${year1}`;
+
+    const Url = 'getReconDateCredit' +
+        '?curr=' + encodeURIComponent(curr) +
+        '&type=' + encodeURIComponent(type) +
+        '&recon_from_date=' + encodeURIComponent(formattedDatefrom) + 
+        '&recon_to_date=' + encodeURIComponent(formattedDateto)  
+        ;
+        if(curr === '' || reconfromDate ===''|| recontoDate ===''){
+        	$.toast({ heading: 'Warning',
+        		text: 'All mandatory fields must be filled.',
+        		icon: 'warning',
+        		position: { 
+        			left: 1600,
+        			top: 0 
+        			}, 
+        		hideAfter: 5000
+        		});
+	
+        }else{
+            $.ajax({
+                url: Url,
+                type: 'GET',
+                success: function (data) {
+                    $('#loader').modal('hide');
+
+                    if (data !== "No Data Found") {   // ✅ If found
+                        if (curr === "USD") {
+                            location.href = 'BulkReportCR?formmode=ReportUSD&curr=' + curr +
+                                           '&ReconFromDate=' + formattedDatefrom +  '&ReconToDate=' + formattedDateto + '&type=' + type;
+                        } else if (curr === "MUR") {
+                            location.href = 'BulkReportCR?formmode=ReportMUR&curr=' + curr +
+                            '&ReconFromDate=' + formattedDatefrom +  '&ReconToDate=' + formattedDateto + '&type=' + type;
+                        }
+                    } else {
+                    	 $.toast({
+                    	    heading: 'Heads up!',
+                    	    text: 'Oops! No records matched your search..',
+                    	    icon: 'warning',
+                    	    position: { left: 1600, top: 0 },
+                    	    hideAfter: 2500
+                    	}); 
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $('#loader').modal('hide');
+                    console.error('Download error:', textStatus, errorThrown, jqXHR);
+
+                    let errorMessage = 'An error occurred while downloading the file. Please try again.';
+                    if (jqXHR.response) {
+                        const reader = new FileReader();
+                        reader.onload = function () {
+                            errorMessage = reader.result;
+                            showResultModal('Error', errorMessage);
+                        };
+                        reader.onerror = function () {
+                            showResultModal('Error', 'An unknown error occurred during download.');
+                        };
+                        reader.readAsText(jqXHR.response);
+                        return;
+                    }
+                    showResultModal('Error', errorMessage);
+                }
+            });
+            }
+
+}
+
+
+function submitform(element) {
+	var report = element.id; 
+	//alert(report);
+	const curr = new URLSearchParams(window.location.search).get("curr");
+	const ReconFromDate = new URLSearchParams(window.location.search).get("ReconFromDate");
+	const ReconToDate = new URLSearchParams(window.location.search).get("ReconToDate");
+	const [year, month, day] = ReconFromDate.split("-");
+	const formattedDatefrom = `${day}-${month}-${year}`;
+	
+	const [year1, month1, day1] = ReconToDate.split("-");
+	const formattedDateto = `${day1}-${month1}-${year1}`;
+  // alert(curr);
+  // alert(formattedDate);
+    const type ="CREDIT";
+    if (!formattedDatefrom) {
+        alert("Please select a date.");
+        return;
+    }
+
+    const filetype = 'EXCEL';
+
+    $('#loader').modal('show');
+//alert(ReconFromDate);
+    // Build download URL
+    const downloadUrl = 'ReconDownloadBulk' +
+        '?Cur=' + encodeURIComponent(curr) +
+        '&type=' + encodeURIComponent(type) +
+        '&filetype=' + encodeURIComponent(filetype) +
+        '&recon_from_date=' + encodeURIComponent(ReconFromDate) + '&recon_to_date=' + encodeURIComponent(ReconToDate) +  '&report=' + encodeURIComponent(report);
+
+    // Use window.location to trigger download
+    window.location.href = downloadUrl;
+
+    $('#loader').modal('hide');
+}
+
+
+</script>
+
+</head>
+<title>BRECON</title>
+<body>
+	<div th:insert="XBRLHeaderMenu :: header"></div>
+	<!-- --------------------------------------------------------------------User List Starts----------------------------------------------------- -->
+	<div class="container-fluid py-5">
+		<div class="row justify-content-center">
+			<div class="col-lg-10">
+				<div class="card shadow-lg border-0" style="border-radius: 16px;"
+					th:if="${formmode}=='list'">
+					<!-- Header -->
+					<div class="card-header text-center"
+						style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px; position: relative;">
+						<!-- Centered title -->
+						<h4 class="text-white m-0 text-center">
+							<i class="fas fa-clipboard-list mr-2" style="color: lightblue;"></i>
+							Recon Report
+						</h4>
+					</div>
+					<!-- Form Body -->
+					<form action="#" th:object="${userProfile}" method="post"
+						autocomplete="off" id="userProfile">
+						<div class="card-body p-3">
+							<input autocomplete="false" name="hidden" type="text"
+								style="display: none;">
+							<!-- Form Fields -->
+							<div class="form-group">
+								<div class="row formline mb-2">
+									<div class="col-sm-2">
+										<label for="Cur">Cur</label>
+									</div>
+									<div class="col-sm-2">
+										<select id="Cur" class="form-control form-control-sm"
+											autocomplete="off">
+											<option value="">Select</option>
+											<option value="MUR">MUR</option>
+											<option value="USD">USD</option>
+											 
+										</select>
+									</div>
+									 
+									<div class="col-sm-2">
+										<label for="Date">Recon From Date</label>
+									</div>
+									<div class="col-sm-2">
+										<input type="Date" id="RECONFromDate" name="Date"
+											class="form-control form-control-sm" />
+									</div>
+									 
+									<div class="col-sm-2">
+										<label for="Date">Recon To Date</label>
+									</div>
+									<div class="col-sm-2">
+										<input type="Date" id="RECONToDate" name="Date"
+											class="form-control form-control-sm" />
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- Footer Buttons -->
+						<div class="card-footer bg-white text-center p-1"
+							style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="home()" style="border-radius: 6px;">
+								<i class="fas fa-home me-1"></i> Home
+							</button>
+							<button type="button" class="btn btn-outline-dark me-3"
+								form="IPSAccessRole" th:attr="data-formmode=${formmode}"
+								onclick="SubmitReport();">
+								<i class="fas fa-upload me-1"></i> &nbsp;Submit
+							</button>
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="back()" style="border-radius: 6px;">
+								<i class="fas fa-angle-left me-1"></i> Back
+							</button>
+						</div>
+					</form>
+				</div>
+				<!--end-->
+				<!--Report -USD Start -->
+				<div class="card shadow-lg border-0" style="border-radius: 16px;"
+					th:if="${formmode}=='ReportUSD'">
+					<!-- Header -->
+					<div class="card-header"
+						style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px; position: relative;">
+
+						<div class="d-flex justify-content-between align-items-center">
+							<!-- Centered title -->
+							<h4 class="text-white m-0 text-center flex-grow-1">
+								<i class="fas fa-wallet" style="color: lightblue;"></i> Recon
+								Summary Report - USD
+							</h4>
+
+							<!-- Download Icon (aligned right) -->
+							<!-- Download Icon (aligned right) -->
+							<li class="nav-item dropdown" style="list-style: none; padding-left: 0;"><a href="#"
+								class="dropdown-toggle  text-white"><i
+									class="fas fa-download text-white" style="cursor: pointer;"
+									title="Download"></i></a>
+								<ul class="dropdown-menu">
+									<li><a href="#" id="SUMMARY" onclick="submitform(this)">
+											Summary</a></li>
+									<li><a href="#" id="DETAIL" onclick="submitform(this)">
+											Detail</a></li>
+								</ul></li>
+						</div>
+					</div>
+					<!-- Form Body -->
+					<form action="#" th:object="${userProfile}" method="post"
+						autocomplete="off" id="userProfile">
+						<div class="card-body p-3">
+							<div class="table-responsive" id="cardBody">
+								<table th:each="report : ${report}"
+									class="table table-bordered table-hover table-sm table-black"
+									style="font-family: Verdana; font-size: 13px;">
+									<thead>
+										<tr>
+											<th style="border: none !important;">Credit
+												card USD Settlement</th>
+											<th style="border: none !important;text-align: right"
+												th:text="' From '+ ${#dates.format(report?.recon_date, 'dd-MM-yyyy')} +' To '+${#dates.format(report?.posting_date, 'dd-MM-yyyy')} "></th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;">Posting Date</th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important; text-align: right"
+												th:text="${#dates.format(report?.posting_date, 'dd-MM-yyyy')}"></th>
+
+										</tr>
+										<tr style="background-color: #D9E1F2;">
+											<th>Account Name</th>
+											<th>GL No</th>
+											<th></th>
+											<th>USD</th>
+											<th>MUR</th>
+											<td class="no-border" style="border: none !important;"></td>
+											<th>Account Name</th>
+											<th>GL No</th>
+											<th>Remarks</th>
+											<th>MUR</th>
+											<th></th>
+											<th>SETT</th>
+											<th>PEX</th>
+											<th>DIFF</th>
+										</tr>
+									</thead>
+									<tbody style="font-family: Verdana;">
+										<!-- Row 1 -->
+										<tr class="text-right">
+											<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>Purchase</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r3_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r3_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">Credit Card Re-Imbursement Fee</td>
+											<td>30604002</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r3_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r3_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td>RATE</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r3_sett, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r3_pex, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r3_diff, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+										<tr class="text-right">
+											<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>Purchase</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r4_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r4_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">Credit Card Re-Imbursement Fee</td>
+											<td>30604002</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r4_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r4_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td>RATE</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r4_sett, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r4_pex, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r4_diff, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+										<tr class="text-right">
+											<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>Refund</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r5_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r5_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">Credit Card Re-Imbursement Fee</td>
+											<td>30604002</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r5_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r5_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td>RATE</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r5_sett, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r5_pex, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r5_diff, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+										<tr class="text-right">
+											<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>Refund</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r6_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r6_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">Credit Card Re-Imbursement Fee</td>
+											<td>30604002</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r6_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r6_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td>RATE</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r6_sett, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r6_pex, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r6_diff, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+										<tr class="font-weight-bold  text-right">
+
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r7_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+
+										<tr class="text-right">
+											<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>Markup</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r8_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r8_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">Markup</td>
+											<td>30604003</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r8_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r8_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+
+										</tr>
+										<tr class="text-right">
+											<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>Markup</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r9_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r9_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">Markup</td>
+											<td>30604003</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r9_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r9_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+
+										</tr>
+										<tr class="font-weight-bold  text-right">
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+
+											<td
+												th:text="${#numbers.formatDecimal(report?.r10_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+										<tr class="text-right">
+											<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>ATM CW Fee</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r11_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r11_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">ATM CW Fee</td>
+											<td>30604001</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r11_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r11_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+
+										</tr>
+										<tr class="text-right">
+										<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>ATM CW Fee</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r12_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r12_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">ATM CW Fee</td>
+											<td>30604001</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r12_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r12_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+
+										</tr>
+										<tr class="font-weight-bold  text-right">
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td></td>
+
+
+											<td
+												th:text="${#numbers.formatDecimal(report?.r13_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+										<tr class="text-right">
+											<td class="text-left">MC Interchange Fee Expense CR</td>
+											<td>42640000</td>
+											<td>ATM charges</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r14_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r14_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">Credit card intermediary</td>
+											<td>11280003</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r14_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r14_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+
+										</tr>
+										<tr class="text-right">
+											<td class="text-left">MC Interchange Fee Expense CR</td>
+											<td>42640000</td>
+											<td>ATM charges</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r15_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r15_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">Credit card intermediary</td>
+											<td>11280003</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r15_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r15_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+
+										</tr>
+										<tr class="text-right">
+											<td class="text-left">MC Interchange Fee Expense CR</td>
+											<td>42640000</td>
+											<td>Refund</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r16_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r16_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">Credit card intermediary</td>
+											<td>11280003</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r16_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r16_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+
+										</tr>
+										<tr class="text-right">
+											<td class="text-left">MC Interchange Fee Expense CR</td>
+											<td>42640000</td>
+											<td>Refund</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r17_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r17_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left">Credit card intermediary</td>
+											<td>11280003</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r17_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r17_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+
+										</tr>
+										<tr class="font-weight-bold  text-right">
+											<td class="text-left"></td>
+											<td></td>
+											<td></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r19_usd, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r19_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td></td>
+											<td class="text-left"></td>
+											<td></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r19_i, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r19_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+
+										</tr>
+
+									</tbody>
+								</table>
+							</div>
+						</div>
+						<!-- Footer Buttons -->
+						<div class="card-footer bg-white text-center p-1"
+							style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="home()" style="border-radius: 6px;">
+								<i class="fas fa-home me-1"></i> Home
+							</button>
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="back()" style="border-radius: 6px;">
+								<i class="fas fa-angle-left me-1"></i> Back
+							</button>
+						</div>
+					</form>
+				</div>
+				<!-- start - mur -->
+				<div class="card shadow-lg border-0" style="border-radius: 16px;"
+					th:if="${formmode}=='ReportMUR'">
+					<!-- Header -->
+						<div class="card-header"
+						style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px; position: relative;">
+
+						<div class="d-flex justify-content-between align-items-center">
+							<!-- Centered title -->
+							<h4 class="text-white m-0 text-center flex-grow-1">
+								<i class="fas fa-wallet" style="color: lightblue;"></i> Recon
+								Summary Report - MUR
+							</h4>
+
+							<!-- Download Icon (aligned right) -->
+							<!-- Download Icon (aligned right) -->
+							<li class="nav-item dropdown" style="list-style: none; padding-left: 0;"><a href="#"
+								class="dropdown-toggle  text-white"><i
+									class="fas fa-download text-white" style="cursor: pointer;"
+									title="Download"></i></a>
+								<ul class="dropdown-menu">
+									<li><a href="#" id="SUMMARY" onclick="submitform(this)">
+											Summary</a></li>
+									<li><a href="#" id="DETAIL" onclick="submitform(this)">
+											Detail</a></li>
+								</ul></li>
+						</div>
+					</div>
+
+					<!-- Form Body -->
+					<form action="#" th:object="${userProfile}" method="post"
+						autocomplete="off" id="userProfile">
+						<div class="card-body p-3">
+							<div class="table-responsive" id="cardBody">
+								<table th:each="report : ${report}"
+									class="table table-bordered table-hover table-sm table-black"
+									style="font-family: Verdana; font-size: 13px;">
+									<thead>
+										<tr>
+											<th style="border: none !important;"
+												th:text="'Credit card MUR Settlement  From '+ ${#dates.format(report?.recon_date, 'dd-MM-yyyy')} +' To '+${#dates.format(report?.posting_date, 'dd-MM-yyyy')} ">
+											</th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;"></th>
+
+											<th style="border: none !important;"></th>
+											<th style="border: none !important;">Posted</th>
+											<th style="border: none !important; text-align: right"
+												th:text="${#dates.format(report?.posting_date, 'dd-MM-yyyy')}"></th>
+
+										</tr>
+										<tr style="background-color: #D9E1F2;">
+											<th>Account Name</th>
+											<th>GL No</th>
+											<th>Remarks</th>
+											<th>MUR</th>
+											<td
+												style="background-color: #8EA9DB; border-bottom: none !important;"></td>
+											<th>Account Name</th>
+											<th>GL No</th>
+											<th>MUR</th>
+										</tr>
+									</thead>
+									<tbody style="font-family: Verdana;">
+										<!-- Row 1 -->
+										<tr class="text-right">
+											<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>Purchase</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r3_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td class="no-border"
+												style="background-color: #8EA9DB; border: none !important;"></td>
+
+											<td class="text-left">Credit Card Re-Imbursement Fee</td>
+											<td>30604002</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r3_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+
+										<!-- Row 2 -->
+										<tr class="text-right">
+											<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>CWF</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r5_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td class="no-border"
+												style="background-color: #8EA9DB; border: none !important;"></td>
+											<td class="text-left">MC Cash Advance/ATM Fee CR</td>
+											<td>30604001</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r5_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+
+										<!-- Row 3 -->
+										<tr class="text-right">
+											<td class="text-left">Credit Cards Account</td>
+											<td>11910000</td>
+											<td>ATM ON US</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r7_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td class="no-border"
+												style="background-color: #8EA9DB; border: none !important;"></td>
+											<td class="text-left">CREDIT CARD ATM INTERMEDIARY</td>
+											<td>11280002</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r7_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+
+										<!-- Row 4 -->
+										<tr class="text-right">
+											<td class="text-left">MC Interchange Fee Expense CR</td>
+											<td>42640000</td>
+											<td>ATM CHARGES</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r10_mur1, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td class="no-border"
+												style="background-color: #8EA9DB; border: none !important;"></td>
+											<td class="text-left">CREDIT CARD INTERMEDIARY</td>
+											<td>11280003</td>
+											<td
+												th:text="${#numbers.formatDecimal(report?.r10_mur2, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+
+										<!-- TOTAL Row -->
+										<tr class="font-weight-bold  text-right">
+											<td></td>
+											<td></td>
+											<td></td>
+											<td style="background-color: #D9E1F2;"
+												th:text="${#numbers.formatDecimal(report?.mur1_total, 1, 'COMMA', 2, 'POINT')}"></td>
+											<td class="no-border"
+												style="background-color: #8EA9DB; border: none !important;"></td>
+											<td></td>
+											<td></td>
+											<td style="background-color: #D9E1F2;"
+												th:text="${#numbers.formatDecimal(report?.mur2_total, 1, 'COMMA', 2, 'POINT')}"></td>
+										</tr>
+									</tbody>
+
+
+								</table>
+							</div>
+						</div>
+						<!-- Footer Buttons -->
+						<div class="card-footer bg-white text-center p-1"
+							style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="home()" style="border-radius: 6px;">
+								<i class="fas fa-home me-1"></i> Home
+							</button>
+							<button type="button" class="btn btn-outline-dark me-3"
+								onclick="back()" style="border-radius: 6px;">
+								<i class="fas fa-angle-left me-1"></i> Back
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- --------------------------------------------------------------------end----------------------------------------------------- -->
+	<script>
+    // Set today's date as max (so user can only pick today or past dates)
+const fromDate = document.getElementById("RECONFromDate");
+const toDate = document.getElementById("RECONToDate");
+
+// Get today's date (yyyy-mm-dd)
+const today = new Date().toISOString().split("T")[0];
+
+// Set max for both as today
+fromDate.max = today;
+toDate.max = today;
+
+// When From Date changes
+fromDate.addEventListener("change", function () {
+    // Set To Date minimum as selected From Date
+    toDate.min = this.value;
+
+    // If current To Date is earlier than selected From Date, reset it
+    if (toDate.value && toDate.value < this.value) {
+        toDate.value = this.value;
+    }
+});
+    </script>
+    
+
+</body>
+</html>

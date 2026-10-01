@@ -1,0 +1,14 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot-XbrlApplication<xbrl>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.bornfire.recon.XbrlApplication",
+      "projectName": "xbrl",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

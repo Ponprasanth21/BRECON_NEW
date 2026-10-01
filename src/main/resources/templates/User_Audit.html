@@ -1,0 +1,394 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<!-- 
+CREATED BY	: SURIYA K
+CREATED ON	: 01.08.2025
+PURPOSE		: DESIGN AND FUNCTIONALITY
+VERSION     : 01
+ -->
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/BRECON/js/jquery.min.js"></script>
+<script src="/BRECON/js/jquery-ui.min.js"></script>
+<style>
+/* Match list screen font style and size */
+.filterable .filters input[disabled] {
+	background-color: transparent;
+	border: none;
+	cursor: auto;
+	box-shadow: none;
+	padding: 0;
+	height: auto;
+}
+
+.filterable .filters input[disabled]::-webkit-input-placeholder {
+	color: #333;
+}
+
+.filterable .filters input[disabled]::-moz-placeholder {
+	color: #333;
+}
+
+.filterable .filters input[disabled]:-ms-input-placeholder {
+	color: #333;
+}
+
+.filterable .filters input[disabled]::-webkit-input-placeholder {
+	color: #333;
+}
+
+.card, .card-body, .form-group, .form-control, .btn, label {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+}
+
+.card-header h5, .card-header h4 {
+	font-weight: bold;
+	font-size: 16px;
+}
+
+.form-control-sm {
+	font-size: 14px;
+}
+
+.btn-sm {
+	font-size: 13px;
+}
+</style>
+<style>
+.dataTables_wrapper {
+	width: 100% !important;
+}
+
+table.dataTable {
+	width: 100% !important;
+}
+
+.user-profile-wrapper {
+	width: 100%;
+	padding: 0 20px; /* optional spacing */
+}
+/* Expand the card or box */
+.card {
+	width: 100% !important;
+}
+
+/* Make table fill full width */
+table.dataTable {
+	width: 100% !important;
+}
+
+/* Optional: make header also full width */
+.user-profile-wrapper {
+	width: 100%;
+}
+
+.dataTables_empty {
+	color: red !important;
+	text-align: center;
+}
+
+#userAuditLevelTb th, #userAuditLevelTb td {
+	padding: 4px !important;
+	text-align: left;
+}
+
+.ui-datepicker {
+	width: 18em; /* Default is 17em — increase for wider calendar */
+	font-size: 14px; /* Adjust font size */
+}
+</style>
+<script>
+	$(function() {
+		$("#Fromdate")
+				.datepicker(
+						{
+							dateFormat : 'dd/mm/yy',
+							maxDate : new Date(),
+							changeMonth : true,
+							changeYear : true,
+							onClose : function(selectedDate) {
+								var Fromdate = document
+										.getElementById("Fromdate").value;
+								if (Fromdate == "") {
+									alert("Enter From date");
+								} else {
+									location.href = './User_Audit?Fromdate='
+											+ Fromdate + '&ListFlg=' + 'Y';
+								}
+							}
+						});
+	});
+
+	function formatDate1(dateString) {
+		var dateParts = dateString.split("/");
+		var day = dateParts[0];
+		var month = parseInt(dateParts[1], 10);
+		var year = dateParts[2];
+		var monthNames = [ "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL",
+				"AUG", "SEP", "OCT", "NOV", "DEC" ];
+		var monthName = monthNames[month - 1];
+		return day + "-" + monthName + "-" + year;
+	}
+
+	function home() {
+		location.href = './IPSDashboard'
+	}
+
+	function back() {
+		window.history.back();
+	}
+
+	$(document).ready(function() {
+		$('#usertable').DataTable({
+			"destroy" : true,
+			"scrollCollapse" : true,
+			"paging" : true,
+			"autoWidth" : false,
+			"ordering" : true,
+			"oLanguage" : {
+				"sSearch" : "",
+				"sSearchPlaceholder" : "Search Here"
+			},
+			"searching" : true,
+			"pageLength" : 10,
+			"lengthChange" : false,
+		});
+	});
+
+	
+</script>
+
+<script type="text/javascript">
+	$(document)
+			.ready(
+					function() {
+						$('.filterable .btn-filter')
+								.click(
+										function() {
+											var $panel = $(this).parents(
+													'.filterable'), $filters = $panel
+													.find('.filters input'), $tbody = $panel
+													.find('.table tbody');
+											if ($filters.prop('disabled') == true) {
+												$filters
+														.prop('disabled', false);
+												$filters.first().focus();
+											} else {
+												$filters.val('').prop(
+														'disabled', true);
+												$tbody.find('.no-result')
+														.remove();
+												$tbody.find('tr').show();
+											}
+										});
+
+						$('.filterable .filters input')
+								.keyup(
+										function(e) {
+											/* Ignore tab key */
+											var code = e.keyCode || e.which;
+											if (code == '9')
+												return;
+											/* Useful DOM data and selectors */
+											var $input = $(this), inputContent = $input
+													.val().toLowerCase(), $panel = $input
+													.parents('.filterable'), column = $panel
+													.find('.filters th')
+													.index($input.parents('th')), $table = $panel
+													.find('.table'), $rows = $table
+													.find('tbody tr');
+											/* Dirtiest filter function ever ;) */
+											var $filteredRows = $rows
+													.filter(function() {
+														var value = $(this)
+																.find('td').eq(
+																		column)
+																.text()
+																.toLowerCase();
+														return value
+																.indexOf(inputContent) === -1;
+													});
+											/* Clean previous no-result if exist */
+											$table.find('tbody .no-result')
+													.remove();
+											/* Show all rows, hide filtered ones (never do that outside of a demo ! xD) */
+											$rows.show();
+											$filteredRows.hide();
+											/* Prepend no-result row if all rows are filtered */
+											if ($filteredRows.length === $rows.length) {
+												$table
+														.find('tbody')
+														.prepend(
+																$('<tr class="no-result text-center"><td colspan="'
+																		+ $table
+																				.find('.filters th').length
+																		+ '">No Record found</td></tr>'));
+											}
+										});
+					});
+</script>
+
+<script>
+	function adjustHeight() {
+		const cardBody = document.getElementById("cardBody");
+		const viewportHeight = window.innerHeight;
+		cardBody.style.maxHeight = `${viewportHeight * 0.80}px`; // Adjust 80% of the viewport height
+	}
+
+	window.addEventListener("resize", adjustHeight);
+	document.addEventListener("DOMContentLoaded", adjustHeight);
+</script>
+
+<script type="text/javascript">
+	function home() {
+		location.href = 'Dashboard'
+	}
+
+	function back() {
+		window.history.back();
+	}
+</script>
+
+</head>
+<title>BRECON</title>
+<body>
+	<div th:insert="XBRLHeaderMenu :: header"></div>
+
+	<div class="container-fluid py-5">
+		<div class="row justify-content-center">
+			<div class="col-lg-10">
+				<div class="card shadow-lg border-0 filterable" style="border-radius: 16px;">
+					<!-- Header -->
+					<div
+						class="card-header d-flex justify-content-between align-items-center"
+						style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+
+						<!-- Centered Title -->
+						<h4 class="text-white m-0 flex-grow-1 text-center">
+							<i class="fas fa-tools me-2" style="color: lightblue;"></i>
+							User Level Audit
+						</h4>
+
+						<!-- Right-aligned Filter -->
+						<div class="d-flex align-items-center ms-auto">
+							<input type="text" id="Fromdate" th:value="${Fromdate}"
+								class="form-control form-control-sm me-2" name="cust_id"
+								autocomplete="off" readonly /> <i
+								class="fas fa-filter text-white btn btns btn-filter"></i>
+						</div>
+					</div>
+
+				<div id="cardBody" class="card-body p-0"
+					style="overflow-y: auto; border: 1px solid #ddd;">
+					<div class="upload-section flex-fill p-3" style="min-width: 300px;">
+
+						<table class="table table-bordered table-hover table-sm"
+							style="font-family: Verdana; font-size: 13px;">
+							<thead class="thead-light" style="background-color: #e9ecf0;">
+								<tr class="filters">
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="Audit Date"
+										disabled></th>
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="Table Name"
+										disabled></th>
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="Function"
+										disabled></th>
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="Enterer"
+										disabled></th>
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="Entry Time"
+										disabled></th>
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="Auth User"
+										disabled></th>
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="Auth Time"
+										disabled></th>
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="Field Name"
+										disabled></th>
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="Old Value"
+										disabled></th>
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="New Value"
+										disabled></th>
+									<th><input type="text"
+										class="form-control font-weight-bold" placeholder="Remarks"
+										disabled></th>
+								</tr>
+							</thead>
+							<tbody th:if="${AuditList == null or #lists.isEmpty(AuditList)}"
+									id="bodyhide">
+									<tr>
+										<td colspan="12" class="text-center text-muted">No data
+											available</td>
+									</tr>
+								</tbody>
+							<tbody>
+								<tr th:each="auditdata : ${AuditList}" class="userlist">
+									<td
+										th:text="${#dates.format(auditdata?.audit_date, 'dd/MM/yyyy')}"></td>
+									<td
+										th:text="${auditdata?.audit_table != null ? auditdata?.audit_table.toUpperCase() : ''}"></td>
+									<td
+										th:text="${auditdata?.func_code != null ? auditdata?.func_code.toUpperCase() : ''}"></td>
+									<td
+										th:text="${auditdata?.entry_user != null ? auditdata?.entry_user.toUpperCase() : ''}"></td>
+									<td
+										th:text="${#dates.format(auditdata?.entry_time, 'dd-MM-yyyy HH:mm a')}"></td>
+									<td><span th:if="${auditdata?.auth_user} != ''"
+										th:text="${auditdata?.auth_user}"></span> <span
+										th:if="${auditdata?.auth_user} == null" style="color: red"></span>
+									</td>
+									<td
+										th:text="${#dates.format(auditdata?.auth_time, 'dd-MM-yyyy HH:mm a')}"></td>
+									<td><p th:each="message : ${auditdata?.fieldName}"
+											th:text="${message}"></p></td>
+									<td><p th:each="message : ${auditdata?.oldvalue}"
+											th:text="${message}"></p></td>
+									<td><p th:each="message : ${auditdata?.newvalue}"
+											th:text="${message}"></p></td>
+									<td
+										th:text="${auditdata?.remarks != null ? auditdata?.remarks.toUpperCase() : ''}"></td>
+								</tr>
+							</tbody>
+						</table>
+
+					</div>
+				</div>
+
+				<!-- Footer -->
+				<div class="card-footer bg-white text-center p-1"
+					style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+					<button type="button" class="btn btn-outline-dark me-3"
+						onclick="home()" style="border-radius: 6px;">
+						<i class="fas fa-home me-1"></i> Home
+					</button>
+					<button type="button" class="btn btn-outline-dark me-3"
+						onclick="back()" style="border-radius: 6px;">
+						<i class="fas fa-angle-left me-1"></i> Back
+					</button>
+				</div>
+			</div>
+
+		</div>
+	</div>
+	</div>
+	<div class="modal fade" id="alert">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body" style="text-align: center">
+					<p id="alertmsg"></p>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

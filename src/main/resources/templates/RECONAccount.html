@@ -1,0 +1,240 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+
+<!-- 
+CREATED BY	: SURIYA K
+CREATED ON	: 08.07.2025
+PURPOSE		: PARAMETER SCREEN
+VERSION     : 01
+ -->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* Match list screen font style and size */
+.card, .card-body, .form-group, .form-control, .btn, label {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+}
+
+.card-header h5, .card-header h4 {
+	font-weight: bold;
+	font-size: 16px;
+}
+
+.form-control-sm {
+	font-size: 14px;
+}
+
+.btn-sm {
+	font-size: 13px;
+}
+</style>
+<style>
+.btns {
+	float: right;
+	margin: 5px;
+}
+
+td {
+	padding: 0.30rem !important;
+}
+
+.col-sm-5 {
+	padding-bottom: 15px;
+}
+
+.list-body {
+	padding: 0px;
+}
+
+.error {
+	color: red;
+	padding-left: 10px;
+}
+
+.formline {
+	padding-bottom: 0px;
+}
+
+.btn-primary {
+	background-color: #E77400;
+	border-color: #0c0c0c;
+}
+
+.btn-primary:not (:disabled ):not (.disabled ).active, .btn-primary:not
+	 (:disabled ):not (.disabled ):active, .show>.btn-primary.dropdown-toggle
+	{
+	color: #fff;
+	background-color: #cc000000;
+	border-color: #161617;
+}
+
+#finusertb {
+	width: 460px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+	padding: 0px;
+}
+</style>
+<style>
+.valids {
+	color: green;
+}
+
+.invalids {
+	color: red;
+}
+</style>
+<style>
+.dataTables_wrapper {
+	width: 100% !important;
+}
+
+table.dataTable {
+	width: 100% !important;
+}
+
+.user-profile-wrapper {
+	width: 100%;
+	padding: 0 20px; /* optional spacing */
+}
+/* Expand the card or box */
+.card {
+	width: 100% !important;
+}
+
+/* Make table fill full width */
+table.dataTable {
+	width: 100% !important;
+}
+
+/* Optional: make header also full width */
+.user-profile-wrapper {
+	width: 100%;
+}
+</style>
+<style>
+.btn-xs:hover {
+    opacity: 0.85;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+</style>
+
+<script th:inline="javascript">
+	function home() {
+		location.href = 'Dashboard'
+
+	}
+
+	function back() {
+		window.history.back();
+	}
+
+</script>
+</head>
+<title>BRECON</title>
+<body>
+	<div th:insert="XBRLHeaderMenu :: header"></div>
+
+	<!-- -------------------User List Starts----------------------------------------------------- -->
+	<div class="container-fluid py-5">
+		<div class="row justify-content-center">
+			<div class="col-md-10">
+				<div class="card shadow-lg border-0" style="border-radius: 16px;">
+					<div th:if="${formmode}=='list'">
+						<div class="card"
+							style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+							<div class="card-header text-center"
+								style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+								<h4 class="text-white m-0">
+<i class="fas fa-address-book mr-2" style="color: lightblue;"></i> Account
+
+
+								</h4>
+							</div>
+							<div class="card-body p-2">
+								<div class="table-responsive p-3" id="cardBody">
+									<table class="table table-bordered table-hover table-sm"
+										>
+										<thead class="thead-light" style="background-color: #e9ecf0;">
+											<tr>
+												<th>Bank Id</th>
+												<th>Sol Id</th>
+												<th>Acct Num</th>
+												<th>Acct Name</th>
+												<th>Acct Place Holder</th>
+												<th>Acct Access Code</th>
+												<th>Crncy Code</th>
+												<th>Crncy Cntry</th>
+												<th>Mirror Acct Num</th>
+												<th>Mirror Acct Name</th>
+												<th>Acct Bank Code</th>
+												<th>Acct Bank Name</th>
+												<th>Addr 1</th>
+												<th>Addr 2</th>
+												<th>Acct City</th>
+												<th>Acct Cntry Code</th>
+												<th>Addl Ref</th>
+												<th>Acct Remarks</th>
+												<th>Last Recon Date</th>
+												<th>Next Recon Date</th>
+												<th>Recon Period Freq</th>
+												<th>Recon Status</th>
+											</tr>
+										</thead>
+										<tbody style="font-family: Verdana;">
+											<tr th:each="parList : ${list}" class="text-left">
+												<td th:text="${parList.bank_id}"></td>
+												<td th:text="${parList.sol_id}"></td>
+												<td th:text="${parList.acct_num}"></td>
+												<td th:text="${parList.acct_name}"></td>
+												<td th:text="${parList.acct_place_holder}"></td>
+												<td th:text="${parList.acct_access_code}"></td>
+												<td th:text="${parList.crncy_code}"></td>
+												<td th:text="${parList.crncy_cntry}"></td>
+												<td th:text="${parList.mirror_acct_num}"></td>
+												<td th:text="${parList.mirror_acct_name}"></td>
+												<td th:text="${parList.acct_bank_code}"></td>
+												<td th:text="${parList.acct_bank_name}"></td>
+												<td th:text="${parList.addr_1}"></td>
+												<td th:text="${parList.addr_2}"></td>
+												<td th:text="${parList.acct_city}"></td>
+												<td th:text="${parList.acct_cntry_code}"></td>
+												<td th:text="${parList.addl_ref}"></td>
+												<td th:text="${parList.acct_remarks}"></td>
+												<td
+													th:text="${#dates.format(parList.last_recon_date, 'dd-MM-yyyy')}"></td>
+												<td
+													th:text="${#dates.format(parList.next_recon_date, 'dd-MM-yyyy')}"></td>
+												<td th:text="${parList.recon_period_freq}"></td>
+												<td th:text="${parList.recon_status}"></td>
+											</tr>
+										</tbody>
+
+									</table>
+
+								</div>
+							</div>
+
+							<div class="card-footer bg-white text-center p-1"
+								style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+								<button type="button" class="btn btn-outline-dark me-3"
+									onclick="home()" style="border-radius: 6px;">
+									<i class="fas fa-home me-1"></i> Home
+								</button>
+								<button type="button" class="btn btn-outline-dark me-3"
+									onclick="back()" style="border-radius: 6px;">
+									<i class="fas fa-angle-left me-1"></i> Back
+								</button>
+							</div>
+						</div>
+					</div>
+
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

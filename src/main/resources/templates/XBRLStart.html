@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>BRECON</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+ <!-- ✅ Only required CSS -->
+  <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+  <link rel="stylesheet" th:href="@{/css/fontawesome.min.css}">
+
+  <!-- ✅ Only required JS -->
+
+<style>
+body, html {
+	height: 100%;
+	margin: 0;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	background-image: url('/BRECON/images/image2.png');
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-attachment: fixed;
+	background-size: cover;
+}
+
+.login-page-wrap {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	backdrop-filter: blur(2px);
+}
+
+.login-card {
+	display: flex;
+	width: 600px;
+	max-width: 97vw;
+	background: rgba(255, 255, 255, 0.88);
+	border-radius: 18px;
+	border: solid 1px black;
+	box-shadow: 0 8px 28px rgba(44, 78, 94, 0.28);
+    overflow: hidden;
+    
+ 
+}
+
+.login-blue-side {
+	background: linear-gradient(135deg, #e0eafc, #cfdef3); 
+    color: #2c3e50;
+	width: 205px;
+	min-width: 205px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 40px 20px;
+	text-align: center;
+    border: solid 1px black;
+}
+
+.login-blue-side img {
+	max-width: 130px;
+	height :100px;
+	margin-bottom: 18px;
+}
+
+.login-blue-side h2 {
+	font-size: 21px;
+	font-weight: 600;
+	letter-spacing: 0.7px;
+	margin-bottom: 0;
+}
+
+.login-form-side {
+	flex: 1;
+	padding: 38px 32px 32px 32px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	border: solid 1px black;
+}
+
+.login-form-side h4 {
+	color: #2a5298;
+	font-weight: 700;
+	margin-bottom: 22px;
+	letter-spacing: .5px;
+}
+
+.form-group {
+	position: relative;
+	margin-bottom: 24px;
+}
+
+.form-group .fa {
+	position: absolute;
+	left: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #a3a3a3;
+	font-size: 16px;
+}
+
+.form-control {
+	padding-left: 38px;
+	border-radius: 8px;
+	border: 1.5px solid #d4dbe5;
+	transition: border .3s;
+	font-size: 15px;
+}
+
+.form-control:focus {
+	border-color: #2a5298;
+	box-shadow: 0 0 4px #81a4e3;
+}
+
+#userid {
+	text-transform: uppercase;
+}
+
+.btn-login {
+	background: linear-gradient(90deg, #2a5298 60%, #376275 100%);
+	color: #fff;
+	font-weight: 700;
+	letter-spacing: .6px;
+	border-radius: 10px;
+	padding: 11px;
+	width: 100%;
+	font-size: 16px;
+	margin-top: 7px;
+	border: none;
+	transition: filter .22s;
+}
+
+.btn-login:hover, .btn-login:focus {
+	filter: brightness(.93);
+	background: #2a5298;
+	color: #fff;
+}
+
+.message-container {
+	min-height: 24px;
+	margin-bottom: 14px;
+	text-align: left;
+	font-size: 13px;
+}
+
+.error-msg {
+	color: #cd103c;
+	font-weight: 600;
+}
+
+.success-msg {
+	color: #34af32;
+	font-weight: 600;
+}
+
+/* Responsive */
+@media ( max-width : 700px) {
+	.login-card {
+		flex-direction: column;
+		width: 100%;
+	}
+	.login-blue-side, .login-form-side {
+		width: 100%;
+		min-width: unset;
+	}
+	.login-form-side {
+		padding: 28px 16px;
+	}
+	.login-blue-side {
+		padding: 24px 12px;
+	}
+}
+</style>
+</head>
+<body>
+  <div class="login-page-wrap">
+    <div class="login-card">
+
+      <div class="login-blue-side">
+        <img th:src="@{/images/Bornfire.png}"   alt="BRECON Logo"/>
+       <img th:src="@{/images/abc_logo.png}" style="height: 25px;" alt="ABC Logo"/>
+
+        <h6>Welcome to<br/>BRECON</h6>
+      </div>
+
+      <div class="login-form-side">
+        <h4>Sign In</h4>
+        <form th:action="@{/login}" method="post" autocomplete="off" novalidate>
+          <div class="form-group">
+            <i class="fa fa-user"></i>
+            <input
+              type="text"
+              class="form-control"
+              id="userid"
+              name="userid"
+              placeholder="User ID"
+              onkeyup="this.value = this.value.toUpperCase()"
+              required
+              aria-required="true"
+            />
+          </div>
+          <div class="form-group">
+            <i class="fa fa-lock"></i>
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              name="password"
+              placeholder="Password"
+              required
+              aria-required="true"
+            />
+          </div>
+          <div class="message-container" role="alert" aria-live="assertive">
+            <span class="error-msg" th:if="${param.error}" th:text="${param.error}"></span>
+            <span class="success-msg" th:if="${param.logout}">You have been logged out.</span>
+          </div>
+          <button type="submit" class="btn btn-login">Sign In</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,37 @@
+# Add any directories, files, or patterns you don't want to be tracked by version control
+*target*
+*.jar
+*.war
+*.ear
+*.class
+*logs*
+
+# Ignore Thumbnail files
+Thumbs.db
+
+# eclipse specific git ignore
+*.pydevproject
+.project
+.metadata
+bin/**
+tmp/**
+tmp/**/*
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.classpath
+.settings/
+.loadpath
+.factorypath
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+.sts4-cache/classpath-data.json
+*.jasper
+*.jasper

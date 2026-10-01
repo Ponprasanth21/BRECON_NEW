@@ -1,0 +1,928 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+<!-- 
+CREATED BY	: NITHYAPRIYA M
+CREATED ON	: 13.06.2025
+PURPOSE		: BANK AND BRANCH
+ -->
+<!-- 
+CREATED BY	: AISHWARYA V
+CREATED ON	: 08.07.2025
+PURPOSE		: BANK AND BRANCH
+VERSION     : 1.O
+ -->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/BRECON/css/fontawesome.min.css">
+
+<script src="/BRECON/js/jquery.min.js"></script>
+<script src="/BRECON/js/jquery-ui.min.js"></script>
+
+
+<style>
+/* Match list screen font style and size */
+.card, .card-body, .form-group, .form-control, .btn, label {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+}
+
+.card-header h5, .card-header h4 {
+	font-weight: bold;
+	font-size: 16px;
+}
+
+.form-control-sm {
+	font-size: 14px;
+}
+
+.btn-sm {
+	font-size: 13px;
+}
+
+.btns {
+	float: right;
+	margin: 5px;
+}
+
+td {
+	padding: 0.30rem !important;
+}
+
+.col-sm-5 {
+	padding-bottom: 15px;
+}
+
+.btn-primary:not (:disabled ):not (.disabled ).active, .btn-primary:not
+	 (:disabled ):not (.disabled ):active, .show>.btn-primary.dropdown-toggle
+	{
+	color: #fff;
+	background-color: #cc000000;
+	border-color: #161617;
+}
+
+.list-body {
+	padding: 0px;
+}
+
+.error {
+	color: red;
+	padding-left: 10px;
+}
+
+.formline {
+	padding-bottom: 5px;
+}
+
+.btn-primary {
+	background-color: #E77400;
+	border-color: #0c0c0c;
+}
+
+#finusertb {
+	width: 460px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+	padding: 0px;
+}
+
+.valids {
+	color: green;
+}
+
+.invalids {
+	color: red;
+}
+
+.dataTables_wrapper {
+	width: 100% !important;
+}
+
+table.dataTable {
+	width: 100% !important;
+}
+
+.user-profile-wrapper {
+	width: 100%;
+	padding: 0 20px; /* optional spacing */
+}
+/* Expand the card or box */
+.card {
+	width: 100% !important;
+}
+/* Make table fill full width */
+table.dataTable {
+	width: 100% !important;
+}
+/* Optional: make header also full width */
+.user-profile-wrapper {
+	width: 100%;
+}
+</style>
+<script th:inline="javascript">
+	function home() {
+		location.href = 'Dashboard'
+	}
+	function back() {
+		window.history.back();
+	}
+	function list() {
+		location.href = 'BankBranchMaster?formmode=list';
+	}
+	function AddModal(a) {
+		location.href = './BankBranchMaster?formmode=add';
+	}
+	function submitformdelete(a) {
+		var srlno = a.getAttribute("data-srl_no");
+		location.href = 'BankBranchMaster?formmode=delete&srlno=' + deleteval;
+	};
+	function view_btn_submit(a) {
+		var srlno = a.getAttribute("data-sol_id");
+		location.href = 'BankBranchMaster?formmode=view&solId=' + srlno;
+	}
+	function viewnew_btn_submit(a) {
+		var srlno = a.getAttribute("data-sol_id");
+		location.href = 'BankBranchMaster?formmode=viewnew&solId=' + srlno;
+	}
+	function cancel_btn_submit(a) {
+		var srlno = a.getAttribute("data-sol_id");
+		location.href = 'BankBranchMaster?formmode=cancel&solId=' + srlno;
+	}
+	function verify_btn_submit(a) {
+		var solId = a.getAttribute("data-sol_id");
+		location.href = 'BankBranchMaster?formmode=verify&solId=' + solId;
+	}
+	function edit_btn_submit(a) {
+		var acctcode = a.getAttribute("data-sol_id");
+		location.href = 'BankBranchMaster?formmode=edit&solId=' + acctcode;
+	}
+	function editnew_btn_submit(a) {
+		var acctcode = a.getAttribute("data-sol_id");
+		location.href = 'BankBranchMaster?formmode=editnew&solId=' + acctcode;
+	}
+</script>
+<script type="text/javascript">
+	//ADD & EDIT BANK DETAIL
+	function submitform(a) {
+		if ($("#BankDetails").valid()) {
+			var formmode = a.getAttribute("data-formmode");
+			var url = "./ModBankBranchMaster?formmode=" + formmode;
+			$("#BankDetails").attr('action', url);
+
+			var options = {
+				success : showResponse,
+				error : errorResponse
+			};
+
+			$("#BankDetails").ajaxSubmit(options);
+
+			function showResponse(responseText, statusText, xhr, $form) {
+				var msg = responseText.trim();
+
+				if (msg === "No Modification done") {
+					$.toast({
+						heading : 'Info',
+						text : msg,
+						icon : 'info',
+						showHideTransition : 'plain',
+						position : {
+							left : 1600,
+							top : 0
+						},
+						loaderBg : '#376275',
+						hideAfter : 3000
+					});
+				} else if (msg === "Branch not found!") {
+					$.toast({
+						heading : 'Error',
+						text : msg,
+						icon : 'error',
+						showHideTransition : 'plain',
+						position : {
+							left : 1600,
+							top : 0
+						},
+						loaderBg : '#FF0000',
+						hideAfter : 3000
+					});
+				} else {
+					$.toast({
+						heading : 'Success',
+						text : msg,
+						icon : 'success',
+						showHideTransition : 'plain',
+						position : {
+							left : 1600,
+							top : 0
+						},
+						loaderBg : '#376275',
+						hideAfter : 3000
+					});
+
+					setTimeout(function() {
+						location.href = 'BankBranchMaster?formmode=list';
+					}, 3100);
+				}
+			}
+
+			function errorResponse(xhr, status, error) {
+				$('#myModalpopup1').modal("toggle");
+				$('#myModalpopup1 .modal-body')
+						.text(
+								"An error occurred while processing your request. Please try again later.");
+			}
+		}
+	}
+	// VERIFY BANK DETAIL
+	function verifyform(a) {
+		if ($("#BankDetails").valid()) {
+			var entry = $("#entry_user").val();
+			var modify = $("#modify_user").val();
+			var verify = $("#verify_user").val();
+			var new_bank_flg = a.getAttribute("data-newflg");
+			var formmode = a.getAttribute("data-formmode");
+			var url = "./ModBankBranchMaster?formmode=" + formmode;
+			$("#BankDetails").attr('action', url);
+			var options = {
+				success : showResponse,
+				error : errorResponse
+			};
+			$("#BankDetails").ajaxSubmit(options);
+			function showResponse(responseText, statusText, xhr, $form) {
+				$.toast({
+					heading : 'Success',
+					text : responseText,
+					icon : 'success',
+					showHideTransition : 'plain',
+					position : {
+						left : 1600,
+						top : 0
+					}, // or any standard position like 'top-center'
+					loaderBg : '#376275',
+					hideAfter : 3000
+				});
+				setTimeout(function() {
+					location.href = 'BankBranchMaster?formmode=list';
+				}, 3100);
+			}
+			;
+			function errorResponse(xhr, status, error) {
+				$('#myModalpopup1').modal("toggle");
+				$('#myModalpopup1 .modal-body')
+						.text(
+								"An error occurred while processing your request. Please try again later.");
+			}
+		}
+	}
+	// DELETE BANK DETAIL
+	function cancelform(a) {
+		if ($("#BankDetails").valid()) {
+			var formmode = a.getAttribute("data-formmode");
+			var url = "./ModBankBranchMaster?formmode=" + formmode;
+			$("#BankDetails").attr('action', url);
+			var options = {
+				success : showResponse,
+				error : errorResponse
+			};
+			$("#BankDetails").ajaxSubmit(options);
+			function showResponse(responseText, statusText, xhr, $form) {
+
+				$.toast({
+					heading : 'Success',
+					text : responseText,
+					icon : 'success',
+					showHideTransition : 'plain',
+					position : {
+						left : 1600,
+						top : 0
+					}, // or any standard position like 'top-center'
+					loaderBg : '#376275',
+					hideAfter : 3000
+				});
+				setTimeout(function() {
+					location.href = 'BankBranchMaster?formmode=list';
+				}, 3100);
+
+			}
+			function errorResponse(xhr, status, error) {
+				$('#myModalpopup1').modal("toggle");
+				$('#myModalpopup1 .modal-body')
+						.text(
+								"An error occurred while processing your request. Please try again later.");
+			}
+		}
+	}
+
+	function getBranchCode() {
+		var parm_1 = document.getElementById("parm_1").value;
+		$
+				.ajax({
+					url : './getrefdesc',
+					data : {
+						refdesc : parm_1
+					},
+					type : 'GET',
+					success : function(responseText, statusText, xhr) {
+						$("#parm_2").val(responseText);
+					},
+					error : function(xhr, status, error) {
+						var errorMessage = xhr.responseText
+								|| "An error occurred while processing your request. Please try again.";
+						$.toast({
+							heading : 'Error',
+							text : errorMessage,
+							icon : 'error',
+							showHideTransition : 'plain',
+							position : {
+								left : 1600,
+								top : 0
+							},
+							loaderBg : '#dc3545',
+							hideAfter : 5000
+						});
+					}
+				});
+	}
+</script>
+<script>
+	$(document).ready(function() {
+		$("#bod_sysdate").datepicker({
+			maxDate : new Date(),
+			changeMonth : true,
+			changeYear : true,
+			dateFormat : "dd-mm-yy"
+		});
+	});
+</script>
+<script>
+	function adjustHeight() {
+		const cardBody = document.getElementById("cardBody");
+		const viewportHeight = window.innerHeight;
+		cardBody.style.maxHeight = `${viewportHeight * 0.95}px`; // Adjust 80% of the viewport height
+	}
+
+	window.addEventListener("resize", adjustHeight);
+	document.addEventListener("DOMContentLoaded", adjustHeight);
+</script>
+</head>
+<title>BRECON</title>
+<body>
+	<div th:insert="XBRLHeaderMenu :: header"></div>
+	<!-- -------------------User List Starts----------------------------------------------------- -->
+	<div class="container-fluid py-5">
+		<div class="row justify-content-center">
+			<div class="col-md-10">
+				<div class="card shadow-lg border-0" style="border-radius: 16px;">
+					<div th:if="${formmode}=='list'">
+						<div class="card"
+							style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+							<!-- Header -->
+							<div class="card-header text-center"
+								style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+								<h4 class="text-white m-0">
+									<i class="fas fa-university mr-2" style="color: lightblue;"></i>Bank
+									and Branch Master &nbsp; <i class="fas fa-user-plus"
+										onclick="AddModal();"></i>
+								</h4>
+							</div>
+							<!-- Body -->
+							<div class="card-body p-2" id="cardBody">
+								<div class="table-responsive" style="max-height: 620px;">
+									<table class="table table-bordered table-hover table-sm"
+										style="font-family: Verdana; font-size: 13px;">
+										<thead class="thead-light" style="background-color: #e9ecf0;">
+											<tr class="text-left">
+												<th>Sol ID</th>
+												<th>Bank ID</th>
+												<th>Bank Name</th>
+												<th>Branch ID</th>
+												<th>Branch Name</th>
+												<th>City</th>
+												<th>Country</th>
+												<th>Status</th>
+												<th>Select</th>
+											</tr>
+										</thead>
+										<tbody>
+											<tr th:each="bankdetails: ${BankandBranchList}"
+												class="text-left">
+												<!-- Case: entity_flg = Y -->
+												<td th:if="${bankdetails.entity_flg == 'Y'}"
+													th:text="${bankdetails.sol_id}"
+													th:attr="data-sol_id=${bankdetails.sol_id}"
+													onclick="view_btn_submit(this)"></td>
+												<!-- Case: entity_flg ≠ Y -->
+												<td th:if="${bankdetails.entity_flg != 'Y'}"
+													th:text="${bankdetails.sol_id}"
+													th:attr="data-sol_id=${bankdetails.sol_id}"
+													onclick="viewnew_btn_submit(this)"></td>
+												<td th:text="${bankdetails?.bank_code}">BANK01</td>
+												<td th:text="${bankdetails?.bank_name}">Bank Name</td>
+												<td th:text="${bankdetails.parm_1}">BR001</td>
+												<td th:text="${bankdetails?.parm_2}">Branch Name</td>
+												<td th:text="${bankdetails?.city_code}">City</td>
+												<td>BOTSWANA</td>
+												<th:block th:switch="${bankdetails.entity_flg}">
+													<td th:case="'Y'" style="color: green;">Verified</td>
+													<td th:case="'N'" style="color: red;">UnVerified</td>
+												</th:block>
+												<td class="text-center">
+													<!-- Modify icon: only if entity is verified (Y) --> <i
+													class="fas fa-edit"
+													style="font-size: 13px; color: #376275; cursor: pointer;"
+													title="Modify" th:if="${bankdetails.entity_flg == 'Y'}"
+													th:attr="data-sol_id=${bankdetails.sol_id}"
+													onclick="edit_btn_submit(this)"></i> 
+													<!-- Verify icon: only if entity is not verified (N) and entry user is not current user -->
+													<i class="fas fa-check-circle me-1"
+													style="font-size: 13px; color: #376275; cursor: pointer;"
+													title="Verify"
+													th:if="${bankdetails.entity_flg == 'N' and bankdetails.entry_user != emp_id}"
+													th:attr="data-sol_id=${bankdetails.sol_id}"
+													onclick="verify_btn_submit(this)"></i> 
+													<!-- Delete icon: only if entity is not verified (N) -->
+													<i class="fas fa-trash"
+													style="font-size: 13px; color: #376275; cursor: pointer;"
+													title="Delete" th:if="${bankdetails.entity_flg == 'N'}"
+													th:attr="data-sol_id=${bankdetails.sol_id}"
+													onclick="cancel_btn_submit(this)"></i>
+												</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+							<!-- Footer -->
+							<div class="card-footer bg-white text-center p-1"
+								style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+								<button type="button" class="btn btn-outline-dark me-3"
+									onclick="home()" style="border-radius: 6px;">
+									<i class="fas fa-home me-1"></i> Home
+								</button>
+								<button type="button" class="btn btn-outline-dark me-3"
+									onclick="back()" style="border-radius: 6px;">
+									<i class="fas fa-angle-left me-1"></i> Back
+								</button>
+							</div>
+						</div>
+					</div>
+					<!-- --------------------------------ADD, EDIT, VERIFY, CANCEL, VIEW, VIEWNEW---------------------------------------------- -->
+					<div class="row"
+						th:if="${formmode == 'add' or formmode == 'edit' or formmode == 'verify' or formmode == 'cancel' or formmode == 'view' or formmode == 'viewnew' or formmode == 'editnew'}">
+						<div class="col-sm-12 finuserapply">
+							<div class="card"
+								style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+								<!-- Header -->
+								<div class="card-header text-center"
+									style="background: #376275; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+									<h5 class="mb-0"
+										style="color: white; font-weight: bold; margin-left: 6px">
+										<span th:if="${formmode == 'add'}"><i
+											class="fas fa-university mr-2" style="color: lightblue;"></i>
+											Bank and Branch Master - Add</span> <span
+											th:if="${formmode == 'edit'}">BANK AND BRANCH MASTER -
+											Edit</span> <span th:if="${formmode == 'verify'}"><i
+											class="fas fa-university mr-2" style="color: lightblue;"></i>
+											Bank and Branch Master - Verify </span> <span
+											th:if="${formmode == 'cancel'}"><i
+											class="fas fa-university mr-2" style="color: lightblue;"></i>
+											Bank and Branch Master - Cancel</span> <span
+											th:if="${formmode == 'view' or formmode == 'viewnew'}"><i
+											class="fas fa-university mr-2" style="color: lightblue;"></i>
+											Bank and Branch Master - View</span>
+									</h5>
+								</div>
+								<!-- Form Body -->
+								<form action="#" th:object="${RefCodeMaster}" method="post"
+									autocomplete="off" id="BankDetails">
+									<div class="card-body p-3">
+										<div class="form-group">
+											<div class="row formline">
+												<div class="col-sm-2">
+													<label>Sol ID <span
+														style="color: red; font-size: 16px;"
+														th:if="${formmode == 'add' or formmode == 'edit'}">*</span></label>
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode == 'view' or formmode == 'verify' or formmode == 'cancel' or formmode == 'viewnew'}">
+													<input type="text" th:value="${BankandBranch?.sol_id}"
+														id="sol_id" class="form-control form-control-sm"
+														name="sol_id" readonly />
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode == 'edit' or formmode == 'add'}">
+													<input type="text" th:value="${BankandBranch?.sol_id}"
+														id="sol_id" class="form-control form-control-sm"
+														name="sol_id"
+														onkeyup="this.value = this.value.toUpperCase();"
+														th:readonly="${formmode == 'edit'}" required />
+												</div>
+												<div class="col-sm-2"></div>
+												<div class="col-sm-2">
+													<label>Description</label>
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode == 'view' or formmode == 'verify' or formmode == 'cancel' or formmode == 'viewnew'}">
+													<input type="text" th:value="${BankandBranch?.sol_desc}"
+														id="sol_desc" class="form-control form-control-sm"
+														readonly />
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode == 'edit' or formmode == 'add'}">
+													<input type="text" th:value="${BankandBranch?.sol_desc}"
+														id="sol_desc" name="sol_desc"
+														class="form-control form-control-sm"
+														onkeyup="this.value = this.value.toUpperCase();" />
+												</div>
+											</div>
+											<div class="row formline">
+												<label class="col-sm-2">Sol Type </label>
+												<div th:if="${formmode}=='add'  " class="col-sm-2">
+													<select id="sol_type" name="sol_type"
+														class="form-control  form-control-sm" required>
+														<option value="">SELECT</option>
+														<option th:each="city : ${soltype}" th:value="${city}"
+															th:text="${city}"></option>
+													</select>
+												</div>
+												<div th:if=" ${formmode}=='edit'" class="col-sm-2">
+
+													<select id="sol_type" name="sol_type"
+														class="form-control form-control-sm w-100" required>
+														<option value="">SELECT</option>
+														<option th:each="item : ${soltype}" th:value="${item}"
+															th:text="${item}"
+															th:selected="${item == BankandBranch?.sol_type}">
+														</option>
+													</select>
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='cancel' or ${formmode}=='viewnew'">
+													<input type="text" th:value="${BankandBranch?.sol_type}"
+														id="sol_type" name="sol_type"
+														class="form-control form-control-sm" autocomplete="off"
+														readonly />
+												</div>
+												<div class="col-sm-2"></div>
+												<label class="col-sm-2">BOD Sysdate </label>
+												<div class="col-sm-2">
+													<input type="text" id="bod_sysdate" name="bod_sysdate"
+														th:if="${formmode}=='add' "
+														class="form-control form-control-sm commonBackground"
+														autocomplete="off" /> <input type="text" id="bod_sysdate"
+														name="bod_sysdate" th:if="  ${formmode}=='edit'"
+														th:value="${#dates.format(BankandBranch?.bod_sysdate,'dd-MM-yyyy')}"
+														class="form-control form-control-sm commonBackground"
+														readonly autocomplete="off" /> <input type="text" id=""
+														name="bod_sysdate"
+														th:if="${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='cancel' or ${formmode}=='viewnew'"
+														class="form-control form-control-sm" autocomplete="off"
+														th:value="${#dates.format(BankandBranch?.bod_sysdate,'dd-MM-yyyy')}"
+														readonly />
+												</div>
+											</div>
+											<div class="row formline">
+												<label class="col-sm-2">Bank Code <span
+													style="color: red; font-size: 20px;"
+													th:if="${formmode}=='add' OR ${formmode}=='edit'">*</span></label>
+												<div th:if="${formmode}=='add' OR ${formmode}=='edit'"
+													class="col-sm-2">
+													<input
+														class="form-control form-control-sm commonBackground"
+														id="bank_code" name="bank_code"
+														onkeyup="this.value = this.value.toUpperCase();"
+														th:value="${BankandBranch?.bank_code}" required>
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='cancel' or ${formmode}=='viewnew'">
+													<input type="text" th:value="${BankandBranch?.bank_code}"
+														id="bank_code" name="bank_code"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm" autocomplete="off"
+														readonly />
+												</div>
+												<div class="col-sm-2"></div>
+												<label class="col-sm-2"> Bank Name<span
+													style="color: red; font-size: 20px;"
+													th:if="${formmode}=='add' OR ${formmode}=='modify'">*</span></label>
+												<div th:if="${formmode}=='add' OR ${formmode}=='edit'"
+													class="col-sm-2">
+													<input
+														class="form-control form-control-sm commonBackground"
+														id="bank_name" name="bank_name"
+														th:value="${BankandBranch?.bank_name}"
+														onkeyup="this.value = this.value.toUpperCase();" required>
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='cancel' or ${formmode}=='viewnew'">
+													<input type="text" th:value="${BankandBranch?.bank_name}"
+														id="bank_name" name="bank_name"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm" autocomplete="off"
+														readonly />
+												</div>
+											</div>
+											<div class="row formline">
+												<label class="col-sm-2"> Branch Code<span
+													style="color: red; font-size: 20px;"
+													th:if="${formmode}=='add' OR ${formmode}=='modify'">*</span></label>
+												<div class="col-sm-2">
+													<select id="parm_1" name="parm_1"
+														onchange="getBranchCode()" th:if="${formmode}=='add'"
+														class="form-control  form-control-sm" required>
+														<option value="">SELECT</option>
+														<option th:each="city : ${brcode}" th:value="${city}"
+															th:text="${city}"></option>
+													</select> <select id="parm_1" name="parm_1"
+														th:if="${formmode}=='edit'" onchange="getBranchCode()"
+														class="form-control form-control-sm w-100" required>
+														<option value="">SELECT</option>
+														<option th:each="item : ${brcode}" th:value="${item}"
+															th:text="${item}"
+															th:selected="${item == BankandBranch?.parm_1}">
+														</option>
+													</select> <input type="text" th:value="${BankandBranch?.parm_1}"
+														id="parm_1" name="parm_1"
+														th:if="${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='cancel' or ${formmode}=='viewnew'"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm" autocomplete="off"
+														readonly />
+												</div>
+
+												<div class="col-sm-2"></div>
+												<label class="col-sm-2">Branch Name<span
+													style="color: red; font-size: 20px;"
+													th:if="${formmode}=='add' OR ${formmode}=='modify'">*</span></label>
+												<div th:if="${formmode}=='add' OR ${formmode}=='edit'"
+													class="col-sm-2">
+													<input
+														class="form-control form-control-sm commonBackground"
+														id="parm_2" name="parm_2" readonly
+														th:value="${BankandBranch?.parm_2}"
+														onkeyup="this.value = this.value.toUpperCase();" required>
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='cancel' or ${formmode}=='viewnew'">
+													<input type="text" th:value="${BankandBranch?.parm_2}"
+														id="parm_2" name="parm_2"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm" autocomplete="off"
+														readonly />
+												</div>
+												<div class="col-sm-2"></div>
+											</div>
+											<div class="row formline">
+												<label class="col-sm-2">Address 1</label>
+												<div class="col-sm-2"
+													th:if="${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='cancel' or ${formmode}=='viewnew'">
+													<input type="text" th:value="${BankandBranch?.addr_1}"
+														id="addr_1" name="addr_1"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm" autocomplete="off"
+														readonly />
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode}=='add' OR ${formmode}=='edit'">
+													<input type="text" th:value="${BankandBranch?.addr_1}"
+														id="addr_1" name="addr_1"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm commonBackground"
+														autocomplete="off" />
+												</div>
+												<div class="col-sm-2"></div>
+												<label class="col-sm-2">Address 2</label>
+												<div class="col-sm-2"
+													th:if="${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='cancel' or ${formmode}=='viewnew'">
+													<input type="text" th:value="${BankandBranch?.addr_2}"
+														id="addr_2" name="addr_2"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm" autocomplete="off"
+														readonly />
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode}=='add' OR ${formmode}=='edit'">
+													<input type="text" th:value="${BankandBranch?.addr_2}"
+														id="addr_2" name="addr_2"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm commonBackground"
+														autocomplete="off" />
+												</div>
+												<div class="col-sm-2"></div>
+											</div>
+											<div class="row formline">
+												<label class="col-sm-2">City</label>
+												<div class="col-sm-2"
+													th:if="${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='cancel' or ${formmode}=='viewnew'">
+													<input type="text" th:value="${BankandBranch?.city_code}"
+														id="city_code" name="city_code"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm" autocomplete="off"
+														readonly />
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode}=='add' OR ${formmode}=='edit'">
+													<input type="text" th:value="${BankandBranch?.city_code}"
+														id="city_code" name="city_code"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm commonBackground"
+														autocomplete="off" />
+												</div>
+												<div class="col-sm-2"></div>
+												<label class="col-sm-2">State</label>
+												<div class="col-sm-2"
+													th:if="${formmode}=='view' OR ${formmode}=='verify' OR ${formmode}=='cancel' or ${formmode}=='viewnew'">
+													<input type="text" th:value="${BankandBranch?.state_code}"
+														id="state_code" name="state_code"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm" autocomplete="off"
+														readonly />
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode}=='add' OR ${formmode}=='edit'">
+													<input type="text" th:value="${BankandBranch?.state_code}"
+														id="state_code" name="state_code"
+														onkeyup="this.value = this.value.toUpperCase();"
+														class="form-control form-control-sm commonBackground"
+														autocomplete="off" />
+												</div>
+												<div class="col-sm-2"></div>
+											</div>
+
+											<div class="row formline  ">
+												<div class="col-sm-2">
+													<label>Country</label>
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode == 'view' or formmode == 'verify' or formmode == 'cancel' or formmode == 'viewnew'}">
+													<input type="text"
+														th:value="${BankandBranch?.country_code}"
+														id="country_code" name="country_code"
+														class="form-control form-control-sm" readonly />
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode == 'edit' or formmode == 'add'}">
+													<input type="text"
+														th:value="${BankandBranch?.country_code}"
+														name="country_code" id="country_code"
+														class="form-control form-control-sm"
+														onkeyup="this.value = this.value.toUpperCase();" />
+												</div>
+												<div class="col-sm-2"></div>
+												<div class="col-sm-2">
+													<label>Zip Code</label>
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode == 'view' or formmode == 'verify' or formmode == 'cancel' or formmode == 'viewnew'}">
+													<input type="number" th:value="${BankandBranch?.zip_code}"
+														id="zip_code" name="zip_code"
+														class="form-control form-control-sm" readonly />
+												</div>
+												<div class="col-sm-2"
+													th:if="${formmode == 'edit' or formmode == 'add'}">
+													<input type="number" th:value="${BankandBranch?.zip_code}"
+														id="zip_code" name="zip_code"
+														class="form-control form-control-sm" />
+												</div>
+											</div>
+										</div>
+									</div>
+									<!-- Footer -->
+									<div class="card-footer bg-white text-center p-1"
+										style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+										<button type="button" class="btn btn-outline-dark me-3"
+											onclick="home()" style="border-radius: 6px;">
+											<i class="fas fa-home me-1"></i> Home
+										</button>
+										<button th:if="${formmode == 'add' or formmode == 'edit'}"
+											type="button" class="btn btn-outline-dark me-3"
+											id="btnSubmit" th:attr="data-formmode=${formmode}"
+											onclick="submitform(this);">
+											<i class="fas fa-upload me-1"></i> &nbsp;Submit
+										</button>
+
+										<button th:if="${formmode == 'verify'}" type="button"
+											class="btn btn-outline-dark me-3" id="btnSubmit"
+											th:attr="data-formmode=${formmode},data-newflg=${BankandBranch?.new_bank_flg}"
+											onclick="verifyform(this);">
+											<i class="fas fa-check-circle me-1 "></i> Verify
+										</button>
+
+										<button th:if="${formmode == 'cancel'}" type="button"
+											class="btn btn-outline-dark me-3" id="btnSubmit"
+											th:attr="data-formmode=${formmode},data-newflg=${BankandBranch?.new_bank_flg}"
+											onclick="cancelform(this);">
+											<i class="fas fa-trash-alt me-1"></i>&nbsp;Delete
+										</button>
+										<button type="button" class="btn btn-outline-dark me-3"
+											onclick="back()" style="border-radius: 6px;">
+											<i class="fas fa-angle-left me-1"></i> Back
+										</button>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+					<!------------ end------------>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!--------------------------------------------------------------------Modal---------------------------------------------------------------->
+	<div class="modal fade" id="alert">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body" style="text-align: center">
+					<p id="alertmsg"></p>
+					<button type="button" class="btn btn-primary" data-dismiss="modal"
+						onclick="list();">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!--------------------------------------------------------------------Modal1---------------------------------------------------------------->
+	<div class="modal fade" id="datadelete">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body"
+					style="margin-top: 8px; text-align: center; color: #f15362;">
+					<button type="button" class="close" data-dismiss="modal">×</button>
+					Are you Sure want to delete?
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary"
+						onclick="submitformdelete(this);" th:attr="data-formmode=delete">Submit</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!--------------------------------------------------------------------Modal2---------------------------------------------------------------->
+	<div class="modal fade" id="formmsg">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-body"
+					style="margin-top: 8px; text-align: center; color: aliceblue;">
+					<button type="button" class="close" data-dismiss="modal">×</button>
+					<a th:value="${msg}"></a>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary"
+						onclick="submitformdelete(this);" th:attr="data-formmode=delete">Submit</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!----------------------------------------------------------------------- Delete Confirmation Modal ---------------------------------------------->
+	<div class="modal fade" id="datacancel" style="background: #000000b0;"
+		role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable"
+			role="document">
+			<div class="modal-content">
+				<!-- Modal Header -->
+				<div
+					style="background-color: #f26223; font-weight: 700; font-size: 20px;">
+					<h4 style="color: white; padding: 13px;">CONFIRMATION</h4>
+				</div>
+				<!-- Modal Body -->
+				<div class="modal-body">
+					<h5 style="font-size: 17px; color: black; padding: 15px;">Are
+						you sure you want to delete the Reference Code?</h5>
+				</div>
+				<!-- Modal Footer -->
+				<div style="padding: 10px; text-align: center;">
+					<button type="button" class="btn btn-secondary"
+						style="font-size: 16px;" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-danger" id="refDelete"
+						style="font-size: 16px;" onclick="deleteRef(this);"
+						th:attr="data-formmode=delete">Yes, Delete</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!--------------------------------------------------------------------Modal3---------------------------------------------------------------->
+	<div class="modal fade" id="myModalpopup1" data-backdrop="static"
+		data-keyboard="false" style="background: #000000b0;"
+		aria-hidden="true">
+		<div
+			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<h4 class="modal-body text-center font-weight-bold"
+					style="color: black !important; font-size: 19px"></h4>
+				<div class="text-center">
+					<button type="button" class="btn mb-2"
+						style="width: 16%; background: #f26223; font-size: 17px;"
+						data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!--------------------------------------------------------------------End---------------------------------------------------------------->
+</body>
+</html>
