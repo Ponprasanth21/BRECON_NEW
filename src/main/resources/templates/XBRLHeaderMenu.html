@@ -606,9 +606,16 @@ function openusermanual() {
             </li>
         </ul>
     </li>
+    
+       <!-- Source Data -->
+   <!-- Source Data -->
+   <li class="nav-item"><a href="#" class="nav-link shine-effect" id="SourceData" onclick="contentLoad(this)">
+        Source Data
+    </a>
+</li>
 
     <!-- Credit Card -->
-    <li class="nav-item dropdown" th:if="${menus.contains('Credit Card')}">
+   <!--  <li class="nav-item dropdown" th:if="${menus.contains('Credit Card')}">
         <a href="#" class="dropdown-toggle shine-effect">Credit Card</a>
         <ul class="dropdown-menu">
             <li th:if="${menus.contains('CR Upload')}">
@@ -625,10 +632,10 @@ function openusermanual() {
                 <a href="#" onclick="contentLoad(this)" id="BulkReportCR">Bulk Report</a>
             </li>
         </ul>
-    </li>
+    </li> -->
 
     <!-- Debit Card -->
-    <li class="nav-item dropdown" th:if="${menus.contains('Debit Card')}">
+    <!-- <li class="nav-item dropdown" th:if="${menus.contains('Debit Card')}">
         <a href="#" class="dropdown-toggle shine-effect">Debit Card</a>
         <ul class="dropdown-menu">
             <li th:if="${menus.contains('DR Upload')}">
@@ -641,8 +648,8 @@ function openusermanual() {
                 <a href="#" onclick="contentLoad(this)" id="Report_Dr">Report</a>
             </li>
         </ul>
-    </li>
-    <li class="nav-item dropdown" th:if="${menus.contains('UPI')}"><a href="#"
+    </li> -->
+    <!-- <li class="nav-item dropdown" th:if="${menus.contains('UPI')}"><a href="#"
 						class="dropdown-toggle shine-effect">UPI Debit Card</a>
 						<ul class="dropdown-menu">
 							<li th:if="${menus.contains('UPI Upload')}"><a href="#" onclick="contentLoad(this)" id="Upi_Debit_Upload">Upload</a></li>
@@ -654,7 +661,7 @@ function openusermanual() {
 					<li class="nav-item dropdown" th:if="${menus.contains('Recon Parameter')}"><a href="#"
 						class="dropdown-toggle shine-effect">RECON Parameter</a>
 						<ul class="dropdown-menu">
-				<!-- 		<li><a href="#" onclick="contentLoad(this)" id="Parameter">Parameter</a></li>
+						<li><a href="#" onclick="contentLoad(this)" id="Parameter">Parameter</a></li>
 						
 							<li><a href="#" onclick="contentLoad(this)" id="Account">Account</a></li>
 							<li><a href="#" onclick="contentLoad(this)"
@@ -663,18 +670,15 @@ function openusermanual() {
 							<li><a href="#" onclick="contentLoad(this)" id="Follow_up">Follow Up</a></li>
 						
 							<li><a href="#" onclick="contentLoad(this)" id="Recon_oper">Reconciliation Operations</a></li>
-							<li><a href="#" onclick="contentLoad(this)" id="Recon_rep">Reconciliation Report</a></li> -->
+							<li><a href="#" onclick="contentLoad(this)" id="Recon_rep">Reconciliation Report</a></li>
 							<li th:if="${menus.contains('Rate Maintenance')}"><a href="#" onclick="contentLoad(this)" id="Rate_main">Rate Maintenance</a></li>
 						</ul></li>
-
-    <!-- Print Queue -->
-    <li class="nav-item" th:if="${menus.contains('Print Queue')}">
-        <a href="#" id="PrintQueue" onclick="contentLoad(this)" class="shine-effect">Print Queue</a>
-    </li>
+ -->
+ 
     
-     <li class="nav-item" th:if="${menus.contains('Print Queue')}">
+    <!--  <li class="nav-item" th:if="${menus.contains('Print Queue')}">
         <a href="#" id="DeleteReport" onclick="contentLoad(this)" class="shine-effect">Delete Report</a>
-    </li>
+    </li> -->
 </ul>
 
 	        </div>

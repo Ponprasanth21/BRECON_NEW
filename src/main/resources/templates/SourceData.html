@@ -1,0 +1,394 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRECON</title>
+
+    <script src="/BRECON/js/jquery.min.js"></script>
+    <script src="/BRECON/js/jquery-ui.min.js"></script>
+
+    <style>
+        :root {
+            --brand: #386b7e;
+            --brand-dark: #2c5667;
+            --ink: #263746;
+            --text: #111111;
+            --muted: #6b7a88;
+            --line: #d5dce2;
+            --head-bg: #e9edf1;
+            --head-hover: #dce3e9;
+            --row-alt: #f7f9fb;
+            --row-hover: #eaf2f5;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            background: #f3f6f8;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+        }
+
+        /* ---------- Card ---------- */
+        .source-data-wrapper {
+            width: 82%;
+            margin: 40px auto 40px auto;
+        }
+
+        .source-data-card {
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(20, 40, 55, 0.14);
+            overflow: visible;              /* needed so the dropdown is never clipped */
+        }
+
+        .source-data-header {
+            height: 46px;
+            background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: .3px;
+            border-radius: 14px 14px 0 0;
+        }
+        .source-data-header i { margin-right: 8px; }
+
+        .source-data-table-wrapper {
+            padding: 14px 14px 6px 14px;
+            box-sizing: border-box;
+            overflow: visible;              /* DO NOT use overflow:hidden / auto here */
+        }
+
+        /* ---------- Table ---------- */
+        .source-data-table {
+            width: 100%;
+            border-collapse: separate;      /* separate allows rounded corners */
+            border-spacing: 0;
+            table-layout: fixed;
+            font-size: 13px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+        }
+
+        .source-data-table thead { position: relative; z-index: 10; }
+
+        .source-data-table thead th {
+            background: var(--head-bg);
+            color: var(--ink);
+            font-weight: bold;
+            text-align: left;
+            padding: 0;
+            height: 40px;
+            vertical-align: middle;
+            white-space: nowrap;
+            border-bottom: 2px solid var(--brand);
+            border-right: 1px solid var(--line);
+            position: relative;
+        }
+        .source-data-table thead th:first-child { border-top-left-radius: 9px; }
+        .source-data-table thead th:last-child  { border-top-right-radius: 9px; border-right: none; }
+
+        .source-header-text {
+            display: block;
+            height: 40px;
+            line-height: 40px;
+            padding-left: 12px;
+            box-sizing: border-box;
+            font-size: 13px;
+            color: var(--ink);
+            letter-spacing: .3px;
+        }
+
+        /* ---------- Upload dropdown ---------- */
+        .upload-header-cell { overflow: visible !important; }
+
+        .upload-dropdown {
+            position: relative;             /* menu is positioned against THIS box */
+            width: 100%;
+            height: 40px;
+        }
+
+        .upload-btn,
+        .header-action-btn {
+            width: 100%;
+            height: 40px;
+            padding: 0 12px;
+            border: none;
+            background: transparent;
+            color: var(--ink);
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            font-weight: bold;
+            text-align: left;
+            cursor: pointer;
+            letter-spacing: .3px;
+            transition: background .15s ease;
+        }
+        .upload-btn:hover,
+        .header-action-btn:hover { background: var(--head-hover); }
+
+        .upload-btn:focus-visible,
+        .header-action-btn:focus-visible {
+            outline: 2px solid var(--brand);
+            outline-offset: -2px;
+        }
+
+        .upload-btn i, .header-action-btn i { margin-right: 6px; color: var(--brand); }
+
+        .upload-arrow {
+            float: right;
+            font-size: 11px;
+            margin-top: 2px;
+            transition: transform .15s ease;
+        }
+        .upload-dropdown.open .upload-arrow { transform: rotate(180deg); }
+        .upload-dropdown.open .upload-btn   { background: var(--head-hover); }
+
+        .upload-menu {
+            display: none;
+            position: absolute;             /* no JS coordinates = no mis-positioning */
+            top: 100%;
+            left: 0;
+            min-width: 100%;
+            width: 170px;
+            margin-top: 2px;
+            background: #ffffff;
+            border: 1px solid #c3ccd3;
+            border-radius: 8px;
+            box-shadow: 0 10px 24px rgba(20, 40, 55, 0.22);
+            overflow: hidden;
+            z-index: 9999;
+            box-sizing: border-box;
+        }
+        .upload-dropdown.open .upload-menu { display: block; }
+
+        .upload-menu a {
+            display: block;
+            height: 38px;
+            line-height: 38px;
+            padding: 0 14px;
+            box-sizing: border-box;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: normal;
+            border-bottom: 1px solid #edf0f2;
+        }
+        .upload-menu a:last-child { border-bottom: none; }
+        .upload-menu a:hover,
+        .upload-menu a:focus {
+            background: var(--head-bg);
+            color: var(--brand-dark);
+            outline: none;
+        }
+        .upload-menu a i { width: 18px; margin-right: 6px; color: var(--brand); }
+
+        /* ---------- Table body ---------- */
+        .source-data-table tbody { position: relative; z-index: 1; }
+
+        .source-data-table tbody td {
+            height: 36px;
+            padding: 6px 12px;
+            border-bottom: 1px solid #e6ebef;
+            border-right: 1px solid #eef1f4;
+            color: var(--text);
+            vertical-align: middle;
+            background: #ffffff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .source-data-table tbody td:last-child { border-right: none; }
+        .source-data-table tbody tr:nth-child(even) td { background: var(--row-alt); }
+        .source-data-table tbody tr:hover td { background: var(--row-hover); }
+        .source-data-table tbody tr:last-child td { border-bottom: none; }
+        .source-data-table tbody tr:last-child td:first-child { border-bottom-left-radius: 9px; }
+        .source-data-table tbody tr:last-child td:last-child  { border-bottom-right-radius: 9px; }
+
+        .no-data {
+            text-align: center !important;
+            color: var(--muted) !important;
+            padding: 36px 10px !important;
+            font-size: 14px;
+            white-space: normal !important;
+        }
+        .no-data i { display: block; font-size: 26px; margin-bottom: 8px; color: #b4c2cc; }
+
+        /* ---------- Footer ---------- */
+        .source-data-footer {
+            border-top: 1px solid #e3e8ec;
+            padding: 10px 0;
+            text-align: center;
+            background: #ffffff;
+            border-radius: 0 0 14px 14px;
+        }
+
+        .source-btn {
+            display: inline-block;
+            padding: 6px 14px;
+            margin: 0 3px;
+            background: #ffffff;
+            border: 1px solid #8a98a3;
+            border-radius: 6px;
+            color: var(--ink);
+            font-size: 13px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background .15s ease, border-color .15s ease;
+        }
+        .source-btn:hover {
+            background: var(--head-bg);
+            border-color: var(--brand);
+            color: #000;
+            text-decoration: none;
+        }
+
+        @media screen and (max-width: 1000px) {
+            .source-data-wrapper { width: 95%; }
+            .source-data-table-wrapper { overflow-x: auto; }
+            .source-data-table { min-width: 900px; font-size: 12px; }
+        }
+    </style>
+
+    <script>
+        $(function () {
+            var $dd  = $('#uploadDropdown');
+            var $btn = $('#uploadButton');
+
+            function openMenu()  { $dd.addClass('open');    $btn.attr('aria-expanded', 'true'); }
+            function closeMenu() { $dd.removeClass('open'); $btn.attr('aria-expanded', 'false'); }
+
+            $btn.on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $dd.hasClass('open') ? closeMenu() : openMenu();
+            });
+
+            // click outside closes
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('#uploadDropdown').length) { closeMenu(); }
+            });
+
+            // Esc closes
+            $(document).on('keydown', function (e) {
+                if (e.key === 'Escape') { closeMenu(); $btn.focus(); }
+            });
+
+            // menu items
+            $('#uploadMenu a').on('click', function (e) {
+                e.preventDefault();
+                var type = $(this).data('type');
+                closeMenu();
+                uploadSource(type);
+            });
+        });
+
+        /* One handler for ATM / POS / EPIN / VISANET */
+        function uploadSource(type) {
+            console.log(type + " Upload clicked");
+            // window.location.href = "/BRECON/upload/" + type;
+        }
+
+        function exportExcel() {
+            console.log("Excel clicked");
+            // window.location.href = "/BRECON/source-data/excel";
+        }
+
+        function extractData() {
+            console.log("Extract clicked");
+            // window.location.href = "/BRECON/source-data/extract";
+        }
+    </script>
+</head>
+
+<body>
+
+    <div th:insert="XBRLHeaderMenu :: header"></div>
+
+    <div class="source-data-wrapper">
+        <div class="source-data-card">
+
+            <div class="source-data-header">
+                <span><i class="fa fa-bar-chart"></i> Source Data</span>
+            </div>
+
+            <div class="source-data-table-wrapper">
+                <table class="source-data-table">
+                    <thead>
+                        <tr>
+                            <th style="width:14%;"><span class="source-header-text">CBS</span></th>
+                            <th style="width:12%;"><span class="source-header-text">ATM</span></th>
+                            <th style="width:12%;"><span class="source-header-text">POS</span></th>
+                            <th style="width:12%;"><span class="source-header-text">EPIN</span></th>
+                            <th style="width:12%;"><span class="source-header-text">VISANET</span></th>
+
+                            <th class="upload-header-cell" style="width:13%;">
+                                <div class="upload-dropdown" id="uploadDropdown">
+                                    <button type="button" id="uploadButton" class="upload-btn"
+                                            aria-haspopup="true" aria-expanded="false">
+                                        <i class="fa fa-upload"></i>Upload
+                                        <span class="upload-arrow">&#9662;</span>
+                                    </button>
+
+                                    <div class="upload-menu" id="uploadMenu" role="menu">
+                                        <a href="#" role="menuitem" data-type="ATM"><i class="fa fa-credit-card"></i>ATM</a>
+                                        <a href="#" role="menuitem" data-type="POS"><i class="fa fa-desktop"></i>POS</a>
+                                        <a href="#" role="menuitem" data-type="EPIN"><i class="fa fa-key"></i>EPIN</a>
+                                        <a href="#" role="menuitem" data-type="VISANET"><i class="fa fa-globe"></i>VISANET</a>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th style="width:12%;">
+                                <button type="button" class="header-action-btn" onclick="exportExcel()">
+                                    <i class="fa fa-file-excel-o"></i>EXCEL
+                                </button>
+                            </th>
+
+                            <th style="width:13%;">
+                                <button type="button" class="header-action-btn" onclick="extractData()">
+                                    <i class="fa fa-download"></i>EXTRACT
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <!-- Replace with real data, e.g.:
+                        <tr th:each="row : ${sourceList}">
+                            <td th:text="${row.cbs}"></td>
+                            <td th:text="${row.atm}"></td>
+                            <td th:text="${row.pos}"></td>
+                            <td th:text="${row.epin}"></td>
+                            <td th:text="${row.visanet}"></td>
+                            <td></td><td></td><td></td>
+                        </tr>
+                        -->
+
+                        <!-- Empty state -->
+                        <tr>
+                            <td colspan="8" class="no-data">
+                                <i class="fa fa-folder-open-o"></i>
+                                No source data available. Use <b>Upload</b> to add ATM, POS, EPIN or VISANET files.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="source-data-footer">
+                <a href="/BRECON/dashboard" class="source-btn"><i class="fa fa-home"></i> Home</a>
+                <a href="javascript:history.back();" class="source-btn"><i class="fa fa-chevron-left"></i> Back</a>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1932,14 +1932,18 @@ public class BRECONNavigationController {
 		}
 	}
 
-	@RequestMapping(value = "PrintQueue", method = { RequestMethod.GET, RequestMethod.POST })
-	public String PrintQueue(@RequestParam(required = false) String formmode,
-			@RequestParam(required = false) String userid, Model md) {
-		if (formmode == null || formmode.equals("list")) {
-			md.addAttribute("formmode", "list");
-			md.addAttribute("List", PRINT_ENQUIRY_REPO.getValues());
-		}
-		return "PrintQueue";
+	@RequestMapping(value = "SourceData", method = { RequestMethod.GET, RequestMethod.POST })
+	public String SourceData(
+	        @RequestParam(required = false) String formmode,
+	        @RequestParam(required = false) String userid,
+	        Model md) {
+
+	    if (formmode == null || formmode.equals("list")) {
+	        md.addAttribute("formmode", "list");
+	        md.addAttribute("List", PRINT_ENQUIRY_REPO.getValues());
+	    }
+
+	    return "SourceData";
 	}
 
 	@RequestMapping(value = "Report_Dr", method = { RequestMethod.GET, RequestMethod.POST })
