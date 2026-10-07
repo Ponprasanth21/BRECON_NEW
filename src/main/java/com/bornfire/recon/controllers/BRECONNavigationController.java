@@ -124,13 +124,13 @@ public class BRECONNavigationController {
 
 	@Autowired
 	LoginServices loginServices;
-	
+
 	@Autowired
 	AuidtConfigure audit;
 
 	@Autowired
 	ReportServices reportServices;
-	
+
 	@Autowired
 	RateMaintenance rateMainService;
 
@@ -241,22 +241,22 @@ public class BRECONNavigationController {
 
 	@Autowired
 	ACCESS_AND_ROLES_TEMP_REPO aCCESS_AND_ROLES_TEMP_REPO;
-	
-	@Autowired 
+
+	@Autowired
 	RECON_DRREPORT_MUR_REPO RECON_DRREPORT_MUR_REPO;
-	
+
 	@Autowired
 	NostroService nostroService;
-	
+
 	@Autowired
 	RECON_TEMP_DRREPORT_USD_REPO RECON_TEMP_DRREPORT_USD_REPO;
-	
+
 	@Autowired
 	RECON_TEMP_DRREPORT_MUR_REPO RECON_TEMP_DRREPORT_MUR_REPO;
-	
+
 	@Autowired
 	RECON_TEMP_UPIREPORT_MUR_REPO RECON_TEMP_UPIREPORT_MUR_REPO;
-	
+
 	@Autowired
 	RECON_TEMP_UPIREPORT_USD_REPO RECON_TEMP_UPIREPORT_USD_REPO;
 
@@ -565,7 +565,7 @@ public class BRECONNavigationController {
 			byte[] byteArr = file.getBytes();
 			userProfile1.setPhoto(byteArr);
 		}
-		String msg = loginServices.editUser(userProfile1, formmode, userid,USERNAME);
+		String msg = loginServices.editUser(userProfile1, formmode, userid, USERNAME);
 		// System.out.println(msg);
 		return msg;
 	}
@@ -590,7 +590,7 @@ public class BRECONNavigationController {
 		String roleId = (String) rq.getSession().getAttribute("ROLEID");
 		String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
 		md.addAttribute("IPSRoleMenu", AccessRoleService.getRoleMenu(roleId));
-		md.addAttribute("flagchange", loginServices.cancelUserentity(userprofile, inputUser,USERNAME));
+		md.addAttribute("flagchange", loginServices.cancelUserentity(userprofile, inputUser, USERNAME));
 		String msg = loginServices.cancel(userprofile.getUserid());
 		// System.out.println(msg);
 		return msg;
@@ -766,29 +766,27 @@ public class BRECONNavigationController {
 		String userid1 = (String) req.getSession().getAttribute("USERID");
 		md.addAttribute("IPSRoleMenu", AccessRoleService.getRoleMenu(roleId));
 
-		System.out.println("emp_id"+userid1);
+		System.out.println("emp_id" + userid1);
 		if (formmode == null || formmode.equals("list")) {
-		    md.addAttribute("menu", "ACCESS AND ROLES");
-		    md.addAttribute("menuname", "ACCESS AND ROLES");
-		    md.addAttribute("formmode", "list");
-		    List<String> entryUsers = aCCESS_AND_ROLES_TEMP_REPO.getEntryUser();
-		    md.addAttribute("entryuser", entryUsers);
-		    md.addAttribute("emp_id", userid1);
+			md.addAttribute("menu", "ACCESS AND ROLES");
+			md.addAttribute("menuname", "ACCESS AND ROLES");
+			md.addAttribute("formmode", "list");
+			List<String> entryUsers = aCCESS_AND_ROLES_TEMP_REPO.getEntryUser();
+			md.addAttribute("entryuser", entryUsers);
+			md.addAttribute("emp_id", userid1);
 
-		   
-		    // Fetch only non-deleted TEMP roles
-		    List<ACCESS_AND_ROLES_TEMP_ENTITY> tempRoles = aCCESS_AND_ROLES_TEMP_REPO.findByDelFlgNot("Y");
+			// Fetch only non-deleted TEMP roles
+			List<ACCESS_AND_ROLES_TEMP_ENTITY> tempRoles = aCCESS_AND_ROLES_TEMP_REPO.findByDelFlgNot("Y");
 
-		    // Fetch only non-deleted ENTITY roles
-		    List<ACCESS_AND_ROLES_ENTITY> mainRoles = accessandrolesrepository.findByDelFlgNot("Y");
+			// Fetch only non-deleted ENTITY roles
+			List<ACCESS_AND_ROLES_ENTITY> mainRoles = accessandrolesrepository.findByDelFlgNot("Y");
 
-		    // Wrap into DTO
-		    AccessAndRolesDTO dto = new AccessAndRolesDTO(tempRoles, mainRoles);
+			// Wrap into DTO
+			AccessAndRolesDTO dto = new AccessAndRolesDTO(tempRoles, mainRoles);
 
-		    // Pass to UI
-		    md.addAttribute("AccessandRoles", dto);
-		}
-		else if (formmode.equals("add")) {
+			// Pass to UI
+			md.addAttribute("AccessandRoles", dto);
+		} else if (formmode.equals("add")) {
 			md.addAttribute("menuname", "ACCESS AND ROLES - ADD");
 			md.addAttribute("formmode", "add");
 		} else if (formmode.equals("edit")) {
@@ -830,7 +828,6 @@ public class BRECONNavigationController {
 			@RequestParam(value = "Invoice_DataValue", required = false) String Invoice_DataValue,
 			@RequestParam(value = "finalString", required = false) String finalString,
 
-
 			@ModelAttribute ACCESS_AND_ROLES_TEMP_ENTITY alertparam, Model md, HttpServletRequest rq) {
 
 		String userid = (String) rq.getSession().getAttribute("USERID");
@@ -838,9 +835,9 @@ public class BRECONNavigationController {
 		String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
 		md.addAttribute("IPSRoleMenu", AccessRoleService.getRoleMenu(roleId));
 
-	String msg = AccessRoleService.addPARAMETER(alertparam, formmode, adminValue, BRF_ReportsValue,
+		String msg = AccessRoleService.addPARAMETER(alertparam, formmode, adminValue, BRF_ReportsValue,
 				Basel_ReportsValue, ArchivalValue, Audit_InquiriesValue, RBR_ReportsValue, VAT_LedgerValue,
-		Invoice_DataValue, finalString, userid,USERNAME);
+				Invoice_DataValue, finalString, userid, USERNAME);
 
 		return msg;
 
@@ -1331,8 +1328,7 @@ public class BRECONNavigationController {
 
 	@RequestMapping(value = "DRReconProcess", method = { RequestMethod.GET, RequestMethod.POST })
 	@ResponseBody
-	public String DRReconProcess(@RequestParam(required = false) String arn,
-			HttpServletRequest rq) {
+	public String DRReconProcess(@RequestParam(required = false) String arn, HttpServletRequest rq) {
 		System.out.println(arn);
 
 		String user = (String) rq.getSession().getAttribute("USERID");
@@ -1347,110 +1343,109 @@ public class BRECONNavigationController {
 		up1.setRecon_type("PARTIAL");
 		BRECON_DRFILE_DESTINATION_REPO.save(up1);
 
-		RECON_DRMAIN_REPO.insertReconDr(arn,user);
+		RECON_DRMAIN_REPO.insertReconDr(arn, user);
 		audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "DATA MATCHED SUCCESSFULLY",
 				"BRECON_DRFILE_SOURCE_TABLE,BRECON_DRFILE_DESTINATION_TABLE", "RECON PROCESS");
 		return "Data synced successfully!.";
 	}
+
 	@PostMapping("DRReconSourceOnly")
 	@ResponseBody
-	public String reconSourceOnly(@RequestParam String arn,HttpServletRequest rq,String fromDate) {
-		
+	public String reconSourceOnly(@RequestParam String arn, HttpServletRequest rq, String fromDate) {
+
 		String user = (String) rq.getSession().getAttribute("USERID");
 		String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
 
-	    RECON_DRFILE_SOURCE_ENTITY src = RECON_DRFILE_SOURCE_REPO.getref(arn);
-	    src.setRecon_flg("Y");
-	    src.setRecon_type("PARTIAL");
-	    RECON_DRFILE_SOURCE_REPO.save(src);
-	    audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "RECON FLAG UPDATED SUCCESSFULLY",
+		RECON_DRFILE_SOURCE_ENTITY src = RECON_DRFILE_SOURCE_REPO.getref(arn);
+		src.setRecon_flg("Y");
+		src.setRecon_type("PARTIAL");
+		RECON_DRFILE_SOURCE_REPO.save(src);
+		audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "RECON FLAG UPDATED SUCCESSFULLY",
 				"BRECON_DRFILE_SOURCE_TABLE", "RECON PROCESS");
-		
-		
-	    return "Source updated successfully";
+
+		return "Source updated successfully";
 	}
+
 	@PostMapping("DRReconDestOnly")
 	@ResponseBody
-	public String reconDestOnly(@RequestParam String arn, HttpServletRequest rq,String fromDate) {
+	public String reconDestOnly(@RequestParam String arn, HttpServletRequest rq, String fromDate) {
 
-	    String user = (String) rq.getSession().getAttribute("USERID");
-	    String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
+		String user = (String) rq.getSession().getAttribute("USERID");
+		String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
 
-	    RECON_DRFILE_DESTINATION_ENTITY dest =
-	        BRECON_DRFILE_DESTINATION_REPO.getrefBydate(arn,fromDate);
-	    dest.setRecon_flg("Y");
-	    dest.setRecon_type("PARTIAL");
-	    BRECON_DRFILE_DESTINATION_REPO.save(dest);
+		RECON_DRFILE_DESTINATION_ENTITY dest = BRECON_DRFILE_DESTINATION_REPO.getrefBydate(arn, fromDate);
+		dest.setRecon_flg("Y");
+		dest.setRecon_type("PARTIAL");
+		BRECON_DRFILE_DESTINATION_REPO.save(dest);
 
-	    RECON_DRMAIN_REPO.insertReconDrFromDest(arn, user);
-	    audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "RECON FLAG UPDATED SUCCESSFULLY",
+		RECON_DRMAIN_REPO.insertReconDrFromDest(arn, user);
+		audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "RECON FLAG UPDATED SUCCESSFULLY",
 				"BRECON_DRFILE_DESTINATION_TABLE", "RECON PROCESS");
-	    BRECON_DRFILE_DESTINATION_REPO.runSourcePro(fromDate,"IB");
-	    return "Destination updated successfully";
+		BRECON_DRFILE_DESTINATION_REPO.runSourcePro(fromDate, "IB");
+		return "Destination updated successfully";
 	}
 
 	// 1️⃣ Both Source & Destination selected
 	@RequestMapping(value = "UPIReconProcess", method = { RequestMethod.GET, RequestMethod.POST })
 	@ResponseBody
 	public String UPIReconProcess(HttpServletRequest req, @RequestParam(required = false) String ref,
-	                              HttpServletRequest rq) {
-	    System.out.println(ref);
-	    String user = (String) rq.getSession().getAttribute("USERID");
-	    String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
-	    // Update Source
-	    RECON_UPI_SOURCE_ENTITY src = RECON_UPI_SOURCE_REPO.getref(ref);
-	    src.setRecon_flg("Y");
-	    src.setRecon_type("PARTIAL");
-	    RECON_UPI_SOURCE_REPO.save(src);
+			HttpServletRequest rq) {
+		System.out.println(ref);
+		String user = (String) rq.getSession().getAttribute("USERID");
+		String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
+		// Update Source
+		RECON_UPI_SOURCE_ENTITY src = RECON_UPI_SOURCE_REPO.getref(ref);
+		src.setRecon_flg("Y");
+		src.setRecon_type("PARTIAL");
+		RECON_UPI_SOURCE_REPO.save(src);
 
-	    // Update Destination
-	    RECON_UPI_DESTINATION_ENTITY dest = RECON_UPI_DESTINATION_REPO.getref(ref);
-	    dest.setRecon_flg("Y");
-	    dest.setRecon_type("PARTIAL");
-	    RECON_UPI_DESTINATION_REPO.save(dest);
+		// Update Destination
+		RECON_UPI_DESTINATION_ENTITY dest = RECON_UPI_DESTINATION_REPO.getref(ref);
+		dest.setRecon_flg("Y");
+		dest.setRecon_type("PARTIAL");
+		RECON_UPI_DESTINATION_REPO.save(dest);
 
-	    // Insert into main table
-	    RECON_UPIMAIN_REPO.insertReconRef(ref, user);
-	    audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "DATA MATCHED SUCCESSFULLY",
+		// Insert into main table
+		RECON_UPIMAIN_REPO.insertReconRef(ref, user);
+		audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "DATA MATCHED SUCCESSFULLY",
 				"BRECON_UPI_SOURCE_TABLE,BRECON_UPI_DESTINATION_TABLE", "RECON PROCESS");
 
-	    return "Data synced successfully!";
+		return "Data synced successfully!";
 	}
 
 	// 2️⃣ Only Source selected
 	@PostMapping("UPIReconSourceOnly")
 	@ResponseBody
-	public String UPIReconSourceOnly(@RequestParam String ref,HttpServletRequest rq,String fromDate) {
+	public String UPIReconSourceOnly(@RequestParam String ref, HttpServletRequest rq, String fromDate) {
 		String user = (String) rq.getSession().getAttribute("USERID");
 		String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
-	    RECON_UPI_SOURCE_ENTITY src = RECON_UPI_SOURCE_REPO.getref(ref);
-	    src.setRecon_flg("Y");
-	    src.setRecon_type("PARTIAL");
-	    RECON_UPI_SOURCE_REPO.save(src);
-	    audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "RECON FLAG UPDATED SUCCESSFULLY",
+		RECON_UPI_SOURCE_ENTITY src = RECON_UPI_SOURCE_REPO.getref(ref);
+		src.setRecon_flg("Y");
+		src.setRecon_type("PARTIAL");
+		RECON_UPI_SOURCE_REPO.save(src);
+		audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "RECON FLAG UPDATED SUCCESSFULLY",
 				"BRECON_UPI_SOURCE_TABLE", "RECON PROCESS");
-	   
-		
-	    return "Source updated successfully";
+
+		return "Source updated successfully";
 	}
 
 	// 3️⃣ Only Destination selected
 	@PostMapping("UPIReconDestOnly")
 	@ResponseBody
-	public String UPIReconDestOnly(@RequestParam String ref, HttpServletRequest rq,String fromDate) {
-	    String user = (String) rq.getSession().getAttribute("USERID");
-	    String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
+	public String UPIReconDestOnly(@RequestParam String ref, HttpServletRequest rq, String fromDate) {
+		String user = (String) rq.getSession().getAttribute("USERID");
+		String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
 
-	    RECON_UPI_DESTINATION_ENTITY dest = RECON_UPI_DESTINATION_REPO.getref(ref);
-	    dest.setRecon_flg("Y");
-	    dest.setRecon_type("PARTIAL");
-	    RECON_UPI_DESTINATION_REPO.save(dest);
+		RECON_UPI_DESTINATION_ENTITY dest = RECON_UPI_DESTINATION_REPO.getref(ref);
+		dest.setRecon_flg("Y");
+		dest.setRecon_type("PARTIAL");
+		RECON_UPI_DESTINATION_REPO.save(dest);
 
-	    RECON_UPIMAIN_REPO.insertReconRefFromDest(ref, user);
-	    audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "RECON FLAG UPDATED SUCCESSFULLY",
+		RECON_UPIMAIN_REPO.insertReconRefFromDest(ref, user);
+		audit.insertAudit(user, USERNAME, "MANUAL RECON PROCESS", "RECON FLAG UPDATED SUCCESSFULLY",
 				"BRECON_UPI_DESTINATION_TABLE", "RECON PROCESS");
-	    RECON_UPI_DESTINATION_REPO.runSourcePro(fromDate);
-	    return "Destination updated successfully";
+		RECON_UPI_DESTINATION_REPO.runSourcePro(fromDate);
+		return "Destination updated successfully";
 	}
 
 	@RequestMapping(value = "CRRefershProcess", method = { RequestMethod.GET, RequestMethod.POST })
@@ -1570,115 +1565,116 @@ public class BRECONNavigationController {
 	@PostMapping("/submitAllRates")
 	@ResponseBody
 	public ResponseEntity<?> saveRates(HttpServletRequest rq, @RequestBody List<RATE_MAINMOD_ENTITY> rates) {
-	    String user = (String) rq.getSession().getAttribute("USERID");
-	    String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
-	    try {
-	        rateMainService.saveRates(rates, user, USERNAME);
-	        return ResponseEntity.ok("Saved successfully");
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error saving rates");
-	    }
+		String user = (String) rq.getSession().getAttribute("USERID");
+		String USERNAME = (String) rq.getSession().getAttribute("USERNAME");
+		try {
+			rateMainService.saveRates(rates, user, USERNAME);
+			return ResponseEntity.ok("Saved successfully");
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error saving rates");
+		}
 	}
+
 	@PostMapping("/submitVersions")
 	@ResponseBody
-	public ResponseEntity<?> submitVersions(@RequestBody List<RATE_MAINMOD_ENTITY> versions, HttpServletRequest request) {
-	    String user = (String) request.getSession().getAttribute("USERID");
-	    String username = (String) request.getSession().getAttribute("USERNAME");
-	    try {
-	        rateMainService.submitVersions(versions, user, username);
-	        return ResponseEntity.ok("Versions saved successfully");
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error saving versions");
-	    }
+	public ResponseEntity<?> submitVersions(@RequestBody List<RATE_MAINMOD_ENTITY> versions,
+			HttpServletRequest request) {
+		String user = (String) request.getSession().getAttribute("USERID");
+		String username = (String) request.getSession().getAttribute("USERNAME");
+		try {
+			rateMainService.submitVersions(versions, user, username);
+			return ResponseEntity.ok("Versions saved successfully");
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error saving versions");
+		}
 	}
+
 	@PostMapping("/submitLists")
 	@ResponseBody
-	public ResponseEntity<?> submitLists(@RequestBody List<RATE_MAINMOD_ENTITY> listEntries, HttpServletRequest request) {
-	    String user = (String) request.getSession().getAttribute("USERID");
-	    String username = (String) request.getSession().getAttribute("USERNAME");
-	    try {
-	        rateMainService.submitLists(listEntries, user, username);
-	        return ResponseEntity.ok("List entries saved successfully");
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error saving list entries");
-	    }
+	public ResponseEntity<?> submitLists(@RequestBody List<RATE_MAINMOD_ENTITY> listEntries,
+			HttpServletRequest request) {
+		String user = (String) request.getSession().getAttribute("USERID");
+		String username = (String) request.getSession().getAttribute("USERNAME");
+		try {
+			rateMainService.submitLists(listEntries, user, username);
+			return ResponseEntity.ok("List entries saved successfully");
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error saving list entries");
+		}
 	}
 
 	@PostMapping("/uploadRateExcel")
 	@ResponseBody
-	public ResponseEntity<?> uploadRateExcel(
-	        @RequestParam("file") MultipartFile file,
-	        @RequestParam(value = "overwrite", required = false, defaultValue = "false") boolean overwrite,
-	        HttpServletRequest request) {
+	public ResponseEntity<?> uploadRateExcel(@RequestParam("file") MultipartFile file,
+			@RequestParam(value = "overwrite", required = false, defaultValue = "false") boolean overwrite,
+			HttpServletRequest request) {
 
-	    String user = (String) request.getSession().getAttribute("USERID");
-	    String username = (String) request.getSession().getAttribute("USERNAME");
+		String user = (String) request.getSession().getAttribute("USERID");
+		String username = (String) request.getSession().getAttribute("USERNAME");
 
-	    try {
-	        Map<String, Object> result = rateMainService.uploadRateExcel(file, user, username, overwrite);
-	        return ResponseEntity.ok(result);
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        Map<String, Object> error = new HashMap<>();
-	        error.put("status", "error");
-	        error.put("message", "Error during upload: " + e.getMessage());
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-	    }
+		try {
+			Map<String, Object> result = rateMainService.uploadRateExcel(file, user, username, overwrite);
+			return ResponseEntity.ok(result);
+		} catch (Exception e) {
+			e.printStackTrace();
+			Map<String, Object> error = new HashMap<>();
+			error.put("status", "error");
+			error.put("message", "Error during upload: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+		}
 	}
 
 	@PostMapping("/uploadRatePex")
 	@ResponseBody
 	public ResponseEntity<?> uploadRatePex(@RequestParam("file") MultipartFile file,
-	                                       @RequestParam(value = "overwrite", required = false, defaultValue = "false") boolean overwrite,
-	                                       HttpServletRequest request) {
+			@RequestParam(value = "overwrite", required = false, defaultValue = "false") boolean overwrite,
+			HttpServletRequest request) {
 
-	    String user = (String) request.getSession().getAttribute("USERID");
-	    String username = (String) request.getSession().getAttribute("USERNAME");
+		String user = (String) request.getSession().getAttribute("USERID");
+		String username = (String) request.getSession().getAttribute("USERNAME");
 
-	    try {
-	        Map<String, Object> result = rateMainService.uploadRatePex(file, user, username, overwrite);
+		try {
+			Map<String, Object> result = rateMainService.uploadRatePex(file, user, username, overwrite);
 
-	        String status = (String) result.get("status");
+			String status = (String) result.get("status");
 
-	        if ("duplicate".equals(status)) {
-	            return ResponseEntity.ok(result);
-	        } else if ("success".equals(status)) {
-	            Map<String, Object> response = new HashMap<>();
-	            response.put("status", "success");
-	            response.put("message", "Uploaded and saved successfully");
-	            response.put("data", result.get("data"));
-	            return ResponseEntity.ok(response);
-	        } else {
-	            return ResponseEntity.ok(result);
-	        }
+			if ("duplicate".equals(status)) {
+				return ResponseEntity.ok(result);
+			} else if ("success".equals(status)) {
+				Map<String, Object> response = new HashMap<>();
+				response.put("status", "success");
+				response.put("message", "Uploaded and saved successfully");
+				response.put("data", result.get("data"));
+				return ResponseEntity.ok(response);
+			} else {
+				return ResponseEntity.ok(result);
+			}
 
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        Map<String, Object> error = new HashMap<>();
-	        error.put("status", "error");
-	        error.put("message", "Error during upload: " + e.getMessage());
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-	    }
+		} catch (Exception e) {
+			e.printStackTrace();
+			Map<String, Object> error = new HashMap<>();
+			error.put("status", "error");
+			error.put("message", "Error during upload: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+		}
 	}
-
-
 
 	@PostMapping("/verifyRate")
 	@ResponseBody
 	public ResponseEntity<String> verifyRate(HttpServletRequest request, @RequestParam String unique_id) {
-	    String loginUserId = (String) request.getSession().getAttribute("USERID");
-	    String username = (String) request.getSession().getAttribute("USERNAME");
+		String loginUserId = (String) request.getSession().getAttribute("USERID");
+		String username = (String) request.getSession().getAttribute("USERNAME");
 
-	    try {
-	        String result = rateMainService.verifyRate(unique_id, loginUserId, username);
-	        return ResponseEntity.ok(result);
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error during verification");
-	    }
+		try {
+			String result = rateMainService.verifyRate(unique_id, loginUserId, username);
+			return ResponseEntity.ok(result);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error during verification");
+		}
 	}
 
 	@RequestMapping(value = "RuleAdd", method = { RequestMethod.GET, RequestMethod.POST })
@@ -1816,51 +1812,51 @@ public class BRECONNavigationController {
 			md.addAttribute("formmode", "ReportUSD");
 			RECON_UPIREPORT_USD_ENTITY usd = RECON_UPIREPORT_USD_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report", usd);
-			
+
 			RECON_TEMP_UPIREPORT_USD_ENTITY usd1 = RECON_TEMP_UPIREPORT_USD_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report1", usd1);
 		} else if (formmode.equals("ModiReportUSD")) {
 			md.addAttribute("formmode", "ModiReportUSD");
 			RECON_UPIREPORT_USD_ENTITY usd = RECON_UPIREPORT_USD_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report", usd);
-			
+
 			RECON_TEMP_UPIREPORT_USD_ENTITY usd1 = RECON_TEMP_UPIREPORT_USD_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report1", usd1);
 		} else if (formmode.equals("ModiReportMUR")) {
 			md.addAttribute("formmode", "ModiReportMUR");
 			RECON_UPIREPORT_MUR_ENTITY mur = RECON_UPIREPORT_MUR_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report", mur);
-			
+
 			RECON_TEMP_UPIREPORT_MUR_ENTITY mur1 = RECON_TEMP_UPIREPORT_MUR_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report1", mur1);
-		}else if (formmode.equals("ReportMUR")) {
+		} else if (formmode.equals("ReportMUR")) {
 			md.addAttribute("formmode", "ReportMUR");
 			RECON_UPIREPORT_MUR_ENTITY mur = RECON_UPIREPORT_MUR_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report", mur);
-			
+
 			RECON_TEMP_UPIREPORT_MUR_ENTITY mur1 = RECON_TEMP_UPIREPORT_MUR_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report1", mur1);
 		}
 		return "UPIReport";
 	}
-	
+
 	@InitBinder
 	public void initBinder(WebDataBinder binder) {
-	    binder.registerCustomEditor(Date.class, new PropertyEditorSupport() {
-	        @Override
-	        public void setAsText(String text) throws IllegalArgumentException {
-	            if (text == null || text.trim().isEmpty()) {
-	                setValue(null);
-	                return;
-	            }
-	            try {
-	                // ✅ Handles standard date format yyyy-MM-dd
-	                setValue(new SimpleDateFormat("yyyy-MM-dd").parse(text));
-	            } catch (Exception e) {
-	                throw new IllegalArgumentException("Invalid date format: " + text, e);
-	            }
-	        }
-	    });
+		binder.registerCustomEditor(Date.class, new PropertyEditorSupport() {
+			@Override
+			public void setAsText(String text) throws IllegalArgumentException {
+				if (text == null || text.trim().isEmpty()) {
+					setValue(null);
+					return;
+				}
+				try {
+					// ✅ Handles standard date format yyyy-MM-dd
+					setValue(new SimpleDateFormat("yyyy-MM-dd").parse(text));
+				} catch (Exception e) {
+					throw new IllegalArgumentException("Invalid date format: " + text, e);
+				}
+			}
+		});
 	}
 
 	@RequestMapping(value = "modiNostroUpi", method = RequestMethod.POST)
@@ -1885,7 +1881,7 @@ public class BRECONNavigationController {
 			return "Error occurred while processing request.";
 		}
 	}
-	
+
 	@RequestMapping(value = "/verifyNostroUpi", method = RequestMethod.POST)
 	@ResponseBody
 	public String verifyNostroUpi(@RequestParam("currency") String currency,
@@ -1908,7 +1904,7 @@ public class BRECONNavigationController {
 			return "Error occurred while processing verification.";
 		}
 	}
-	
+
 	@RequestMapping(value = "/cancelVerifyUpi", method = RequestMethod.POST)
 	@ResponseBody
 	public String cancelVerifyUpi(@RequestParam("currency") String currency,
@@ -1933,17 +1929,15 @@ public class BRECONNavigationController {
 	}
 
 	@RequestMapping(value = "SourceData", method = { RequestMethod.GET, RequestMethod.POST })
-	public String SourceData(
-	        @RequestParam(required = false) String formmode,
-	        @RequestParam(required = false) String userid,
-	        Model md) {
+	public String SourceData(@RequestParam(required = false) String formmode,
+			@RequestParam(required = false) String userid, Model md) {
 
-	    if (formmode == null || formmode.equals("list")) {
-	        md.addAttribute("formmode", "list");
-	        md.addAttribute("List", PRINT_ENQUIRY_REPO.getValues());
-	    }
+		if (formmode == null || formmode.equals("list")) {
+			md.addAttribute("formmode", "list");
+			md.addAttribute("List", PRINT_ENQUIRY_REPO.getValues());
+		}
 
-	    return "SourceData";
+		return "SourceData";
 	}
 
 	@RequestMapping(value = "Report_Dr", method = { RequestMethod.GET, RequestMethod.POST })
@@ -1960,34 +1954,34 @@ public class BRECONNavigationController {
 			md.addAttribute("formmode", "ReportUSD");
 			RECON_DREPORT_USD_ENTITY usd = RECON_DREPORT_USD_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report", usd);
-			
+
 			RECON_TEMP_DREPORT_USD_ENTITY usd1 = RECON_TEMP_DRREPORT_USD_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report1", usd1);
 		} else if (formmode.equals("ReportMUR")) {
 			md.addAttribute("formmode", "ReportMUR");
 			RECON_DRREPORT_MUR_ENTITY mur = RECON_DRREPORT_MUR_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report", mur);
-			
+
 			RECON_TEMP_DRREPORT_MUR_ENTITY mur1 = RECON_TEMP_DRREPORT_MUR_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report1", mur1);
 		} else if (formmode.equals("ModiReportUSD")) {
 			md.addAttribute("formmode", "ModiReportUSD");
 			RECON_DREPORT_USD_ENTITY usd = RECON_DREPORT_USD_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report", usd);
-			
+
 			RECON_TEMP_DREPORT_USD_ENTITY usd1 = RECON_TEMP_DRREPORT_USD_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report1", usd1);
 		} else if (formmode.equals("ModiReportMUR")) {
 			md.addAttribute("formmode", "ModiReportMUR");
 			RECON_DRREPORT_MUR_ENTITY mur = RECON_DRREPORT_MUR_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report", mur);
-			
+
 			RECON_TEMP_DRREPORT_MUR_ENTITY mur1 = RECON_TEMP_DRREPORT_MUR_REPO.getReconDate(ReconDate, curr);
 			md.addAttribute("report1", mur1);
 		}
 		return "DRReport";
 	}
-	
+
 	@RequestMapping(value = "modiNostroDr", method = RequestMethod.POST)
 	@ResponseBody
 	public String modiNostroDr(@RequestParam("formmode") String formmode, @RequestParam("currency") String currency,
@@ -2010,7 +2004,7 @@ public class BRECONNavigationController {
 			return "Error occurred while processing request.";
 		}
 	}
-	
+
 	@RequestMapping(value = "/verifyNostroDr", method = RequestMethod.POST)
 	@ResponseBody
 	public String verifyNostroDr(@RequestParam("currency") String currency,
@@ -2033,7 +2027,7 @@ public class BRECONNavigationController {
 			return "Error occurred while processing verification.";
 		}
 	}
-	
+
 	@RequestMapping(value = "/cancelVerifyDr", method = RequestMethod.POST)
 	@ResponseBody
 	public String cancelVerifyDr(@RequestParam("currency") String currency,
@@ -2056,7 +2050,7 @@ public class BRECONNavigationController {
 			return "Error occurred while cancelling verification.";
 		}
 	}
-	
+
 	@RequestMapping(value = "DeleteReport", method = { RequestMethod.GET, RequestMethod.POST })
 	public String DeleteReport(@RequestParam(required = false) String formmode,
 			@RequestParam(required = false) String userid, Model md) {
@@ -2066,12 +2060,11 @@ public class BRECONNavigationController {
 		}
 		return "DeleteReport";
 	}
-	
-	
+
 	@RequestMapping(value = "BulkReportCR", method = { RequestMethod.GET, RequestMethod.POST })
 	public String BulkReportCR(@RequestParam(required = false) String formmode, HttpServletRequest req,
-			@RequestParam(required = false) String userid, Model md, @RequestParam(required = false) String ReconFromDate,
-			@RequestParam(required = false) String ReconToDate,
+			@RequestParam(required = false) String userid, Model md,
+			@RequestParam(required = false) String ReconFromDate, @RequestParam(required = false) String ReconToDate,
 			@RequestParam(required = false) String curr, @RequestParam(required = false) String type) {
 		String user = (String) req.getSession().getAttribute("USERID");
 		System.out.println(user);
@@ -2081,20 +2074,20 @@ public class BRECONNavigationController {
 			md.addAttribute("loginuser", user);
 		} else if (formmode.equals("ReportUSD")) {
 			md.addAttribute("formmode", "ReportUSD");
-			RECON_CRREPORT_USD_ENTITY usd = RECON_CRREPORT_USD_REPO.getReconDateBulk(ReconFromDate,ReconToDate, curr);
+			RECON_CRREPORT_USD_ENTITY usd = RECON_CRREPORT_USD_REPO.getReconDateBulk(ReconFromDate, ReconToDate, curr);
 			md.addAttribute("report", usd);
 		} else if (formmode.equals("ReportMUR")) {
 			md.addAttribute("formmode", "ReportMUR");
-			RECON_CRREPORT_MUR_ENTITY mur = RECON_CRREPORT_MUR_REPO.getReconDateBulk(ReconFromDate,ReconToDate, curr);
+			RECON_CRREPORT_MUR_ENTITY mur = RECON_CRREPORT_MUR_REPO.getReconDateBulk(ReconFromDate, ReconToDate, curr);
 			md.addAttribute("report", mur);
 		}
 		return "CRReportBulk";
 	}
-	
+
 	@RequestMapping(value = "Report_UPIBULK", method = { RequestMethod.GET, RequestMethod.POST })
 	public String Report_UPIBULK(@RequestParam(required = false) String formmode, HttpServletRequest req,
-			@RequestParam(required = false) String userid, Model md, @RequestParam(required = false) String ReconFromDate,
-			@RequestParam(required = false) String ReconToDate,
+			@RequestParam(required = false) String userid, Model md,
+			@RequestParam(required = false) String ReconFromDate, @RequestParam(required = false) String ReconToDate,
 			@RequestParam(required = false) String curr, @RequestParam(required = false) String type) {
 		String user = (String) req.getSession().getAttribute("USERID");
 		System.out.println(user);
@@ -2104,23 +2097,24 @@ public class BRECONNavigationController {
 			md.addAttribute("loginuser", user);
 		} else if (formmode.equals("ReportUSD")) {
 			md.addAttribute("formmode", "ReportUSD");
-			RECON_UPIREPORT_USD_ENTITY usd = RECON_UPIREPORT_USD_REPO.getReconDateBulk(ReconFromDate,ReconToDate, curr);
+			RECON_UPIREPORT_USD_ENTITY usd = RECON_UPIREPORT_USD_REPO.getReconDateBulk(ReconFromDate, ReconToDate,
+					curr);
 			md.addAttribute("report", usd);
-			
+
 		} else if (formmode.equals("ReportMUR")) {
 			md.addAttribute("formmode", "ReportMUR");
-			RECON_UPIREPORT_MUR_ENTITY mur = RECON_UPIREPORT_MUR_REPO.getReconDateBulk(ReconFromDate,ReconToDate, curr);
+			RECON_UPIREPORT_MUR_ENTITY mur = RECON_UPIREPORT_MUR_REPO.getReconDateBulk(ReconFromDate, ReconToDate,
+					curr);
 			md.addAttribute("report", mur);
-		
+
 		}
 		return "UPIReportBulk";
 	}
-	
-	
+
 	@RequestMapping(value = "Report_DrBulk", method = { RequestMethod.GET, RequestMethod.POST })
 	public String Report_DrBulk(@RequestParam(required = false) String formmode, HttpServletRequest req,
-			@RequestParam(required = false) String userid, Model md, @RequestParam(required = false) String ReconFromDate,
-			@RequestParam(required = false) String ReconToDate,
+			@RequestParam(required = false) String userid, Model md,
+			@RequestParam(required = false) String ReconFromDate, @RequestParam(required = false) String ReconToDate,
 			@RequestParam(required = false) String curr, @RequestParam(required = false) String type) {
 		String user = (String) req.getSession().getAttribute("USERID");
 		System.out.println(user);
@@ -2130,16 +2124,16 @@ public class BRECONNavigationController {
 			md.addAttribute("loginuser", user);
 		} else if (formmode.equals("ReportUSD")) {
 			md.addAttribute("formmode", "ReportUSD");
-			RECON_DREPORT_USD_ENTITY usd = RECON_DREPORT_USD_REPO.getReconDateBulk(ReconFromDate,ReconToDate, curr);
+			RECON_DREPORT_USD_ENTITY usd = RECON_DREPORT_USD_REPO.getReconDateBulk(ReconFromDate, ReconToDate, curr);
 			md.addAttribute("report", usd);
-			
+
 		} else if (formmode.equals("ReportMUR")) {
 			md.addAttribute("formmode", "ReportMUR");
-			RECON_DRREPORT_MUR_ENTITY mur = RECON_DRREPORT_MUR_REPO.getReconDateBulk(ReconFromDate,ReconToDate, curr);
+			RECON_DRREPORT_MUR_ENTITY mur = RECON_DRREPORT_MUR_REPO.getReconDateBulk(ReconFromDate, ReconToDate, curr);
 			md.addAttribute("report", mur);
-			
-		} 
+
+		}
 		return "DRReportBulk";
 	}
-	
+
 }

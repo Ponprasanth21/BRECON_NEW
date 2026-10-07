@@ -103,7 +103,56 @@ public class BRECONUploadController {
 	
 	@Autowired
 	RECON_UPI_DESTINATION_REPO RECON_UPI_DESTINATION_REPO;
+	
+	
+	// file upload controller for source data
+	
+	@Autowired
+    private com.bornfire.recon.services.SourceDataUploadService sourceDataUploadService;
 
+    @PostMapping(value = "SourceDataUpload")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> sourceDataUpload(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("type") String type,
+            HttpServletRequest rq) {
+
+        Map<String, Object> response = new HashMap<>();
+        String userId = (String) rq.getSession().getAttribute("USERID");
+
+        try {
+            int insertedRows = sourceDataUploadService.uploadTransactionFile(file, type, userId);
+
+            response.put("status", "SUCCESS");
+            response.put("type", type);
+            response.put("fileName", file.getOriginalFilename());
+            response.put("fileSize", (file.getSize() / 1024) + " KB");
+            response.put("insertedRows", insertedRows);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error uploading source data file for type: " + type, e);
+            response.put("status", "ERROR");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+    
+    
+    // download the data from sourcedata
+
+    @GetMapping("/SourceDataExportExcel")
+    public void sourceDataExportExcel(
+            @RequestParam("type") String type, 
+            HttpServletResponse response) {
+        try {
+            sourceDataUploadService.exportDataToExcel(type, response);
+        } catch (Exception e) {
+            logger.error("Error generating Excel download for " + type, e);
+        }
+    }
+    
+    
+    
 	@PostMapping(value = "CrFileUpload")
 	@ResponseBody
 	public ResponseEntity<Map<String, Object>> UploadExcel(@RequestParam("file") MultipartFile[] file, @RequestParam("fileInput") String fileInput,

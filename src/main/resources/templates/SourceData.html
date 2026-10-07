@@ -6,10 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BRECON</title>
 
-    <script src="/BRECON/js/jquery.min.js"></script>
-    <script src="/BRECON/js/jquery-ui.min.js"></script>
-    <!-- SheetJS library to parse Excel (.xlsx, .xls, .csv) -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script th:src="@{/js/jquery.min.js}"></script>
+    <script th:src="@{/js/jquery-ui.min.js}"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
     <style>
@@ -35,7 +33,6 @@
             color: var(--text);
         }
 
-        /* ---------- Card ---------- */
         .source-data-wrapper {
             width: 86%;
             margin: 40px auto;
@@ -68,7 +65,7 @@
             overflow: visible;
         }
 
-        /* ---------- Top Category Navigation Bar ---------- */
+        /* Category Nav */
         .category-nav-table {
             width: 100%;
             border-collapse: separate;
@@ -92,7 +89,6 @@
         .category-nav-table th:first-child { border-top-left-radius: 9px; }
         .category-nav-table th:last-child  { border-top-right-radius: 9px; border-right: none; }
 
-        /* Clickable category tab button */
         .source-header-clickable {
             display: flex;
             align-items: center;
@@ -134,17 +130,11 @@
             font-weight: bold;
         }
 
-        /* ---------- Upload dropdown ---------- */
-        .upload-header-cell { overflow: visible !important; }
+        /* Dropdowns (Upload & Excel) */
+        .dropdown-header-cell { overflow: visible !important; }
+        .action-dropdown { position: relative; width: 100%; height: 42px; }
 
-        .upload-dropdown {
-            position: relative;
-            width: 100%;
-            height: 42px;
-        }
-
-        .upload-btn,
-        .header-action-btn {
+        .upload-btn, .header-action-btn {
             width: 100%;
             height: 42px;
             padding: 0 12px;
@@ -159,27 +149,15 @@
             letter-spacing: .3px;
             transition: background .15s ease;
         }
-        .upload-btn:hover,
-        .header-action-btn:hover { background: var(--head-hover); }
-
-        .upload-btn:focus-visible,
-        .header-action-btn:focus-visible {
-            outline: 2px solid var(--brand);
-            outline-offset: -2px;
-        }
-
+        .upload-btn:hover, .header-action-btn:hover { background: var(--head-hover); }
         .upload-btn i, .header-action-btn i { margin-right: 6px; color: var(--brand); }
 
-        .upload-arrow {
-            float: right;
-            font-size: 11px;
-            margin-top: 2px;
-            transition: transform .15s ease;
-        }
-        .upload-dropdown.open .upload-arrow { transform: rotate(180deg); }
-        .upload-dropdown.open .upload-btn   { background: var(--head-hover); }
+        .dropdown-arrow { float: right; font-size: 11px; margin-top: 2px; transition: transform .15s ease; }
+        .action-dropdown.open .dropdown-arrow { transform: rotate(180deg); }
+        .action-dropdown.open .header-action-btn,
+        .action-dropdown.open .upload-btn { background: var(--head-hover); }
 
-        .upload-menu {
+        .action-dropdown-menu {
             display: none;
             position: absolute;
             top: 100%;
@@ -195,30 +173,22 @@
             z-index: 9999;
             box-sizing: border-box;
         }
-        .upload-dropdown.open .upload-menu { display: block; }
-
-        .upload-menu a {
+        .action-dropdown.open .action-dropdown-menu { display: block; }
+        .action-dropdown-menu a {
             display: block;
             height: 38px;
             line-height: 38px;
             padding: 0 14px;
-            box-sizing: border-box;
             color: var(--text);
             text-decoration: none;
             font-size: 13px;
-            font-weight: normal;
             border-bottom: 1px solid #edf0f2;
         }
-        .upload-menu a:last-child { border-bottom: none; }
-        .upload-menu a:hover,
-        .upload-menu a:focus {
-            background: var(--head-bg);
-            color: var(--brand-dark);
-            outline: none;
-        }
-        .upload-menu a i { width: 18px; margin-right: 6px; color: var(--brand); }
+        .action-dropdown-menu a:last-child { border-bottom: none; }
+        .action-dropdown-menu a:hover { background: var(--head-bg); color: var(--brand-dark); }
+        .action-dropdown-menu a i { width: 18px; margin-right: 6px; color: var(--brand); }
 
-        /* ---------- Dedicated File List Table ---------- */
+        /* File List Area */
         .file-list-container {
             border: 1px solid var(--line);
             border-top: none;
@@ -237,16 +207,9 @@
             font-size: 13px;
             color: var(--ink);
         }
-        .file-list-title-bar strong {
-            color: var(--brand-dark);
-            font-size: 14px;
-        }
+        .file-list-title-bar strong { color: var(--brand-dark); font-size: 14px; }
 
-        .dedicated-file-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
+        .dedicated-file-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .dedicated-file-table th {
             background: #f1f5f9;
             color: var(--ink);
@@ -265,29 +228,17 @@
         .dedicated-file-table tr:hover td { background: var(--row-hover); }
         .dedicated-file-table tr:last-child td { border-bottom: none; }
 
-        .file-name-cell {
-            font-weight: bold;
-            color: var(--brand-dark);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .file-name-cell i {
-            color: #1d6f42; /* Excel green */
-            font-size: 16px;
-        }
+        .file-name-cell { font-weight: bold; color: var(--brand-dark); display: flex; align-items: center; gap: 8px; }
+        .file-name-cell i { color: #1d6f42; font-size: 16px; }
 
-        .btn-delete-file {
-            background: none;
-            border: none;
-            color: #d9534f;
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
+        #uploadStatusMsg {
+            display: none;
+            padding: 10px;
+            text-align: center;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: bold;
             font-size: 13px;
-        }
-        .btn-delete-file:hover {
-            background: #fee2e2;
         }
 
         .no-data {
@@ -298,7 +249,6 @@
         }
         .no-data i { display: block; font-size: 30px; margin-bottom: 10px; color: #b4c2cc; }
 
-        /* ---------- Footer ---------- */
         .source-data-footer {
             border-top: 1px solid #e3e8ec;
             padding: 10px 0;
@@ -306,7 +256,6 @@
             background: #ffffff;
             border-radius: 0 0 14px 14px;
         }
-
         .source-btn {
             display: inline-block;
             padding: 6px 14px;
@@ -318,27 +267,14 @@
             font-size: 13px;
             text-decoration: none;
             cursor: pointer;
-            transition: background .15s ease, border-color .15s ease;
         }
-        .source-btn:hover {
-            background: var(--head-bg);
-            border-color: var(--brand);
-            color: #000;
-            text-decoration: none;
-        }
-
-        @media screen and (max-width: 1000px) {
-            .source-data-wrapper { width: 95%; }
-            .source-data-table-wrapper { overflow-x: auto; }
-            .category-nav-table { min-width: 900px; font-size: 12px; }
-        }
+        .source-btn:hover { background: var(--head-bg); border-color: var(--brand); color: #000; }
     </style>
 
     <script>
         var currentUploadType = "";
-        var activeCategory = "ATM"; // Default selected view
+        var activeCategory = "ATM";
 
-        // Dedicated array of uploaded files for each category
         var uploadedFilesStore = {
             CBS: [],
             ATM: [],
@@ -348,89 +284,111 @@
         };
 
         $(function () {
-            var $dd  = $('#uploadDropdown');
-            var $btn = $('#uploadButton');
+            var $upDd   = $('#uploadDropdown');
+            var $upBtn  = $('#uploadButton');
+            var $xlDd   = $('#excelDropdown');
+            var $xlBtn  = $('#excelButton');
 
-            function openMenu()  { $dd.addClass('open');    $btn.attr('aria-expanded', 'true'); }
-            function closeMenu() { $dd.removeClass('open'); $btn.attr('aria-expanded', 'false'); }
-
-            $btn.on('click', function (e) {
+            // Upload Dropdown toggle
+            $upBtn.on('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                $dd.hasClass('open') ? closeMenu() : openMenu();
+                $xlDd.removeClass('open');
+                $upDd.toggleClass('open');
             });
 
+            // Excel Dropdown toggle
+            $xlBtn.on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $upDd.removeClass('open');
+                $xlDd.toggleClass('open');
+            });
+
+            // Click outside closes both menus
             $(document).on('click', function (e) {
-                if (!$(e.target).closest('#uploadDropdown').length) { closeMenu(); }
+                if (!$(e.target).closest('#uploadDropdown').length) { $upDd.removeClass('open'); }
+                if (!$(e.target).closest('#excelDropdown').length) { $xlDd.removeClass('open'); }
             });
 
+            // Keyboard Escape closes dropdowns
             $(document).on('keydown', function (e) {
                 if (e.key === 'Escape') {
-                    closeMenu();
-                    $btn.focus();
+                    $upDd.removeClass('open');
+                    $xlDd.removeClass('open');
                 }
             });
 
-            // Upload selection
+            // Trigger file input for Upload
             $('#uploadMenu a').on('click', function (e) {
                 e.preventDefault();
                 currentUploadType = $(this).data('type');
-                closeMenu();
+                $upDd.removeClass('open');
                 $('#excelFileInput').val('');
                 $('#excelFileInput').click();
             });
 
-            // Handle file upload
+            // Trigger Excel Download
+            $('#excelMenu a').on('click', function (e) {
+                e.preventDefault();
+                var downloadType = $(this).data('type');
+                $xlDd.removeClass('open');
+                downloadCategoryExcel(downloadType);
+            });
+
+            // Upload execution
             $('#excelFileInput').on('change', function (e) {
                 var file = e.target.files[0];
                 if (!file) return;
 
-                var reader = new FileReader();
-                reader.onload = function (evt) {
-                    var data = new Uint8Array(evt.target.result);
-                    var workbook = XLSX.read(data, { type: 'array' });
-                    var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    var rawRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-                    var rowCount = rawRows.length > 0 ? (rawRows.length - 1) : 0; // Exclude header row
+                var formData = new FormData();
+                formData.append("file", file);
+                formData.append("type", currentUploadType);
 
-                    var now = new Date();
-                    var formattedDate = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Uploading & storing ' + file.name + ' in database (' + currentUploadType + ')...');
 
-                    var fileRecord = {
-                        id: Date.now(),
-                        fileName: file.name,
-                        uploadDate: formattedDate,
-                        fileSize: (file.size / 1024).toFixed(2) + " KB",
-                        rowCount: rowCount > 0 ? rowCount : rawRows.length
-                    };
+                $.ajax({
+                    url: 'SourceDataUpload',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        $('#uploadStatusMsg').hide();
+                        var now = new Date();
+                        var formattedDate = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-                    // Add to dedicated store
-                    uploadedFilesStore[currentUploadType].push(fileRecord);
+                        var record = {
+                            id: Date.now(),
+                            fileName: file.name,
+                            uploadDate: formattedDate,
+                            fileSize: (file.size / 1024).toFixed(2) + " KB",
+                            recordsInserted: res.insertedRows || 0
+                        };
 
-                    // Switch active tab to the uploaded category
-                    switchCategory(currentUploadType);
-                    updateBadges();
-                };
-                reader.readAsArrayBuffer(file);
+                        uploadedFilesStore[currentUploadType].push(record);
+                        switchCategory(currentUploadType);
+                        updateBadges();
+                    },
+                    error: function (xhr) {
+                        $('#uploadStatusMsg').hide();
+                        var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+                        alert("Database upload failed: " + err);
+                    }
+                });
             });
 
-            // Initial view
             switchCategory('ATM');
         });
 
-        // Switch category list when clicking header (CBS, ATM, POS, EPIN, VISANET)
         function switchCategory(cat) {
             activeCategory = cat;
-
-            // Highlight active button
             $('.source-header-clickable').removeClass('active');
             $('[data-header-for="' + cat + '"]').addClass('active');
-
             $('#activeCategoryName').text(cat);
             renderDedicatedList();
         }
 
-        // Update counts on badges
         function updateBadges() {
             ['CBS', 'ATM', 'POS', 'EPIN', 'VISANET'].forEach(function (cat) {
                 var btn = $('[data-header-for="' + cat + '"]');
@@ -438,15 +396,11 @@
                 var badge = btn.find('.source-badge');
 
                 badge.text(count);
-                if (count > 0) {
-                    btn.addClass('has-data');
-                } else {
-                    btn.removeClass('has-data');
-                }
+                if (count > 0) btn.addClass('has-data');
+                else btn.removeClass('has-data');
             });
         }
 
-        // Render dedicated list for the selected category
         function renderDedicatedList() {
             var files = uploadedFilesStore[activeCategory];
             var $tbody = $('#dedicatedFileTableBody');
@@ -457,73 +411,54 @@
             if (files.length === 0) {
                 $tbody.append(
                     '<tr>' +
-                        '<td colspan="5" class="no-data">' +
+                        '<td colspan="4" class="no-data">' +
                             '<i class="fa fa-folder-open-o"></i>' +
                             'No files uploaded for <b>' + activeCategory + '</b> yet.<br>' +
-                            '<span style="font-size:12px; color:#888;">Select <b>Upload &gt; ' + activeCategory + '</b> to add an Excel file.</span>' +
+                            '<span style="font-size:12px; color:#888;">Select <b>Upload &gt; ' + activeCategory + '</b> to upload Excel files.</span>' +
                         '</td>' +
                     '</tr>'
                 );
                 return;
             }
 
-            files.forEach(function (file, index) {
+            files.forEach(function (file) {
                 var rowHtml =
                     '<tr>' +
-                        '<td style="width: 35%;">' +
+                        '<td style="width: 40%;">' +
                             '<div class="file-name-cell">' +
                                 '<i class="fa fa-file-excel-o"></i>' +
                                 '<span>' + file.fileName + '</span>' +
                             '</div>' +
                         '</td>' +
-                        '<td style="width: 25%; color: #475569;"><i class="fa fa-clock-o" style="margin-right:5px; color:#94a3b8;"></i>' + file.uploadDate + '</td>' +
-                        '<td style="width: 15%;">' + file.fileSize + '</td>' +
-                        '<td style="width: 15%;"><span style="background:#e2e8f0; padding:2px 8px; border-radius:12px; font-size:12px;">' + file.rowCount + ' rows</span></td>' +
-                        '<td style="width: 10%; text-align: center;">' +
-                            '<button type="button" class="btn-delete-file" onclick="removeFile(' + file.id + ')" title="Remove File">' +
-                                '<i class="fa fa-trash"></i>' +
-                            '</button>' +
-                        '</td>' +
+                        '<td style="width: 25%; color: #475569;"><i class="fa fa-clock-o" style="margin-right:6px; color:#94a3b8;"></i>' + file.uploadDate + '</td>' +
+                        '<td style="width: 20%;">' + file.fileSize + '</td>' +
+                        '<td style="width: 15%;"><span style="background:#e2e8f0; padding:3px 10px; border-radius:12px; font-size:12px;">' + file.recordsInserted + ' rows inserted</span></td>' +
                     '</tr>';
                 $tbody.append(rowHtml);
             });
         }
 
-        // Remove a file from the list
-        function removeFile(fileId) {
-            uploadedFilesStore[activeCategory] = uploadedFilesStore[activeCategory].filter(function (f) {
-                return f.id !== fileId;
-            });
-            updateBadges();
-            renderDedicatedList();
+        // Dedicated Excel Download Method
+        function downloadCategoryExcel(type) {
+            window.location.href = "SourceDataExportExcel?type=" + encodeURIComponent(type);
         }
 
-        function exportExcel() {
-            console.log("Excel clicked");
-        }
-
-        function extractData() {
-            console.log("Extract clicked");
-        }
+        function extractData() { console.log("Data Extract"); }
     </script>
 </head>
 
 <body>
-
     <div th:insert="XBRLHeaderMenu :: header"></div>
 
-    <!-- Hidden file input for Excel upload -->
     <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" />
 
     <div class="source-data-wrapper">
         <div class="source-data-card">
-
             <div class="source-data-header">
                 <span><i class="fa fa-bar-chart"></i> Source Data</span>
             </div>
 
             <div class="source-data-table-wrapper">
-                <!-- Top Navigation & Actions Bar -->
                 <table class="category-nav-table">
                     <thead>
                         <tr>
@@ -558,15 +493,15 @@
                                 </button>
                             </th>
 
-                            <!-- Dropdown upload -->
-                            <th class="upload-header-cell" style="width:13%;">
-                                <div class="upload-dropdown" id="uploadDropdown">
+                            <!-- Upload Dropdown -->
+                            <th class="dropdown-header-cell" style="width:13%;">
+                                <div class="action-dropdown" id="uploadDropdown">
                                     <button type="button" id="uploadButton" class="upload-btn" aria-haspopup="true" aria-expanded="false">
                                         <i class="fa fa-upload"></i>Upload
-                                        <span class="upload-arrow">&#9662;</span>
+                                        <span class="dropdown-arrow">&#9662;</span>
                                     </button>
 
-                                    <div class="upload-menu" id="uploadMenu" role="menu">
+                                    <div class="action-dropdown-menu" id="uploadMenu" role="menu">
                                         <a href="#" role="menuitem" data-type="CBS"><i class="fa fa-database"></i>CBS</a>
                                         <a href="#" role="menuitem" data-type="ATM"><i class="fa fa-credit-card"></i>ATM</a>
                                         <a href="#" role="menuitem" data-type="POS"><i class="fa fa-desktop"></i>POS</a>
@@ -576,10 +511,22 @@
                                 </div>
                             </th>
 
-                            <th style="width:12%;">
-                                <button type="button" class="header-action-btn" onclick="exportExcel()">
-                                    <i class="fa fa-file-excel-o"></i>EXCEL
-                                </button>
+                            <!-- Excel Export Dropdown -->
+                            <th class="dropdown-header-cell" style="width:12%;">
+                                <div class="action-dropdown" id="excelDropdown">
+                                    <button type="button" id="excelButton" class="header-action-btn" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fa fa-file-excel-o"></i>EXCEL
+                                        <span class="dropdown-arrow">&#9662;</span>
+                                    </button>
+
+                                    <div class="action-dropdown-menu" id="excelMenu" role="menu">
+                                        <a href="#" role="menuitem" data-type="CBS"><i class="fa fa-database"></i>CBS</a>
+                                        <a href="#" role="menuitem" data-type="ATM"><i class="fa fa-credit-card"></i>ATM</a>
+                                        <a href="#" role="menuitem" data-type="POS"><i class="fa fa-desktop"></i>POS</a>
+                                        <a href="#" role="menuitem" data-type="EPIN"><i class="fa fa-key"></i>EPIN</a>
+                                        <a href="#" role="menuitem" data-type="VISANET"><i class="fa fa-globe"></i>VISANET</a>
+                                    </div>
+                                </div>
                             </th>
 
                             <th style="width:13%;">
@@ -591,10 +538,11 @@
                     </thead>
                 </table>
 
-                <!-- Dedicated File List View for Selected Category -->
+                <div id="uploadStatusMsg"></div>
+
                 <div class="file-list-container">
                     <div class="file-list-title-bar">
-                        <span>Showing Uploaded Files for: <strong id="activeCategoryName">ATM</strong></span>
+                        <span>Uploaded File(s) for: <strong id="activeCategoryName">ATM</strong></span>
                         <span id="categoryFileCount" style="color: var(--muted); font-size: 12px;">0 file(s) found</span>
                     </div>
 
@@ -604,13 +552,12 @@
                                 <th>File Name</th>
                                 <th>Upload Date & Time</th>
                                 <th>File Size</th>
-                                <th>Records</th>
-                                <th style="text-align: center;">Action</th>
+                                <th>Status / Rows Inserted</th>
                             </tr>
                         </thead>
                         <tbody id="dedicatedFileTableBody">
                             <tr>
-                                <td colspan="5" class="no-data">
+                                <td colspan="4" class="no-data">
                                     <i class="fa fa-folder-open-o"></i>
                                     No files uploaded for <b>ATM</b> yet.<br>
                                     <span style="font-size:12px; color:#888;">Select <b>Upload &gt; ATM</b> to add an Excel file.</span>
@@ -619,16 +566,13 @@
                         </tbody>
                     </table>
                 </div>
-
             </div>
 
             <div class="source-data-footer">
-                <a href="/BRECON/dashboard" class="source-btn"><i class="fa fa-home"></i> Home</a>
+                <a th:href="@{/Dashboard}" class="source-btn"><i class="fa fa-home"></i> Home</a>
                 <a href="javascript:history.back();" class="source-btn"><i class="fa fa-chevron-left"></i> Back</a>
             </div>
-
         </div>
     </div>
-
 </body>
 </html>
