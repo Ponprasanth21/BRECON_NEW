@@ -1,7 +1,10 @@
 <!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" th:fragment="header">
 
+
 <head>
+ <link rel="icon" type="image/png"
+      th:href="@{/images/favicon_bob.png}">
 <title>BRECON</title>
 <link rel="stylesheet" href="/BRECON/css/bootstrap.min.css">
 <link rel="stylesheet" href="/BRECON/css/fontawesome.min.css">
@@ -20,6 +23,7 @@
 <script src="/BRECON/js/dataTables.bootstrap4.min.js"></script>
 <!-- TOAST -->
 <link rel="stylesheet" th:href="@{/css/jquery.toast.min.css}">
+
 <script th:src="@{/js/jquery.toast.min.js}"></script>
 <style>
 /* Global Font */
@@ -593,6 +597,12 @@ function openusermanual() {
             </li>
         </ul>
     </li>
+    
+    <!-- Source Data -->
+   <li class="nav-item"><a href="#" class="nav-link shine-effect" id="SourceData" onclick="contentLoad(this)">
+        Source Data
+    </a>
+</li>
 
     <!-- Audit Inquiries -->
     <li class="nav-item dropdown" th:if="${menus.contains('Audit Inquiries')}">
@@ -607,12 +617,8 @@ function openusermanual() {
         </ul>
     </li>
     
-       <!-- Source Data -->
-   <!-- Source Data -->
-   <li class="nav-item"><a href="#" class="nav-link shine-effect" id="SourceData" onclick="contentLoad(this)">
-        Source Data
-    </a>
-</li>
+       
+   
 
     <!-- Credit Card -->
    <!--  <li class="nav-item dropdown" th:if="${menus.contains('Credit Card')}">

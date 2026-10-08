@@ -1,177 +1,259 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
+  <meta charset="UTF-8" />
   <title>BRECON</title>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
- <!-- ✅ Only required CSS -->
   <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
   <link rel="stylesheet" th:href="@{/css/fontawesome.min.css}">
 
-  <!-- ✅ Only required JS -->
-
 <style>
+:root {
+    --navy-900: #1c2d38;
+    --navy-700: #293d4a;
+    --blue-600: #323f48;
+    --ink: #101820;
+    --muted: #647785;
+    --line: #435968;
+    --field: #e6edf4;
+    --danger: #c81e4a;
+    --ok: #16a34a;
+}
+* { box-sizing: border-box; }
+
 body, html {
 	height: 100%;
 	margin: 0;
 	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-	background-image: url('/BRECON/images/image2.png');
+	background-color: #070f2e;                       /* fallback while image loads */
+	background-image: url('/BRECON/images/bob_bg.png');
 	background-repeat: no-repeat;
 	background-position: center center;
-	background-attachment: fixed;
 	background-size: cover;
 }
 
+/* soft dark veil so the card stands out from the busy background */
 .login-page-wrap {
 	min-height: 100vh;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	backdrop-filter: blur(2px);
+	padding: 24px;
+		background: linear-gradient(
+		rgba(50, 63, 72, .35),
+		rgba(50, 63, 72, .35)
+	);
+	
 }
 
 .login-card {
-	display: flex;
-	width: 600px;
-	max-width: 97vw;
-	background: rgba(255, 255, 255, 0.88);
-	border-radius: 18px;
-	border: solid 1px black;
-	box-shadow: 0 8px 28px rgba(44, 78, 94, 0.28);
+    display: flex;
+    width: 650px;
+    max-width: 100%;
+    min-height: 0;
+    background: #293d4a;
+    border: 1px solid rgba(157, 184, 202, 0.22);
+    border-radius: 16px;
     overflow: hidden;
-    
- 
+    box-shadow: 0 20px 50px rgba(5, 10, 20, 0.28);
 }
 
-.login-blue-side {
-	background: linear-gradient(135deg, #e0eafc, #cfdef3); 
-    color: #2c3e50;
-	width: 205px;
-	min-width: 205px;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 40px 20px;
-	text-align: center;
-    border: solid 1px black;
+/* ---------- Left : welcome + Bornfire ---------- */
+.login-brand-side {
+    flex: 0 0 255px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px 20px;
+    color: #ffffff;
+
+    background:
+        radial-gradient(
+            circle at 15% 10%,
+            rgba(255, 255, 255, 0.08),
+            transparent 45%
+        ),
+        linear-gradient(
+            160deg,
+            #40535e 0%,
+            #293d4a 55%,
+            #1c2d38 100%
+        );
 }
 
-.login-blue-side img {
-	max-width: 130px;
-	height :100px;
-	margin-bottom: 18px;
+.login-brand-side .welcome-small {
+	font-size: 17px;
+	font-weight: 400;
+	letter-spacing: .4px;
+	opacity: .85;
+	margin: 0 0 4px;
 }
 
-.login-blue-side h2 {
-	font-size: 21px;
-	font-weight: 600;
-	letter-spacing: 0.7px;
-	margin-bottom: 0;
+.login-brand-side h1 {
+	font-size: 28px;
+	font-weight: 700;
+	letter-spacing: 2.5px;
+	margin: 0;
+	color: #fff;
 }
 
+.brand-divider {
+	width: 44px;
+	height: 3px;
+	border-radius: 3px;
+	background: #f58220;
+	margin: 14px 0 20px;
+}
+
+.logo-tile {
+	background: #fff;
+	border-radius: 12px;
+	padding: 12px 16px;
+	box-shadow: 0 10px 24px rgba(0, 0, 0, .25);
+}
+
+.logo-tile img {
+	display: block;
+	height: 70px;
+	width: auto;
+	max-width: 110px;
+	object-fit: contain;
+}
+
+/* ---------- Right : Bank of Baroda + form ---------- */
 .login-form-side {
 	flex: 1;
-	padding: 38px 32px 32px 32px;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	border: solid 1px black;
+	padding: 32px 36px;
+	background: #fff;
 }
 
-.login-form-side h4 {
-	color: #2a5298;
-	font-weight: 700;
-	margin-bottom: 22px;
-	letter-spacing: .5px;
+.bank-logo {
+	text-align: center;
+	margin-bottom: 30px;
+}
+
+.bank-logo img {
+	height: 38px;
+	width: auto;
+	max-width: 100%;
+	object-fit: contain;
 }
 
 .form-group {
 	position: relative;
-	margin-bottom: 24px;
+	margin-bottom: 16px;
 }
 
 .form-group .fa {
 	position: absolute;
-	left: 12px;
+	left: 16px;
 	top: 50%;
 	transform: translateY(-50%);
-	color: #a3a3a3;
-	font-size: 16px;
+	color: #94a3b8;
+	font-size: 15px;
+	pointer-events: none;
+	transition: color .2s;
 }
 
 .form-control {
-	padding-left: 38px;
-	border-radius: 8px;
-	border: 1.5px solid #d4dbe5;
-	transition: border .3s;
-	font-size: 15px;
+    height: 48px;
+    padding: 0 14px 0 42px;
+    border-radius: 8px;
+    border: 1px solid #d1deea;
+    background: #e6edf4;
+    color: #101820;
+    font-size: 14px;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+}
+
+.form-control::placeholder {
+    color: #647785;
 }
 
 .form-control:focus {
-	border-color: #2a5298;
-	box-shadow: 0 0 4px #81a4e3;
+    background: #ffffff;
+    border-color: #7898b5;
+    box-shadow: 0 0 0 3px rgba(157, 184, 202, 0.22);
+    outline: none;
 }
 
-#userid {
-	text-transform: uppercase;
+.form-group .fa {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #607b90;
+    font-size: 15px;
+    pointer-events: none;
 }
+
+#userid { text-transform: uppercase; }
 
 .btn-login {
-	background: linear-gradient(90deg, #2a5298 60%, #376275 100%);
-	color: #fff;
-	font-weight: 700;
-	letter-spacing: .6px;
-	border-radius: 10px;
-	padding: 11px;
-	width: 100%;
-	font-size: 16px;
-	margin-top: 7px;
-	border: none;
-	transition: filter .22s;
+    width: 100%;
+    height: 48px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: linear-gradient(
+        90deg,
+        #405b70 0%,
+        #233c57 100%
+    );
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(5, 15, 25, 0.25);
+    transition: transform .15s, box-shadow .15s, filter .15s;
 }
 
-.btn-login:hover, .btn-login:focus {
-	filter: brightness(.93);
-	background: #2a5298;
-	color: #fff;
+.btn-login:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(5, 15, 25, 0.3);
+}
+
+.btn-login:active { transform: translateY(0); }
+
+.btn-login:focus-visible {
+	outline: 3px solid rgba(42, 82, 152, .4);
+	outline-offset: 2px;
 }
 
 .message-container {
-	min-height: 24px;
-	margin-bottom: 14px;
-	text-align: left;
+	min-height: 22px;
+	margin-bottom: 10px;
 	font-size: 13px;
 }
 
-.error-msg {
-	color: #cd103c;
-	font-weight: 600;
-}
+.error-msg   { color: var(--danger); font-weight: 600; }
+.success-msg { color: var(--ok);     font-weight: 600; }
 
-.success-msg {
-	color: #34af32;
-	font-weight: 600;
-}
-
-/* Responsive */
-@media ( max-width : 700px) {
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
 	.login-card {
 		flex-direction: column;
-		width: 100%;
+		width: 380px;
+		min-height: 0;
 	}
-	.login-blue-side, .login-form-side {
-		width: 100%;
-		min-width: unset;
+	.login-brand-side {
+		flex: none;
+		padding: 24px 20px;
 	}
-	.login-form-side {
-		padding: 28px 16px;
-	}
-	.login-blue-side {
-		padding: 24px 12px;
-	}
+	.login-brand-side h1 { font-size: 26px; }
+	.brand-divider { margin: 14px 0 18px; }
+	.logo-tile img { height: 54px; }
+	.login-form-side { padding: 26px 22px 30px; }
+	.bank-logo { text-align: center; margin-bottom: 24px; }
 }
 </style>
 </head>
@@ -179,15 +261,22 @@ body, html {
   <div class="login-page-wrap">
     <div class="login-card">
 
-      <div class="login-blue-side">
-        <img th:src="@{/images/Bornfire.png}"   alt="BRECON Logo"/>
-       <img th:src="@{/images/BOB.png}" style="height: 40px;" alt="BOB Logo"/>
-
-        <h6>Welcome to<br/>BRECON</h6>
+      <!-- LEFT: Welcome + Bornfire logo -->
+      <div class="login-brand-side">
+        <p class="welcome-small">Welcome to</p>
+        <h1>BRECON</h1>
+        <div class="brand-divider"></div>
+        <div class="logo-tile">
+          <img th:src="@{/images/Bornfire.png}" alt="Bornfire Logo" />
+        </div>
       </div>
 
+      <!-- RIGHT: Bank of Baroda logo + login form -->
       <div class="login-form-side">
-        <h4>Sign In</h4>
+        <div class="bank-logo">
+          <img th:src="@{/images/BOB.png}" alt="Bank of Baroda" />
+        </div>
+
         <form th:action="@{/login}" method="post" autocomplete="off" novalidate>
           <div class="form-group">
             <i class="fa fa-user"></i>
@@ -200,8 +289,10 @@ body, html {
               onkeyup="this.value = this.value.toUpperCase()"
               required
               aria-required="true"
+              aria-label="User ID"
             />
           </div>
+
           <div class="form-group">
             <i class="fa fa-lock"></i>
             <input
@@ -212,13 +303,16 @@ body, html {
               placeholder="Password"
               required
               aria-required="true"
+              aria-label="Password"
             />
           </div>
+
           <div class="message-container" role="alert" aria-live="assertive">
             <span class="error-msg" th:if="${param.error}" th:text="${param.error}"></span>
             <span class="success-msg" th:if="${param.logout}">You have been logged out.</span>
           </div>
-          <button type="submit" class="btn btn-login">Sign In</button>
+
+          <button type="submit" class="btn-login">Sign In</button>
         </form>
       </div>
 
