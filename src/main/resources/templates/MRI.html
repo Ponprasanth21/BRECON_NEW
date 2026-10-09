@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
+    <title>BRECON | MRI</title>
+
+    <link rel="icon" type="image/png"
+          th:href="@{/images/favicon_bob.png}">
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: #f1f5f7;
+            color: #111;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .mri-page {
+            width: 90%;
+            max-width: 1550px;
+            margin: 30px auto;
+        }
+
+        .mri-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 28px rgba(25,50,65,.12);
+            overflow: hidden;
+        }
+
+        .mri-title {
+            padding: 15px 20px;
+            background: linear-gradient(135deg,#386b7e,#2c5667);
+            color: #fff;
+            text-align: center;
+            font-size: 17px;
+            font-weight: bold;
+        }
+
+        .mri-content { padding: 18px; }
+
+        .mri-summary {
+            display: grid;
+            grid-template-columns: repeat(4,minmax(0,1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .mri-stat {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 17px;
+            border: 1px solid #dce4e9;
+            border-radius: 9px;
+            background: #fff;
+        }
+
+        .mri-stat-icon {
+            width: 43px;
+            height: 43px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9px;
+            background: #e4eef3;
+            color: #315f73;
+            font-size: 21px;
+        }
+
+        .mri-stat-label {
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .mri-stat-value {
+            font-size: 23px;
+            font-weight: bold;
+        }
+
+        .mri-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .mri-search {
+            flex: 1;
+            min-width: 220px;
+            max-width: 400px;
+        }
+
+        .mri-search input,
+        .mri-filter select {
+            width: 100%;
+            height: 38px;
+            padding: 8px 11px;
+            border: 1px solid #cbd5dc;
+            border-radius: 5px;
+            background: #fff;
+            color: #111;
+            font-size: 13px;
+        }
+
+        .mri-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .mri-btn {
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 8px 13px;
+            border: 1px solid #315f73;
+            border-radius: 5px;
+            background: #fff;
+            color: #264e61;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .mri-btn:hover { background: #eaf1f4; }
+
+        .mri-primary {
+            background: #315f73;
+            color: #fff;
+        }
+
+        .mri-primary:hover {
+            background: #244b5e;
+            color: #fff;
+        }
+
+        .mri-green {
+            color: #226844;
+            border-color: #287a52;
+        }
+
+        .mri-notice {
+            display: none;
+            margin-bottom: 14px;
+            padding: 11px 13px;
+            background: #edf6fa;
+            border: 1px solid #c8dce7;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+
+        .mri-list-heading {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 13px;
+            background: #f7f9fb;
+            border: 1px solid #d5dfe5;
+            border-bottom: 0;
+            border-radius: 7px 7px 0 0;
+            font-size: 13px;
+        }
+
+        .mri-list-heading strong { color: #315f73; }
+
+        .mri-table-wrap {
+            overflow-x: auto;
+            border: 1px solid #d5dfe5;
+            border-radius: 0 0 7px 7px;
+        }
+
+        .mri-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .mri-table th {
+            padding: 13px 12px;
+            background: #e9eef2;
+            color: #17394e;
+            text-align: left;
+            white-space: nowrap;
+            border-bottom: 2px solid #386b7e;
+        }
+
+        .mri-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5eaee;
+            vertical-align: middle;
+        }
+
+        .mri-table tbody tr:nth-child(even) { background: #f8fafb; }
+        .mri-table tbody tr:hover { background: #edf4f7; }
+
+        .mri-empty {
+            height: 150px;
+            text-align: center;
+            color: #425466;
+            line-height: 2;
+        }
+
+        .mri-status {
+            display: inline-block;
+            padding: 4px 9px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .mri-pending { background: #fff2d6; color: #815b0b; }
+        .mri-completed { background: #def3e6; color: #21683f; }
+        .mri-error { background: #fde8e8; color: #a32d2d; }
+
+        .mri-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 13px 18px;
+            border-top: 1px solid #e1e7eb;
+            font-size: 12px;
+        }
+
+        .mri-file-input { display: none; }
+
+        .mri-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            padding: 20px;
+            align-items: center;
+            justify-content: center;
+            background: rgba(20,34,43,.55);
+        }
+
+        .mri-modal.open { display: flex; }
+
+        .mri-modal-box {
+            width: 100%;
+            max-width: 520px;
+            background: #fff;
+            border-radius: 9px;
+            overflow: hidden;
+            box-shadow: 0 15px 45px rgba(0,0,0,.2);
+        }
+
+        .mri-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 18px;
+            background: #315f73;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .mri-close {
+            border: 0;
+            background: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .mri-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            padding: 20px;
+        }
+
+        .mri-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .mri-field.full { grid-column: 1 / -1; }
+
+        .mri-field label {
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .mri-field input,
+        .mri-field select {
+            width: 100%;
+            height: 37px;
+            padding: 8px;
+            border: 1px solid #cbd5dc;
+            border-radius: 5px;
+            color: #111;
+            background: #fff;
+        }
+
+        .mri-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 12px 20px;
+            border-top: 1px solid #e5eaee;
+        }
+
+        @media(max-width:1000px) {
+            .mri-page { width: 96%; }
+            .mri-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        }
+
+        @media(max-width:600px) {
+            .mri-page { width: 100%; margin: 12px auto; }
+            .mri-content { padding: 9px; }
+            .mri-summary { gap: 8px; }
+            .mri-stat { padding: 10px; gap: 8px; }
+            .mri-stat-value { font-size: 19px; }
+            .mri-search { max-width: none; }
+            .mri-form { grid-template-columns: 1fr; }
+            .mri-field.full { grid-column: auto; }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Shared BRECON header: include only once -->
+<div th:insert="XBRLHeaderMenu :: header"></div>
+
+<main class="mri-page">
+    <section class="mri-card">
+
+        <div class="mri-title">
+            MRI — Management Reporting Interface
+        </div>
+
+        <div class="mri-content">
+
+            <div class="mri-summary">
+                <div class="mri-stat">
+                    <div class="mri-stat-icon">▤</div>
+                    <div>
+                        <div class="mri-stat-label">Total Files</div>
+                        <div class="mri-stat-value" id="mriTotal">0</div>
+                    </div>
+                </div>
+
+                <div class="mri-stat">
+                    <div class="mri-stat-icon">◷</div>
+                    <div>
+                        <div class="mri-stat-label">Pending</div>
+                        <div class="mri-stat-value" id="mriPending">0</div>
+                    </div>
+                </div>
+
+                <div class="mri-stat">
+                    <div class="mri-stat-icon">✓</div>
+                    <div>
+                        <div class="mri-stat-label">Completed</div>
+                        <div class="mri-stat-value" id="mriCompleted">0</div>
+                    </div>
+                </div>
+
+                <div class="mri-stat">
+                    <div class="mri-stat-icon">!</div>
+                    <div>
+                        <div class="mri-stat-label">Errors</div>
+                        <div class="mri-stat-value" id="mriErrors">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mri-toolbar">
+                <div class="mri-search">
+                    <input type="search" id="mriSearch"
+                           placeholder="Search file name or reference...">
+                </div>
+
+                <div class="mri-filter">
+                    <select id="mriStatusFilter" aria-label="Filter by status">
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Error">Error</option>
+                    </select>
+                </div>
+
+                <div class="mri-actions">
+                    <input type="file" id="mriUploadInput"
+                           class="mri-file-input"
+                           accept=".xml,.csv,.xlsx,.xls">
+
+                    <button type="button" class="mri-btn mri-primary"
+                            id="mriUploadBtn">↑ Upload</button>
+
+                    <button type="button" class="mri-btn mri-green"
+                            id="mriDownloadAll">⇩ Download XML</button>
+
+                    <button type="button" class="mri-btn"
+                            id="mriExtract">⇩ Extract</button>
+                </div>
+            </div>
+
+            <div class="mri-notice" id="mriNotice" role="status"></div>
+
+            <div class="mri-list-heading">
+                <span><strong>MRI Records List</strong></span>
+                <span>Total: <strong id="mriVisibleCount">0</strong> records</span>
+            </div>
+
+            <div class="mri-table-wrap">
+                <table class="mri-table">
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>File Name</th>
+                            <th>Reference ID</th>
+                            <th>Upload Date &amp; Time</th>
+                            <th>Records</th>
+                            <th>Status</th>
+                            <th>Download XML</th>
+                            <th>Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mriTableBody">
+                        <tr>
+                            <td colspan="8" class="mri-empty">
+                                No MRI files available.<br>
+                                Select Upload to choose a file.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <div class="mri-footer">
+            <span>MRI Reporting Management</span>
+            <button type="button" class="mri-btn" id="mriRefresh">
+                Refresh List
+            </button>
+        </div>
+    </section>
+</main>
+
+<!-- Edit modal -->
+<div class="mri-modal" id="mriModal">
+    <div class="mri-modal-box">
+        <div class="mri-modal-header">
+            <span>Edit MRI Record</span>
+            <button type="button" class="mri-close" id="mriClose">&times;</button>
+        </div>
+
+        <form id="mriEditForm">
+            <div class="mri-form">
+                <input type="hidden" id="mriEditId">
+
+                <div class="mri-field full">
+                    <label for="mriEditName">File Name</label>
+                    <input id="mriEditName" required>
+                </div>
+
+                <div class="mri-field">
+                    <label for="mriEditRef">Reference ID</label>
+                    <input id="mriEditRef" required>
+                </div>
+
+                <div class="mri-field">
+                    <label for="mriEditRecords">Record Count</label>
+                    <input id="mriEditRecords" type="number" min="0" required>
+                </div>
+
+                <div class="mri-field full">
+                    <label for="mriEditStatus">Status</label>
+                    <select id="mriEditStatus">
+                        <option>Pending</option>
+                        <option>Completed</option>
+                        <option>Error</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mri-modal-footer">
+                <button type="button" class="mri-btn" id="mriCancel">
+                    Cancel
+                </button>
+                <button type="submit" class="mri-btn mri-primary">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function () {
+    const body = document.getElementById("mriTableBody");
+    const uploadInput = document.getElementById("mriUploadInput");
+    const notice = document.getElementById("mriNotice");
+    const modal = document.getElementById("mriModal");
+
+    // Demo data only. Replace with records from the backend API.
+    let records = [];
+    let nextId = 1;
+
+    function showNotice(text) {
+        notice.textContent = text;
+        notice.style.display = "block";
+    }
+
+    function safe(value) {
+        return String(value ?? "").replace(/[&<>"']/g, ch => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;",
+            '"': "&quot;", "'": "&#39;"
+        })[ch]);
+    }
+
+    function filteredRecords() {
+        const search = document.getElementById("mriSearch")
+            .value.toLowerCase().trim();
+        const status = document.getElementById("mriStatusFilter").value;
+
+        return records.filter(r =>
+            (r.name.toLowerCase().includes(search) ||
+             r.ref.toLowerCase().includes(search)) &&
+            (!status || r.status === status)
+        );
+    }
+
+    function render() {
+        const list = filteredRecords();
+        document.getElementById("mriTotal").textContent = records.length;
+        document.getElementById("mriPending").textContent =
+            records.filter(r => r.status === "Pending").length;
+        document.getElementById("mriCompleted").textContent =
+            records.filter(r => r.status === "Completed").length;
+        document.getElementById("mriErrors").textContent =
+            records.filter(r => r.status === "Error").length;
+        document.getElementById("mriVisibleCount").textContent = list.length;
+
+        body.replaceChildren();
+
+        if (!list.length) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+            cell.colSpan = 8;
+            cell.className = "mri-empty";
+            cell.textContent = "No MRI records found.";
+            row.appendChild(cell);
+            body.appendChild(row);
+            return;
+        }
+
+        list.forEach((r, i) => {
+            const statusClass = {
+                Pending: "mri-pending",
+                Completed: "mri-completed",
+                Error: "mri-error"
+            }[r.status] || "mri-pending";
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${i + 1}</td>
+                <td>${safe(r.name)}</td>
+                <td>${safe(r.ref)}</td>
+                <td>${safe(r.date)}</td>
+                <td>${Number(r.count) || 0}</td>
+                <td><span class="mri-status ${statusClass}">
+                    ${safe(r.status)}</span></td>
+                <td><button class="mri-btn mri-green"
+                    type="button" data-xml="${r.id}">XML</button></td>
+                <td><button class="mri-btn"
+                    type="button" data-edit="${r.id}">Edit</button></td>`;
+            body.appendChild(row);
+        });
+    }
+
+    function downloadXml(r) {
+        const xmlEscape = v => String(v).replace(/[<>&'"]/g, ch => ({
+            "<": "&lt;", ">": "&gt;", "&": "&amp;",
+            "'": "&apos;", '"': "&quot;"
+        })[ch]);
+
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<MRIRecord>
+    <FileName>${xmlEscape(r.name)}</FileName>
+    <ReferenceID>${xmlEscape(r.ref)}</ReferenceID>
+    <UploadDate>${xmlEscape(r.date)}</UploadDate>
+    <RecordCount>${Number(r.count) || 0}</RecordCount>
+    <Status>${xmlEscape(r.status)}</Status>
+</MRIRecord>`;
+
+        const url = URL.createObjectURL(new Blob([xml], {
+            type: "application/xml;charset=utf-8"
+        }));
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = r.name.replace(/\.[^.]+$/, "") + ".xml";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    function closeModal() {
+        modal.classList.remove("open");
+    }
+
+    function openEdit(id) {
+        const r = records.find(item => item.id === id);
+        if (!r) return;
+
+        document.getElementById("mriEditId").value = r.id;
+        document.getElementById("mriEditName").value = r.name;
+        document.getElementById("mriEditRef").value = r.ref;
+        document.getElementById("mriEditRecords").value = r.count;
+        document.getElementById("mriEditStatus").value = r.status;
+        modal.classList.add("open");
+    }
+
+    document.getElementById("mriUploadBtn").addEventListener("click", () => {
+        uploadInput.click();
+    });
+
+    uploadInput.addEventListener("change", () => {
+        Array.from(uploadInput.files || []).forEach(file => {
+            records.push({
+                id: nextId++,
+                name: file.name,
+                ref: "MRI-" + Date.now() + "-" + nextId,
+                date: new Date().toLocaleString(),
+                count: 0,
+                status: "Pending",
+                file: file
+            });
+        });
+
+        uploadInput.value = "";
+        render();
+
+        if (records.length) {
+            showNotice("File added to the demonstration list. Backend upload is not yet connected.");
+        }
+    });
+
+    body.addEventListener("click", event => {
+        const edit = event.target.closest("[data-edit]");
+        const xml = event.target.closest("[data-xml]");
+
+        if (edit) openEdit(Number(edit.dataset.edit));
+
+        if (xml) {
+            const r = records.find(item => item.id === Number(xml.dataset.xml));
+            if (r) downloadXml(r);
+        }
+    });
+
+    document.getElementById("mriEditForm").addEventListener("submit", event => {
+        event.preventDefault();
+
+        const id = Number(document.getElementById("mriEditId").value);
+        const r = records.find(item => item.id === id);
+        if (!r) return;
+
+        r.name = document.getElementById("mriEditName").value.trim();
+        r.ref = document.getElementById("mriEditRef").value.trim();
+        r.count = Number(document.getElementById("mriEditRecords").value);
+        r.status = document.getElementById("mriEditStatus").value;
+
+        closeModal();
+        render();
+        showNotice("Record updated in the demonstration list. Backend persistence is not connected.");
+    });
+
+    document.getElementById("mriDownloadAll").addEventListener("click", () => {
+        const list = filteredRecords();
+        if (!list.length) {
+            showNotice("No MRI records to download.");
+            return;
+        }
+        list.forEach(downloadXml);
+    });
+
+    document.getElementById("mriExtract").addEventListener("click", () => {
+        const list = filteredRecords();
+        if (!list.length) {
+            showNotice("No MRI records to extract.");
+            return;
+        }
+
+        const csvCell = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+        const rows = [
+            ["File Name", "Reference ID", "Upload Date", "Record Count", "Status"],
+            ...list.map(r => [r.name, r.ref, r.date, r.count, r.status])
+        ];
+
+        const csv = "\uFEFF" + rows
+            .map(row => row.map(csvCell).join(","))
+            .join("\r\n");
+
+        const url = URL.createObjectURL(new Blob([csv], {
+            type: "text/csv;charset=utf-8;"
+        }));
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "MRI_Extract.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("mriClose").addEventListener("click", closeModal);
+    document.getElementById("mriCancel").addEventListener("click", closeModal);
+
+    modal.addEventListener("click", event => {
+        if (event.target === modal) closeModal();
+    });
+
+    document.getElementById("mriSearch").addEventListener("input", render);
+    document.getElementById("mriStatusFilter").addEventListener("change", render);
+
+    document.getElementById("mriRefresh").addEventListener("click", () => {
+        document.getElementById("mriSearch").value = "";
+        document.getElementById("mriStatusFilter").value = "";
+        notice.style.display = "none";
+        render();
+    });
+
+    render();
+})();
+</script>
+
+</body>
+</html>

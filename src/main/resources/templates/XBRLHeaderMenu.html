@@ -604,6 +604,31 @@ function openusermanual() {
     </a>
 </li>
 
+<!-- FATCA -->
+<li class="nav-item">
+    <a href="#" id="FATCA"
+       th:attr="data-url=@{/FATCA}"
+       onclick="contentLoad(this); return false;">
+        FATCA
+    </a>
+</li>
+
+    <!-- CRS -->
+   <li class="nav-item">
+    <a href="#" id="CRS"
+     th:attr="data-url=@{/CRS}"
+       onclick="contentLoad(this); return false;"
+       class="shine-effect">CRS</a>
+</li>
+
+    <!-- MRI -->
+    <li class="nav-item">
+        <a href="#" id="MRI"
+         th:attr="data-url=@{/MRI}"
+           onclick="contentLoad(this)"
+           class="shine-effect">MRI</a>
+    </li>
+
     <!-- Audit Inquiries -->
     <li class="nav-item dropdown" th:if="${menus.contains('Audit Inquiries')}">
         <a href="#" class="dropdown-toggle shine-effect">Audit Inquiries</a>
@@ -616,6 +641,10 @@ function openusermanual() {
             </li>
         </ul>
     </li>
+    
+
+    
+    
     
        
    

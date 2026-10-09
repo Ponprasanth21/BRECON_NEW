@@ -1939,6 +1939,22 @@ public class BRECONNavigationController {
 
 		return "SourceData";
 	}
+	
+	@GetMapping("/FATCA")
+    public String loadFATCA() {
+        return "FATCA";
+    }
+	
+	
+	@GetMapping("/CRS")
+    public String loadCRSContent() {
+        return "CRS";
+    }
+	
+	@GetMapping("/MRI") 
+	public String showMRIPage() { 
+		return "MRI"; }
+	
 
 	@RequestMapping(value = "Report_Dr", method = { RequestMethod.GET, RequestMethod.POST })
 	public String Report_Dr(@RequestParam(required = false) String formmode, HttpServletRequest req,
