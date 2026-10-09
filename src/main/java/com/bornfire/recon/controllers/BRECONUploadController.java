@@ -1,6 +1,8 @@
 package com.bornfire.recon.controllers;
 
-import java.io.FileNotFoundException;
+
+
+import java.io.FileNotFoundException; 
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -38,6 +40,8 @@ import com.bornfire.recon.services.upload.DrUploadService;
 import com.bornfire.recon.services.upload.ProcessDownloadService;
 import com.bornfire.recon.services.upload.UpiUploadService;
 import com.bornfire.recon.entities.upload.*;
+import java.util.ArrayList;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Controller
 @ConfigurationProperties("default")
@@ -150,6 +154,118 @@ public class BRECONUploadController {
             logger.error("Error generating Excel download for " + type, e);
         }
     }
+
+    //reconsilanation
+    
+    @PostMapping("runVisaReconciliation")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> runVisaReconciliation(
+            @RequestParam(value = "reconDate", required = false) String reconDate) {
+
+        Map<String, Object> res = new HashMap<>();
+        try {
+            int totalProcessed = sourceDataUploadService.executeVisaReconciliation(reconDate);
+            res.put("status", "SUCCESS");
+            res.put("totalProcessed", totalProcessed);
+            res.put("message", "Reconciliation completed successfully. Processed records: " + totalProcessed);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @GetMapping("downloadFailedRefundReport")
+    public void downloadFailedRefundReport(HttpServletResponse response) {
+        try {
+            sourceDataUploadService.exportFailedRefundReport(response);
+        } catch (Exception e) {
+            logger.error("Error downloading Failed Refund Report", e);
+        }
+    }
+    
+    
+    
+    // home page analytics
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+    
+    @GetMapping("/getReconAnalytics")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getReconAnalytics() {
+        Map<String, Object> data = new HashMap<>();
+
+        // Helper lambda or method to safely fetch count without throwing table missing errors
+        data.put("atmCount", getSafeCount("BRECON.ATM_TRANSACTION_DATA"));
+        data.put("posCount", getSafeCount("BRECON.POS_TRANSATION_DATA"));
+        data.put("cbsCount", getSafeCount("BRECON.CBS_TXN"));
+        data.put("epinCount", getSafeCount("BRECON.BRECON_CARD_EPIN_DATA_TABLE"));
+
+        // Reconciliation Status Counts
+        int settled = 0, failedRefund = 0, pending = 0;
+        try {
+            List<Map<String, Object>> statusList = jdbcTemplate.queryForList(
+                "SELECT RECON_STATUS, COUNT(*) AS CNT FROM BRECON.RECON_TXN GROUP BY RECON_STATUS"
+            );
+            for (Map<String, Object> row : statusList) {
+                String status = row.get("RECON_STATUS") != null ? String.valueOf(row.get("RECON_STATUS")) : "";
+                Object cntObj = row.get("CNT");
+                int cnt = cntObj instanceof Number ? ((Number) cntObj).intValue() : 0;
+
+                if ("SETTLED".equalsIgnoreCase(status)) {
+                    settled = cnt;
+                } else if ("FAILED_REFUND".equalsIgnoreCase(status)) {
+                    failedRefund = cnt;
+                } else if ("PENDING_INVESTIGATION".equalsIgnoreCase(status)) {
+                    pending = cnt;
+                }
+            }
+        } catch (Exception e) {
+            // Log warning if table is empty or being created
+            System.err.println("Warning querying RECON_TXN status: " + e.getMessage());
+        }
+
+        data.put("settled", settled);
+        data.put("failedRefund", failedRefund);
+        data.put("pending", pending);
+        data.put("totalRecon", (settled + failedRefund + pending));
+
+        // Top 10 Exception records
+        List<Map<String, Object>> exceptions = new ArrayList<>();
+        try {
+            exceptions = jdbcTemplate.queryForList(
+                "SELECT CARD_NUMBER, RRN, AUTH_ID, AMOUNT, TRAN_DT, RECON_STATUS, REASON " +
+                "FROM BRECON.RECON_TXN " +
+                "WHERE RECON_STATUS IN ('FAILED_REFUND', 'PENDING_INVESTIGATION') " +
+                "AND ROWNUM <= 10"
+            );
+        } catch (Exception e) {
+            System.err.println("Warning querying RECON_TXN exceptions: " + e.getMessage());
+        }
+        data.put("exceptions", exceptions);
+
+        return ResponseEntity.ok(data);
+    }
+
+    // Safe count helper method (place right below in the same controller)
+    private int getSafeCount(String tableName) {
+        try {
+            Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + tableName, Integer.class);
+            return count != null ? count : 0;
+        } catch (Exception ex) {
+            System.err.println("Table " + tableName + " not available or empty: " + ex.getMessage());
+            return 0;
+        }
+    }
+   
+  
+    
+    
+    
+    
+    
     
     
     

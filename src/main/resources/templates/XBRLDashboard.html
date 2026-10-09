@@ -1,545 +1,334 @@
 <!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 <head>
- <link rel="icon" type="image/png"
-      th:href="@{/images/favicon_bob.png}">
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script type="text/javascript">
-$(document).ready(function () {
-    $('.dropdown, .dropdown-submenu').hover(function () {
-        $(this).children('.dropdown-menu').stop(true, true).delay(200).fadeIn(200);
-    }, function () {
-        $(this).children('.dropdown-menu').stop(true, true).delay(200).fadeOut(200);
-    });
-});
-</script>
-<style>
-
-.container-fluid {
-    width: 100%;
-    padding-right: 0px;
-    padding-left: 0px;
-    margin-right: auto;
-    margin-left: auto;
-}
-.container-manager {
-	padding-right: 47px;
-	padding-left: 132px;
-}
-
-.row {
-	display: -ms-flexbox;
-	display: flex;
-	-ms-flex-wrap: wrap;
-	flex-wrap: wrap;
-	margin-right: -103p;
-	margin-left: -104px;
-}
-
-
-
-.button-hover {
-    background-color: #f0f0f0;
-    padding:10px ;
-    border-radius: 10px;
-    transition: transform 0.3s ease, background-color 0.3s ease;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.button-hover:hover {
-    transform: scale(1.1); /* Enlarge on hover */
-    
-    background-color: #acb9c9;
-    color: white;
-     /* Change background color on hover */
-/*     background-color: #d966ff; /* Change background color on hover */
-  /* Change text color on hover */
-}
-
-.button-hover span {
-    font-size: ;
-    font-weight: ;
-}
-
-.button-hover label {
-    font-size: 16px;
-}
-
-
-
-
-
-
-</style>
-<script th:inline="javascript">
-	/*<![CDATA[*/
-	function Yes() {
-		location.href = "./changePassword";
-	}
-	$(document).ready(function() {
-
-		var userdate = document.getElementById("pdate").value;
-		var userdate1 = userdate.split('-');
-		var date1 = userdate1[0];
-		var month1 = userdate1[1];
-
-		var year = userdate1[2];
-		let todays = new Date().toISOString().slice(0, 10);
-		const startDate = todays;
-		const endDate = userdate;
-
-		const diffInMs = new Date(endDate) - new Date(startDate)
-		const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
-
-		if (diffInDays<=3 && diffInDays>0) {
-			$("#alert1").modal("toggle");
-		} else if (diffInDays == 0) {
-			$('#alert2').modal({
-				backdrop : 'static',
-				keyboard : false
-			}, 'show');
-			$("#alert2").modal("toggle");
-		}
-
-	});
-
-	/*>]]*/
-
-	function t() {
-
-		$.ajax({
-			type : 'get',
-			url : './t',
-
-			success : function(data) {
-
-				/*<![CDATA[*/
-
-				alert(data);
-			}
-
-		})
-
-	}
-</script>
-
-
-
-
-<script>
-	window.onload = function loadCharts() {
-		// Pie Chart
-		const pieCtx = document.getElementById('myPieChart').getContext('2d');
-		const pieChart = new Chart(pieCtx, {
-			type : 'line', // Corrected type to 'pie'
-			data : {
-				labels : [ "Raw Material", "Packing Material",
-						"Finished Goods", "Others" ],
-				datasets : [ {
-					
-					label : 'Product Status',
-					data : [ 65, 50, 75, 30 ],
-					backgroundColor : [ '#A7D8F5', // Light Blue
-					'#FFA3B5', // Light Pink
-					'#FFE79A', // Light Yellow
-					'#66B266' // Light Green
-					]
-				} ]
-			},
-			options : {
-				responsive : true,
-				maintainAspectRatio : false
-			}
-		});
-		
-		
-		
-		
-
-		const waterfallCtx = document.getElementById('myWaterfallChart').getContext('2d');
-		const barChart = new Chart(waterfallCtx, {
-		    type: 'bar',
-		    data: {
-		        labels: ["Purchase Order", "Purchase Invoice", "Sale Order", "Sale Invoice"],
-		        datasets: [
-		            {
-		                label: 'Inventory Status',
-		                data: [60,30,80,50], // Example waterfall data
-		                backgroundColor: ['#A7D8F5', '#FFA3B5', '#FFE79A', '#66B266'],
-		                borderColor: ['#2A7CC7', '#E54C60', '#D8B94B', '#347D34'],
-		                borderWidth: 2,
-		                borderRadius: 10, // Set border radius for rounded corners
-		                borderSkipped: false, // Avoid skipping borders for rounded effect
-		                barThickness: 35 // Set specific bar thickness (in pixels)
-		            },
-		            {
-		                label: 'Cumulative Values',
-		                data: [60,30,80,50], // Cumulative values for the line
-		                type: 'line', // Specify line type
-		                borderColor: '#0000FF', // Line color
-		                borderWidth: 2,
-		                fill: false, // No fill under the line
-		                tension: 0.4 // Smooth curve
-		            }
-		        ]
-		    },
-		    options: {
-		        responsive: true,
-		        maintainAspectRatio: false,
-		        scales: {
-		            x: {
-		                grid: {
-		                    display: true,
-		                    color: '#cccccc',
-		                    borderDash: [4, 4]
-		                },
-		                title: {
-		                    display: true,
-		                    text: 'Categories',
-		                    font: {
-		                        size: 14,
-		                        weight: 'bold'
-		                    }
-		                }
-		            },
-		            y: {
-		                beginAtZero: true,
-		                grid: {
-		                    display: true,
-		                    color: '#dddddd'
-		                },
-		                title: {
-		                    display: true,
-		                    text: 'Values',
-		                    font: {
-		                        size: 14,
-		                        weight: 'bold'
-		                    }
-		                }
-		            }
-		        },
-		        plugins: {
-		            legend: {
-		                display: true,
-		                position: 'top'
-		            },
-		            tooltip: {
-		                enabled: true
-		            }
-		        }
-		    }
-		});
-
-
-
-		// Function to update Bar Chart values
-		function putvalue(mydata,line) {
-			
-			if(mydata){
-			console.log("Updating bar chart with data:", mydata); // Debugging log
-			barChart.data.datasets[0].data = mydata;
-			barChart.data.datasets[1].data = mydata;
-			barChart.update();
-			}
-			
-			if(line){
-			pieChart.data.datasets[0].data = line;
-	        pieChart.update();
-			}
-		}
-
-		// Function to fetch details for the graph
-		function getdetailsforgraph() {
-			$
-					.ajax({
-						url : './getdetailsforgraph',
-						type : 'GET',
-						success : function(response) {
-							console.log("Response from server:", response); // Debugging log
-
-							// Extracting data and updating text fields
-							$('#purchaseorder').text(response.Purchaseorder);
-							$('#purchaseinvoice')
-									.text(response.purchaseinvoice);
-							$('#saleorder').text(response.saleorder);
-							$('#saleinvoice').text(response.saleinvoice);
-							$('#purchasereturn').text(response.purchasereturn);
-							$('#salereturn').text(response.salereturn);
-
-							// Prepare data for bar chart update
-							const graphData = [ response.Purchaseorder || 0,
-									response.purchaseinvoice || 0,
-									response.saleorder || 0,
-									response.saleinvoice || 0 ];
-							
-							const linechart=[response.RAWMATERIALS || 0,
-								response.PACKINGMATERIALS || 0,
-								response.FINISHEDGOODS || 0,
-								response.STOREANDSPARE || 0
-							]
-							
-							console.log("the line chart" + linechart)
-							
-
-							// Update the bar chart
-							putvalue(graphData,linechart);
-						},
-						error : function(xhr, status, error) {
-							console.error("Error fetching data:", error);
-						}
-					});
-		}
-
-		// Call the function to fetch data and update the graph
-		getdetailsforgraph();
-	};
-</script>
-
-
-
-<style>
-    .btn-custom {
-        padding: 5px 10px;
-        border: 2px solid #007BFF;
-        color: #007BFF;
-        background-color: white;
-        border-radius: 5px;
-        transition: 0.3s;
-    }
-
-    .btn-custom:hover {
-        color: white;
-        background-color: #007BFF;
-    }
-    .container {
-  display: flex;
-  justify-content: space-between;
-}
-
-.left, .right {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-    /* Default button styles */
-.switch-btn {
-  background-color: #f8f9fa; /* Default light background */
-  color: black;
-  transition: background-color 0.3s ease;
-}
-
-/* Active button styles */
-.switch-btn.active {
-  background-color: #A2ABD4; /* Highlight color */
-  color: white; /* Optional for better visibility */
-}
-    .table {
-    width: 100%;
-    margin-bottom: 1rem;
-    color: #354a5f;
-}
-    
-</style>
-
-<script type="text/javascript">
-
-$(document).ready(function() {
-    const purchaseButton = document.getElementById('pur_id');
-    purchaseButton.style.backgroundColor = ''; // Corrected property name
-});
-
-
-
-
-function switchTable(type, event) {
-	  // Prevent default action (e.g., form submission)
-	  if (event) event.preventDefault();
-
-	  // Get references to the tables and buttons
-	  const purchaseTable = document.getElementById('dataTables_purchase');
-	  const saleTable = document.getElementById('dataTables_sale');
-	  const buttons = document.querySelectorAll('.switch-btn');
-	  const purchaseButton = document.getElementById('pur_id');
-
-	  // Toggle table visibility
-	  if (type === 'purchase') {
-	    purchaseTable.style.display = 'block';
-	    saleTable.style.display = 'none';
-	  } else if (type === 'sale') {
-	    saleTable.style.display = 'block';
-	    purchaseTable.style.display = 'none';
-	    purchaseButton.style.backgroundColor = '';
-	  }
-
-	  // Update button states
-	  buttons.forEach((button) => {
-	    if (button.dataset.type === type) {
-	      button.classList.add('active');
-	    } else {
-	      button.classList.remove('active');
-	    }
-	  });
-	}
-
-</script>
-
-
-
-
-<script>
-
-
-let currentPage = { purchase: 1, sale: 1 }; // Track pages for each table
-const rowsPerPage = 5;
-
-// Function to paginate a table
-function paginateTable(tableId) {
-    const tableBody = document.getElementById(`${tableId}Body`);
-    const rows = Array.from(tableBody.querySelectorAll('tr'));
-    const totalRows = rows.length;
-    const totalPages = Math.ceil(totalRows / rowsPerPage);
-
-    // Determine current page for the table
-    const tableType = tableId.includes('purchase') ? 'purchase' : 'sale';
-    currentPage[tableType] = Math.max(1, Math.min(currentPage[tableType], totalPages));
-
-    // Show/hide rows based on the current page
-    rows.forEach((row, index) => {
-        row.style.display =
-            index >= (currentPage[tableType] - 1) * rowsPerPage && index < currentPage[tableType] * rowsPerPage
-                ? ''
-                : 'none';
-    });
-
-    // Update pagination controls
-    const pageIndicator = document.getElementById(`${tableType}PageIndicator`);
-    pageIndicator.innerText = `Page ${currentPage[tableType]} of ${totalPages}`;
-
-    // Enable/disable buttons
-    document.getElementById(`${tableType}PrevPage`).disabled = currentPage[tableType] === 1;
-    document.getElementById(`${tableType}NextPage`).disabled = currentPage[tableType] === totalPages;
-}
-
-// Event handlers for pagination buttons
-function prevPage(event, tableType) {
-    event.preventDefault();
-    if (currentPage[tableType] > 1) {
-        currentPage[tableType]--;
-        paginateTable(`dataTables_${tableType}`);
-    }
-}
-
-function nextPage(event, tableType) {
-    event.preventDefault();
-    const tableBody = document.getElementById(`dataTables_${tableType}Body`);
-    const totalRows = tableBody.querySelectorAll('tr').length;
-    const totalPages = Math.ceil(totalRows / rowsPerPage);
-
-    if (currentPage[tableType] < totalPages) {
-        currentPage[tableType]++;
-        paginateTable(`dataTables_${tableType}`);
-    }
-}
-
-// Functions to switch tables
-function purc_table(event) {
-    event.preventDefault();
-    document.getElementById('dataTables_purchase').style.display = 'table';
-    document.getElementById('dataTables_sale').style.display = 'none';
-    document.getElementById('purchaseControls').style.display = 'block';
-    document.getElementById('saleControls').style.display = 'none';
-    paginateTable('dataTables_purchase'); // Apply pagination to Purchase table
-}
-
-function sale_table(event) {
-    event.preventDefault();
-    document.getElementById('dataTables_purchase').style.display = 'none';
-    document.getElementById('dataTables_sale').style.display = 'table';
-    document.getElementById('purchaseControls').style.display = 'none';
-    document.getElementById('saleControls').style.display = 'block';
-    paginateTable('dataTables_sale'); // Apply pagination to Sale table
-}
-
-// Initialize pagination on page load
-document.addEventListener('DOMContentLoaded', () => {
-    paginateTable('dataTables_purchase'); // Default to Purchase table
-    paginateTable('dataTables_sale'); // Initialize Sale table pagination
-});
-
-
-</script>
-<style>
-
-.blur-border {
-    width: 100%;
-    height: 100%;
-    border: 2px solid #5b708a; /* Define border */
-    box-shadow: 0px 0px 10px 4px #5b708a; /* Creates a blur effect */
-    border-radius: 5px; /* Optional: smooth corners */
-}
-
-</style>
+    <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BRECON - Reconciliation Dashboard</title>
+
+    <!-- Dependencies -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background-color: #f4f7f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #333;
+        }
+        .container-manager {
+            padding: 20px 40px;
+        }
+        .metric-card {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+        .metric-icon {
+            font-size: 32px;
+            width: 55px;
+            height: 55px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .metric-value {
+            font-size: 26px;
+            font-weight: 700;
+            margin: 0;
+        }
+        .metric-label {
+            font-size: 13px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #8898aa;
+            margin: 0;
+        }
+        .chart-box {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+            height: 380px;
+        }
+        .chart-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .table-box {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .badge-settled { background-color: #28a745; color: white; }
+        .badge-refund { background-color: #dc3545; color: white; }
+        .badge-pending { background-color: #ffc107; color: #212529; }
+    </style>
 </head>
-<title>BRECON</title>
 <body>
-	<div th:insert="XBRLHeaderMenu :: header"></div>
-	<div class="container-manager">
-   </div>
+    <div th:insert="XBRLHeaderMenu :: header"></div>
 
+    <div class="container-manager">
+        <!-- Top Title and Action Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="font-weight-bold" style="color: #0b3954;">Reconciliation Operations Overview</h3>
+                <span class="text-muted">Real-time status of 3-Way settlement (Switch vs CBS vs VISA)</span>
+            </div>
+            <div>
+                <button class="btn btn-outline-primary mr-2" onclick="refreshDashboard();">
+                    <i class="fas fa-sync-alt"></i> Refresh Data
+                </button>
+                <a th:href="@{/SourceData}" class="btn btn-primary" style="background-color: #0b3954; border: none;">
+                    <i class="fas fa-upload"></i> Source Upload & Extract
+                </a>
+            </div>
+        </div>
 
+        <!-- Metric KPI Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div>
+                        <p class="metric-label">Reconciled TXNs</p>
+                        <h3 class="metric-value" id="cardTotalRecon">0</h3>
+                    </div>
+                    <div class="metric-icon" style="background-color: #e8f4fd; color: #007bff;">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div>
+                        <p class="metric-label">3-Way Settled</p>
+                        <h3 class="metric-value text-success" id="cardSettled">0</h3>
+                    </div>
+                    <div class="metric-icon" style="background-color: #e9f7ef; color: #28a745;">
+                        <i class="fas fa-check-double"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div>
+                        <p class="metric-label">Failed Refunds</p>
+                        <h3 class="metric-value text-danger" id="cardFailedRefund">0</h3>
+                    </div>
+                    <div class="metric-icon" style="background-color: #fde8e8; color: #dc3545;">
+                        <i class="fas fa-undo-alt"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div>
+                        <p class="metric-label">Exceptions / Pending</p>
+                        <h3 class="metric-value text-warning" id="cardPending">0</h3>
+                    </div>
+                    <div class="metric-icon" style="background-color: #fff8e6; color: #ffc107;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Charts Section -->
+        <div class="row">
+            <!-- Ingested Source Volume Bar Chart -->
+            <div class="col-md-7">
+                <div class="chart-box">
+                    <div class="chart-title">
+                        <span><i class="fas fa-chart-bar mr-2"></i>Ingested Channel Volumes</span>
+                        <small class="text-muted">Total records loaded per source</small>
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="sourceVolumeBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
 
-	<!--------------------------------------------------------- Password change modal------------------------------------------------ -->
-	<div class="modal fade" id="alert1">
-		<div
-			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-			<div class="modal-content">
-				<div class="menu-header">
-					<h4 class="modal-title" style="text-align: center;">BORNFIRE
-						MANAGER</h4>
+            <!-- Reconciliation Status Doughnut Chart -->
+            <div class="col-md-5">
+                <div class="chart-box">
+                    <div class="chart-title">
+                        <span><i class="fas fa-chart-pie mr-2"></i>Recon Status Distribution</span>
+                        <small class="text-muted">Matching breakdown</small>
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="reconStatusPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-				</div>
-				<br>
-				<div class="form-group">
-					<p style="margin-left: 120px;">Password Expiry Date :</p>
-					<p style="margin-top: -38px; margin-left: 290px;"
-						th:text="${#dates.format(RoleMenu?.passExpDate,'dd-MM-yyyy')}">
-				</div>
-				<div class="modal-body"
-					style="text-align: center; background-color: #c6ccd2">
-					<p id="alertmsg1" style="font-size: 16px; text-align: center">Do
-						You Want Change Password?</p>
-					<button type="button" class="btn btn-primary" data-dismiss="modal"
-						onclick="Yes(this);">Yes</button>
-					<button type="button" class="btn btn-primary" data-dismiss="modal"
-						onclick="">No</button>
-				</div>
-			</div>
-		</div>
-	</div>
+        <!-- Exceptions Table Preview -->
+        <div class="table-box mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="font-weight-bold mb-0 text-dark">
+                    <i class="fas fa-list-alt mr-2 text-danger"></i>Exception & Refund Queue
+                </h5>
+                <a th:href="@{/downloadFailedRefundReport}" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-file-excel mr-1"></i>Download Refund Report
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead style="background-color: #0b3954; color: white;">
+                        <tr>
+                            <th>Card Number</th>
+                            <th>RRN</th>
+                            <th>Auth ID</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exceptionTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center py-3">Loading reconciliation data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-	<div class="modal fade" id="alert2">
-		<div
-			class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-			<div class="modal-content">
-				<div class="menu-header">
-					<h4 class="modal-title" style="text-align: center;">BORNFIRE
-						MANAGER</h4>
+    <!-- Chart and AJAX Logic -->
+    <script>
+        let barChartInstance = null;
+        let pieChartInstance = null;
 
-				</div>
-				<br>
-				<div class="modal-body"
-					style="text-align: center; background-color: #c6ccd2">
+        function initCharts() {
+            // Source Volumes Bar Chart
+            const barCtx = document.getElementById('sourceVolumeBarChart').getContext('2d');
+            barChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Switch ATM', 'Switch POS', 'CBS Core', 'VISA EPIN'],
+                    datasets: [{
+                        label: 'Record Count',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#2A7CC7', '#00A896', '#F39C12', '#9B59B6'],
+                        borderRadius: 6,
+                        barThickness: 40
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#ececec' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
 
-					<p id="alertmsg1" style="font-size: 16px; text-align: center">Change
-						Password</p>
-					<button type="button" class="btn btn-primary" data-dismiss="modal"
-						onclick="Yes(this);">OK</button>
-				</div>
-			</div>
-		</div>
-	</div>
+            // Status Doughnut Chart
+            const pieCtx = document.getElementById('reconStatusPieChart').getContext('2d');
+            pieChartInstance = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Settled', 'Failed Refund', 'Pending Investigation'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#28a745', '#dc3545', '#ffc107'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function refreshDashboard() {
+            $.ajax({
+                url: './getReconAnalytics',
+                type: 'GET',
+                success: function (data) {
+                    // Update KPI counters
+                    $('#cardTotalRecon').text(data.totalRecon || 0);
+                    $('#cardSettled').text(data.settled || 0);
+                    $('#cardFailedRefund').text(data.failedRefund || 0);
+                    $('#cardPending').text(data.pending || 0);
+
+                    // Update Bar Chart
+                    barChartInstance.data.datasets[0].data = [
+                        data.atmCount || 0,
+                        data.posCount || 0,
+                        data.cbsCount || 0,
+                        data.epinCount || 0
+                    ];
+                    barChartInstance.update();
+
+                    // Update Pie Chart
+                    pieChartInstance.data.datasets[0].data = [
+                        data.settled || 0,
+                        data.failedRefund || 0,
+                        data.pending || 0
+                    ];
+                    pieChartInstance.update();
+
+                    // Update Table
+                    const tbody = $('#exceptionTableBody');
+                    tbody.empty();
+
+                    if (!data.exceptions || data.exceptions.length === 0) {
+                        tbody.append('<tr><td colspan="7" class="text-center py-3 text-success font-weight-bold">No pending exceptions found. All records settled!</td></tr>');
+                    } else {
+                        data.exceptions.forEach(function (row) {
+                            let badgeClass = row.RECON_STATUS === 'FAILED_REFUND' ? 'badge-refund' : 'badge-pending';
+                            tbody.append(`
+                                <tr>
+                                    <td><code>${row.CARD_NUMBER || ''}</code></td>
+                                    <td>${row.RRN || ''}</td>
+                                    <td>${row.AUTH_ID || ''}</td>
+                                    <td>${row.AMOUNT || '0.00'}</td>
+                                    <td>${row.TRAN_DT || ''}</td>
+                                    <td><span class="badge ${badgeClass} p-1">${row.RECON_STATUS || ''}</span></td>
+                                    <td>${row.REASON || ''}</td>
+                                </tr>
+                            `);
+                        });
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("Failed to load dashboard metrics:", error);
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            initCharts();
+            refreshDashboard();
+        });
+    </script>
 </body>
 </html>

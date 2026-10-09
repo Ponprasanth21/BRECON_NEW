@@ -445,13 +445,47 @@
         }
 
         function extractData() { console.log("Data Extract"); }
+		
+		
+		//reconsilanation script
+		
+		function extractData() {
+		    if (!confirm("Start 3-way VISA reconciliation (VISA + CBS + Switch)?")) {
+		        return;
+		    }
+
+		    $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Executing VISA Reconciliation process...');
+
+		    $.ajax({
+		        url: 'runVisaReconciliation',
+		        type: 'POST',
+		        data: { reconDate: '' }, // Leave empty for all dates or pass specific date
+		        success: function(res) {
+		            $('#uploadStatusMsg').hide();
+		            alert(res.message);
+		            // Optional: prompt to download the refund report if exceptions were caught
+		            if (confirm("Reconciliation complete. Download Failed Transaction Refund Report now?")) {
+		                window.location.href = 'downloadFailedRefundReport';
+		            }
+		        },
+		        error: function(xhr) {
+		            $('#uploadStatusMsg').hide();
+		            var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+		            alert("Reconciliation failed: " + err);
+		        }
+		    });
+		}
+		
+		
+		
+		
     </script>
 </head>
 
 <body>
     <div th:insert="XBRLHeaderMenu :: header"></div>
 
-    <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" />
+    <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv, .txt, .TXT" style="display: none;" />
 
     <div class="source-data-wrapper">
         <div class="source-data-card">

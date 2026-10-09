@@ -1,15 +1,32 @@
 package com.bornfire.recon.services;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.sql.CallableStatement;
+import java.sql.Connection;
 import java.sql.Timestamp;
+import java.sql.Types;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,10 +78,15 @@ public class SourceDataUploadService {
         "MODIFY_FLAG", "ENTITY_FLAG"
     };
 
+    private static final String[] CBS_COLUMNS = new String[] {
+        "ACCOUNT_NUMBER", "CARD_NUMBER", "RRN", "AMOUNT", "TRAN_DT", 
+        "TRAN_TYPE", "DR_CR_FLAG", "TRAN_DESCRIPTION", "ENTRY_TIME", 
+        "ENTRY_USER", "DEL_FLAG", "ENTITY_FLAG", "MODIFY_FLAG"
+    };
+
     private String cleanKey(String col) {
         if (col == null) return "";
         String s = col.trim().toUpperCase();
-        // Strip table prefixes like "POS." or "ATM." (e.g. POS.TRAN_DT -> TRAN_DT)
         if (s.contains(".")) {
             s = s.substring(s.lastIndexOf('.') + 1);
         }
@@ -73,116 +95,186 @@ public class SourceDataUploadService {
 
     @Transactional
     public int uploadTransactionFile(MultipartFile file, String type, String userId) throws Exception {
-        String targetTable;
-        if ("ATM".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.ATM_TRANSACTION_DATA";
-        } else if ("POS".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.POS_TRANSATION_DATA";
-        } else if ("EPIN".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.EPIN_TRANSACTION_DATA";
-        } else if ("VISANET".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.VISANET_TRANSACTION_DATA";
-        } else {
-            targetTable = "BRECON.CBS_TRANSACTION_DATA";
+        String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+        boolean isCbs = "CBS".equalsIgnoreCase(type);
+        boolean isEpin = "EPIN".equalsIgnoreCase(type);
+
+        // If EPIN raw TXT file is uploaded via standard Upload dropdown, route directly to raw text parser
+        if (isEpin && fileName.endsWith(".txt")) {
+            String reportDateStr = new SimpleDateFormat("dd-MM-yy").format(new Date());
+            int count = uploadRawEpinTextFile(file, reportDateStr);
+            executeCompanyEpinProcedure(reportDateStr);
+            return count;
         }
 
-        logger.info("Starting upload for category: {} into table: {}", type, targetTable);
+        String targetTable;
+        String[] targetColumns;
+
+        if ("ATM".equalsIgnoreCase(type)) {
+            targetTable = "BRECON.ATM_TRANSACTION_DATA";
+            targetColumns = DB_COLUMNS;
+        } else if ("POS".equalsIgnoreCase(type)) {
+            targetTable = "BRECON.POS_TRANSATION_DATA";
+            targetColumns = DB_COLUMNS;
+        } else if ("EPIN".equalsIgnoreCase(type)) {
+            targetTable = "BRECON.VISA_EPIN";
+            targetColumns = DB_COLUMNS;
+        } else if ("EPIN745".equalsIgnoreCase(type)) {
+            targetTable = "BRECON.VISA_EPIN745";
+            targetColumns = DB_COLUMNS;
+        } else if (isCbs) {
+            targetTable = "BRECON.CBS_TXN";
+            targetColumns = CBS_COLUMNS;
+        } else {
+            targetTable = "BRECON." + type.toUpperCase() + "_TRANSACTION_DATA";
+            targetColumns = DB_COLUMNS;
+        }
+
+        logger.info("Uploading file [{}] as [{}] into table [{}]", file.getOriginalFilename(), type, targetTable);
 
         List<Object[]> batchParams = new ArrayList<>();
-        DataFormatter formatter = new DataFormatter();
         Timestamp currentTime = new Timestamp(System.currentTimeMillis());
+        String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
 
-        try (InputStream is = file.getInputStream();
-             Workbook workbook = WorkbookFactory.create(is)) {
+        boolean isTextCsv = fileName.endsWith(".csv") || fileName.endsWith(".txt");
 
-            Sheet sheet = workbook.getSheetAt(0);
-            if (sheet == null || sheet.getPhysicalNumberOfRows() == 0) {
-                logger.warn("Uploaded sheet is empty");
-                return 0;
-            }
-
-            Row headerRow = sheet.getRow(0);
-            if (headerRow == null) {
-                logger.warn("No header row found in Excel sheet");
-                return 0;
-            }
-
-            // Map normalized header names to column index
-            Map<String, Integer> colIndexMap = new HashMap<>();
-            for (Cell cell : headerRow) {
-                String rawName = formatter.formatCellValue(cell);
-                String normalized = cleanKey(rawName);
-                if (!normalized.isEmpty()) {
-                    colIndexMap.put(normalized, cell.getColumnIndex());
+        if (isTextCsv) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+                String headerLine = reader.readLine();
+                if (headerLine == null || headerLine.trim().isEmpty()) {
+                    return 0;
                 }
-            }
 
-            logger.info("Detected Excel headers: {}", colIndexMap.keySet());
+                String delimiter = headerLine.contains(",") ? "," : "\\|";
+                String[] headers = headerLine.split(delimiter);
 
-            // Iterate through data rows
-            int totalRows = sheet.getLastRowNum();
-            for (int r = 1; r <= totalRows; r++) {
-                Row row = sheet.getRow(r);
-                if (row == null) continue;
+                Map<String, Integer> colIndexMap = new HashMap<>();
+                for (int i = 0; i < headers.length; i++) {
+                    String norm = cleanKey(headers[i]);
+                    if (!norm.isEmpty()) {
+                        colIndexMap.put(norm, i);
+                    }
+                }
 
-                Object[] rowValues = new Object[DB_COLUMNS.length];
-                boolean rowHasMeaningfulData = false;
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().isEmpty()) continue;
+                    String[] tokens = line.split(delimiter, -1);
 
-                for (int i = 0; i < DB_COLUMNS.length; i++) {
-                    String col = DB_COLUMNS[i];
+                    Object[] rowValues = new Object[targetColumns.length];
+                    boolean hasData = false;
 
-                    // System metadata columns
-                    if ("ENTRY_TIME".equals(col)) {
-                        rowValues[i] = currentTime;
-                    } else if ("ENTRY_USER".equals(col)) {
-                        rowValues[i] = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
-                    } else if ("DEL_FLAG".equals(col)) {
-                        rowValues[i] = "N";
-                    } else if ("ENTITY_FLAG".equals(col)) {
-                        rowValues[i] = "Y";
-                    } else if ("MODIFY_FLAG".equals(col)) {
-                        rowValues[i] = "N";
-                    } else {
-                        // Match normalized column name
-                        Integer cellIndex = colIndexMap.get(cleanKey(col));
-                        if (cellIndex != null) {
-                            Cell cell = row.getCell(cellIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
-                            if (cell != null) {
-                                String cellStr = formatter.formatCellValue(cell).trim();
-                                if (!cellStr.isEmpty()) {
-                                    rowHasMeaningfulData = true;
-                                    rowValues[i] = cellStr;
+                    for (int i = 0; i < targetColumns.length; i++) {
+                        String col = targetColumns[i];
+                        if ("ENTRY_TIME".equals(col)) {
+                            rowValues[i] = currentTime;
+                        } else if ("ENTRY_USER".equals(col)) {
+                            rowValues[i] = effectiveUser;
+                        } else if ("DEL_FLAG".equals(col)) {
+                            rowValues[i] = "N";
+                        } else if ("ENTITY_FLAG".equals(col)) {
+                            rowValues[i] = "Y";
+                        } else if ("MODIFY_FLAG".equals(col)) {
+                            rowValues[i] = "N";
+                        } else {
+                            Integer idx = colIndexMap.get(cleanKey(col));
+                            if (idx != null && idx < tokens.length) {
+                                String val = tokens[idx].trim().replaceAll("^\"|\"$", "");
+                                if (!val.isEmpty()) {
+                                    hasData = true;
+                                    rowValues[i] = val;
                                 } else {
                                     rowValues[i] = null;
                                 }
                             } else {
                                 rowValues[i] = null;
                             }
-                        } else {
-                            rowValues[i] = null;
                         }
+                    }
+
+                    if (hasData) {
+                        batchParams.add(rowValues);
+                    }
+                }
+            }
+        } else {
+            DataFormatter formatter = new DataFormatter();
+            try (InputStream is = file.getInputStream();
+                 Workbook workbook = WorkbookFactory.create(is)) {
+
+                Sheet sheet = workbook.getSheetAt(0);
+                if (sheet == null || sheet.getPhysicalNumberOfRows() == 0) return 0;
+
+                Row headerRow = sheet.getRow(0);
+                if (headerRow == null) return 0;
+
+                Map<String, Integer> colIndexMap = new HashMap<>();
+                for (Cell cell : headerRow) {
+                    String rawName = formatter.formatCellValue(cell);
+                    String normalized = cleanKey(rawName);
+                    if (!normalized.isEmpty()) {
+                        colIndexMap.put(normalized, cell.getColumnIndex());
                     }
                 }
 
-                if (rowHasMeaningfulData) {
-                    batchParams.add(rowValues);
+                for (int r = 1; r <= sheet.getLastRowNum(); r++) {
+                    Row row = sheet.getRow(r);
+                    if (row == null) continue;
+
+                    Object[] rowValues = new Object[targetColumns.length];
+                    boolean hasData = false;
+
+                    for (int i = 0; i < targetColumns.length; i++) {
+                        String col = targetColumns[i];
+
+                        if ("ENTRY_TIME".equals(col)) {
+                            rowValues[i] = currentTime;
+                        } else if ("ENTRY_USER".equals(col)) {
+                            rowValues[i] = effectiveUser;
+                        } else if ("DEL_FLAG".equals(col)) {
+                            rowValues[i] = "N";
+                        } else if ("ENTITY_FLAG".equals(col)) {
+                            rowValues[i] = "Y";
+                        } else if ("MODIFY_FLAG".equals(col)) {
+                            rowValues[i] = "N";
+                        } else {
+                            Integer cellIndex = colIndexMap.get(cleanKey(col));
+                            if (cellIndex != null) {
+                                Cell cell = row.getCell(cellIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                                if (cell != null) {
+                                    String cellStr = formatter.formatCellValue(cell).trim();
+                                    if (!cellStr.isEmpty()) {
+                                        hasData = true;
+                                        rowValues[i] = cellStr;
+                                    } else {
+                                        rowValues[i] = null;
+                                    }
+                                } else {
+                                    rowValues[i] = null;
+                                }
+                            } else {
+                                rowValues[i] = null;
+                            }
+                        }
+                    }
+
+                    if (hasData) {
+                        batchParams.add(rowValues);
+                    }
                 }
             }
         }
-
-        logger.info("Found {} valid rows to insert into {}", batchParams.size(), targetTable);
 
         if (batchParams.isEmpty()) {
             return 0;
         }
 
-        // Build INSERT query
         StringBuilder sql = new StringBuilder("INSERT INTO ").append(targetTable).append(" (");
         StringBuilder placeholders = new StringBuilder(" VALUES (");
-        for (int i = 0; i < DB_COLUMNS.length; i++) {
-            sql.append("\"").append(DB_COLUMNS[i]).append("\"");
+        for (int i = 0; i < targetColumns.length; i++) {
+            sql.append("\"").append(targetColumns[i]).append("\"");
             placeholders.append("?");
-            if (i < DB_COLUMNS.length - 1) {
+            if (i < targetColumns.length - 1) {
                 sql.append(", ");
                 placeholders.append(", ");
             }
@@ -190,37 +282,55 @@ public class SourceDataUploadService {
         sql.append(")").append(placeholders).append(")");
 
         int[] updateCounts = jdbcTemplate.batchUpdate(sql.toString(), batchParams);
-        logger.info("Batch execution completed. Rows affected: {}", updateCounts.length);
-
+        logger.info("Successfully inserted {} records into {}", updateCounts.length, targetTable);
         return updateCounts.length;
     }
 
     public void exportDataToExcel(String type, HttpServletResponse response) throws Exception {
         String targetTable;
+        boolean isCbs = "CBS".equalsIgnoreCase(type);
+
         if ("ATM".equalsIgnoreCase(type)) {
             targetTable = "BRECON.ATM_TRANSACTION_DATA";
         } else if ("POS".equalsIgnoreCase(type)) {
             targetTable = "BRECON.POS_TRANSATION_DATA";
         } else if ("EPIN".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.EPIN_TRANSACTION_DATA";
-        } else if ("VISANET".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.VISANET_TRANSACTION_DATA";
+            targetTable = "BRECON.VISA_EPIN";
+        } else if ("EPIN745".equalsIgnoreCase(type)) {
+            targetTable = "BRECON.VISA_EPIN745";
+        } else if (isCbs) {
+            targetTable = "BRECON.CBS_TXN";
         } else {
-            targetTable = "BRECON.CBS_TRANSACTION_DATA";
+            targetTable = "BRECON." + type.toUpperCase() + "_TRANSACTION_DATA";
         }
 
-        logger.info("Exporting Excel report for type: {} from table: {}", type, targetTable);
+        logger.info("Exporting Excel report for type: [{}] from table: [{}]", type, targetTable);
 
-        // Fetch records from target table
-        String query = "SELECT * FROM " + targetTable;
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(query);
+        List<Map<String, Object>> rows = new ArrayList<>();
+        try {
+            String query = "SELECT * FROM " + targetTable;
+            rows = jdbcTemplate.queryForList(query);
+        } catch (Exception ex) {
+            logger.warn("Table {} query issue: {}", targetTable, ex.getMessage());
+        }
 
-        // Stream via SXSSFWorkbook for low memory overhead
+        List<String> columnNames = new ArrayList<>();
+        if (!rows.isEmpty()) {
+            columnNames.addAll(rows.get(0).keySet());
+        } else if (isCbs) {
+            for (String col : CBS_COLUMNS) {
+                columnNames.add(col);
+            }
+        } else {
+            for (String col : DB_COLUMNS) {
+                columnNames.add(col);
+            }
+        }
+
         SXSSFWorkbook workbook = new SXSSFWorkbook(100);
         try {
             Sheet sheet = workbook.createSheet(type.toUpperCase() + "_DATA");
 
-            // Header Style
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -229,34 +339,144 @@ public class SourceDataUploadService {
             headerStyle.setFillForegroundColor(IndexedColors.TEAL.getIndex());
             headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-            // Write Header Row
             Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < DB_COLUMNS.length; i++) {
+            for (int i = 0; i < columnNames.size(); i++) {
                 Cell cell = headerRow.createCell(i);
-                cell.setCellValue(DB_COLUMNS[i]);
+                cell.setCellValue(columnNames.get(i));
                 cell.setCellStyle(headerStyle);
             }
 
-            // Write Data Rows
             int rowIndex = 1;
             for (Map<String, Object> rowMap : rows) {
                 Row row = sheet.createRow(rowIndex++);
-                for (int colIndex = 0; colIndex < DB_COLUMNS.length; colIndex++) {
-                    String colName = DB_COLUMNS[colIndex];
-                    Object val = rowMap.get(colName);
+                for (int colIndex = 0; colIndex < columnNames.size(); colIndex++) {
+                    String col = columnNames.get(colIndex);
+                    Object val = rowMap.get(col);
                     Cell cell = row.createCell(colIndex);
                     cell.setCellValue(val != null ? String.valueOf(val) : "");
                 }
             }
 
-            // Write to response stream
-            String fileName = type.toUpperCase() + "_TRANSACTION_DATA_" + System.currentTimeMillis() + ".xlsx";
+            String fileName = type.toUpperCase() + "_DATA_" + System.currentTimeMillis() + ".xlsx";
+            response.reset();
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            response.setHeader("Pragma", "no-cache");
+            response.setDateHeader("Expires", 0);
+
+            workbook.write(response.getOutputStream());
+            response.getOutputStream().flush();
+        } finally {
+            workbook.dispose();
+            workbook.close();
+        }
+    }
+
+    @Transactional
+    public int executeVisaReconciliation(String reconDate) {
+        logger.info("Executing SP_EXECUTE_VISA_RECON for date: {}", reconDate);
+
+        return jdbcTemplate.execute((Connection con) -> {
+            try (CallableStatement cs = con.prepareCall("{call BRECON.SP_EXECUTE_VISA_RECON(?, ?)}")) {
+                if (reconDate != null && !reconDate.trim().isEmpty()) {
+                    cs.setString(1, reconDate);
+                } else {
+                    cs.setNull(1, Types.VARCHAR);
+                }
+                cs.registerOutParameter(2, Types.INTEGER);
+                cs.execute();
+                return cs.getInt(2);
+            }
+        });
+    }
+
+    // Executes the company-provided BRECON_CARD_EPIN_PROCEDURE
+    @Transactional
+    public void executeCompanyEpinProcedure(String reportDateStr) {
+        logger.info("Executing BRECON_CARD_EPIN_PROCEDURE for date: {}", reportDateStr);
+        jdbcTemplate.execute((Connection con) -> {
+            try (CallableStatement cs = con.prepareCall("{call BRECON.BRECON_CARD_EPIN_PROCEDURE(?)}")) {
+                cs.setString(1, reportDateStr);
+                cs.execute();
+                return null;
+            }
+        });
+    }
+
+    // Raw text file reader for EPIN Base II files
+    @Transactional
+    public int uploadRawEpinTextFile(MultipartFile file, String reportDateStr) throws Exception {
+        String sql = "INSERT INTO BRECON.BRECON_EPIN_TEXT_TABLE (TEXTDATA, UP_DATE) VALUES (?, TO_DATE(?, 'DD-MM-YY'))";
+        List<Object[]> batchArgs = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.trim().isEmpty()) {
+                    batchArgs.add(new Object[] { line, reportDateStr });
+                }
+            }
+        }
+
+        if (!batchArgs.isEmpty()) {
+            jdbcTemplate.batchUpdate(sql, batchArgs);
+            logger.info("Inserted {} lines into BRECON_EPIN_TEXT_TABLE", batchArgs.size());
+        }
+        return batchArgs.size();
+    }
+
+    public void exportFailedRefundReport(HttpServletResponse response) throws Exception {
+        String sql = "SELECT CARD_NUMBER, RRN, AUTH_ID, AMOUNT, TRAN_DT, AUTHX_RESP_CDE, AUTHX_TYP, REASON " +
+                     "FROM BRECON.RECON_TXN " +
+                     "WHERE RECON_STATUS = 'FAILED_REFUND'";
+
+        List<Map<String, Object>> list = jdbcTemplate.queryForList(sql);
+
+        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+        try {
+            Sheet sheet = workbook.createSheet("FAILED_TXN_REFUND_REPORT");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font font = workbook.createFont();
+            font.setBold(true);
+            font.setColor(IndexedColors.WHITE.getIndex());
+            headerStyle.setFont(font);
+            headerStyle.setFillForegroundColor(IndexedColors.MAROON.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            String[] headers = new String[] {
+                "Card Number", "RRN", "Auth ID", "Amount", "Txn Date", 
+                "Response Code", "Auth Type", "Reason"
+            };
+
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell c = headerRow.createCell(i);
+                c.setCellValue(headers[i]);
+                c.setCellStyle(headerStyle);
+            }
+
+            int rowIdx = 1;
+            for (Map<String, Object> r : list) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(r.get("CARD_NUMBER") != null ? String.valueOf(r.get("CARD_NUMBER")) : "");
+                row.createCell(1).setCellValue(r.get("RRN") != null ? String.valueOf(r.get("RRN")) : "");
+                row.createCell(2).setCellValue(r.get("AUTH_ID") != null ? String.valueOf(r.get("AUTH_ID")) : "");
+                row.createCell(3).setCellValue(r.get("AMOUNT") != null ? String.valueOf(r.get("AMOUNT")) : "");
+                row.createCell(4).setCellValue(r.get("TRAN_DT") != null ? String.valueOf(r.get("TRAN_DT")) : "");
+                row.createCell(5).setCellValue(r.get("AUTHX_RESP_CDE") != null ? String.valueOf(r.get("AUTHX_RESP_CDE")) : "");
+                row.createCell(6).setCellValue(r.get("AUTHX_TYP") != null ? String.valueOf(r.get("AUTHX_TYP")) : "");
+                row.createCell(7).setCellValue(r.get("REASON") != null ? String.valueOf(r.get("REASON")) : "Reversal Not Received");
+            }
+
+            String fileName = "FAILED_TXN_REFUND_REPORT_" + System.currentTimeMillis() + ".xlsx";
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
             workbook.write(response.getOutputStream());
             response.getOutputStream().flush();
         } finally {
-            workbook.dispose(); // Cleans up temporary disk backing files
+            workbook.dispose();
             workbook.close();
         }
     }
