@@ -114,7 +114,7 @@ public class BRECONUploadController {
 	@Autowired
     private com.bornfire.recon.services.SourceDataUploadService sourceDataUploadService;
 
-    @PostMapping(value = "SourceDataUpload")
+	@PostMapping(value = "SourceDataUpload")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> sourceDataUpload(
             @RequestParam("file") MultipartFile file,
@@ -133,10 +133,20 @@ public class BRECONUploadController {
             response.put("fileSize", (file.getSize() / 1024) + " KB");
             response.put("insertedRows", insertedRows);
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            logger.error("Error uploading source data file for type: " + type, e);
+        } catch (Throwable e) {
+            logger.error("UPLOAD ERROR DETAILS:", e);
+            e.printStackTrace(); // Prints the exact line number to Eclipse Console
+            
+            // Build meaningful message for browser alert
+            String errorDetail = e.getClass().getSimpleName() + ": " + 
+                                 (e.getMessage() != null ? e.getMessage() : "No message");
+            if (e.getStackTrace().length > 0) {
+                StackTraceElement top = e.getStackTrace()[0];
+                errorDetail += " at " + top.getFileName() + ":" + top.getLineNumber();
+            }
+            
             response.put("status", "ERROR");
-            response.put("message", e.getMessage());
+            response.put("message", errorDetail);
             return ResponseEntity.badRequest().body(response);
         }
     }
@@ -260,11 +270,76 @@ public class BRECONUploadController {
         }
     }
    
-  
     
+    //fatca uploadcontroller 
     
+    @Autowired
+    private com.bornfire.recon.services.FatcaManagementService fatcaService;
     
-    
+		 // =========================================================================
+		 // FATCA / MCIB REPORTING ENDPOINTS
+		 // =========================================================================
+		
+		 @GetMapping("/getFatcaDashboardData")
+		 @ResponseBody
+		 public ResponseEntity<Map<String, Object>> getFatcaDashboardData() {
+		     return ResponseEntity.ok(fatcaService.getFatcaDashboardData());
+		 }
+		
+		 @PostMapping("/uploadFatcaFile")
+		 @ResponseBody
+		 public ResponseEntity<Map<String, Object>> uploadFatcaFile(
+		         @RequestParam("file") MultipartFile file,
+		         HttpServletRequest request) {
+		
+		     Map<String, Object> res = new HashMap<>();
+		     String userId = (String) request.getSession().getAttribute("USERID");
+		
+		     try {
+		         int inserted = fatcaService.uploadFatcaFile(file, userId);
+		         res.put("status", "SUCCESS");
+		         res.put("insertedRows", inserted);
+		         res.put("message", "Uploaded " + inserted + " records into BRECON.FACTA_TRANSCATION_DATA.");
+		         return ResponseEntity.ok(res);
+		     } catch (Exception e) {
+		         logger.error("FATCA upload failed", e);
+		         res.put("status", "ERROR");
+		         res.put("message", e.getMessage());
+		         return ResponseEntity.badRequest().body(res);
+		     }
+		 }
+		
+		 @PostMapping("/updateFatcaRecord")
+		 @ResponseBody
+		 public ResponseEntity<Map<String, Object>> updateFatcaRecord(
+		         @RequestParam("refNo") String refNo,
+		         @RequestParam("status") String status,
+		         HttpServletRequest request) {
+		
+		     Map<String, Object> res = new HashMap<>();
+		     String userId = (String) request.getSession().getAttribute("USERID");
+		     boolean updated = fatcaService.updateFatcaRecord(refNo, status, userId);
+		
+		     res.put("status", updated ? "SUCCESS" : "ERROR");
+		     res.put("message", updated ? "Record updated successfully" : "Failed to update record");
+		     return ResponseEntity.ok(res);
+		 }
+		
+		 @GetMapping("/downloadFatcaXml")
+		 public void downloadFatcaXml(HttpServletResponse response) {
+		     try {
+		         String xmlContent = fatcaService.generateFatcaXml();
+		         response.setContentType("application/xml");
+		         response.setHeader("Content-Disposition", 
+		                 "attachment; filename=\"FATCA_REPORT_" + System.currentTimeMillis() + ".xml\"");
+		         response.getOutputStream().write(xmlContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		         response.getOutputStream().flush();
+		     } catch (Exception e) {
+		         logger.error("Error downloading FATCA XML", e);
+		     }
+		 }
+ 
+ 
     
     
     

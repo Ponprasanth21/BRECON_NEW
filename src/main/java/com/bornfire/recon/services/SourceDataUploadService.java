@@ -14,6 +14,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -78,15 +81,34 @@ public class SourceDataUploadService {
         "MODIFY_FLAG", "ENTITY_FLAG"
     };
 
+    // 91 Clean Core Banking HTD Columns
     private static final String[] CBS_COLUMNS = new String[] {
-        "ACCOUNT_NUMBER", "CARD_NUMBER", "RRN", "AMOUNT", "TRAN_DT", 
-        "TRAN_TYPE", "DR_CR_FLAG", "TRAN_DESCRIPTION", "ENTRY_TIME", 
-        "ENTRY_USER", "DEL_FLAG", "ENTITY_FLAG", "MODIFY_FLAG"
+        "TRAN_DATE", "TRAN_ID", "PART_TRAN_SRL_NUM", "DEL_FLG", "TRAN_TYPE", "TRAN_SUB_TYPE",
+        "PART_TRAN_TYPE", "GL_SUB_HEAD_CODE", "ACID", "VALUE_DATE", "TRAN_AMT", "TRAN_PARTICULAR",
+        "ENTRY_USER_ID", "PSTD_USER_ID", "VFD_USER_ID", "ENTRY_DATE", "PSTD_DATE", "VFD_DATE",
+        "RPT_CODE", "REF_NUM", "INSTRMNT_TYPE", "INSTRMNT_DATE", "INSTRMNT_NUM", "INSTRMNT_ALPHA",
+        "TRAN_RMKS", "PSTD_FLG", "PRNT_ADVC_IND", "AMT_RESERVATION_IND", "RESERVATION_AMT",
+        "RESTRICT_MODIFY_IND", "LCHG_USER_ID", "LCHG_TIME", "RCRE_USER_ID", "RCRE_TIME",
+        "CUST_ID", "VOUCHER_PRINT_FLG", "MODULE_ID", "BR_CODE", "FX_TRAN_AMT", "RATE_CODE",
+        "RATE", "CRNCY_CODE", "NAVIGATION_FLG", "TRAN_CRNCY_CODE", "REF_CRNCY_CODE", "REF_AMT",
+        "SOL_ID", "BANK_CODE", "TREA_REF_NUM", "TREA_RATE", "TS_CNT", "GST_UPD_FLG", "ISO_FLG",
+        "EABFAB_UPD_FLG", "LIFT_LIEN_FLG", "PROXY_POST_IND", "SI_SRL_NUM", "SI_ORG_EXEC_DATE",
+        "PR_SRL_NUM", "SERIAL_NUM", "DEL_MEMO_PAD", "UAD_MODULE_ID", "UAD_MODULE_KEY",
+        "REVERSAL_DATE", "REVERSAL_VALUE_DATE", "PTTM_EVENT_TYPE", "PROXY_ACID", "TOD_ENTITY_TYPE",
+        "TOD_ENTITY_ID", "DTH_INIT_SOL_ID", "REGULARIZATION_AMT", "PRINCIPAL_PORTION_AMT",
+        "TF_ENTITY_SOL_ID", "TRAN_PARTICULAR_2", "TRAN_PARTICULAR_CODE", "TR_STATUS",
+        "PARTY_CODE", "SVS_TRAN_ID", "CRNCY_HOL_CHK_DONE_FLG", "REFERRAL_ID", "GL_DATE",
+        "BKDT_TRAN_FLG", "BANK_ID", "IMPL_CASH_PART_TRAN_FLG", "PTRAN_CHRG_EXISTS_FLG",
+        "MUD_POOL_BAL_BUILD_FLG", "GL_SEGMENT_STRING", "SYS_PART_TRAN_CODE", "USER_PART_TRAN_CODE",
+        "TRAN_FREE_CODE1", "TRAN_FREE_CODE2"
     };
 
     private String cleanKey(String col) {
         if (col == null) return "";
         String s = col.trim().toUpperCase();
+        if (s.contains("TRAN_RMKS")) {
+            return "TRAN_RMKS";
+        }
         if (s.contains(".")) {
             s = s.substring(s.lastIndexOf('.') + 1);
         }
@@ -99,7 +121,6 @@ public class SourceDataUploadService {
         boolean isCbs = "CBS".equalsIgnoreCase(type);
         boolean isEpin = "EPIN".equalsIgnoreCase(type);
 
-        // If EPIN raw TXT file is uploaded via standard Upload dropdown, route directly to raw text parser
         if (isEpin && fileName.endsWith(".txt")) {
             String reportDateStr = new SimpleDateFormat("dd-MM-yy").format(new Date());
             int count = uploadRawEpinTextFile(file, reportDateStr);
@@ -124,13 +145,14 @@ public class SourceDataUploadService {
             targetColumns = DB_COLUMNS;
         } else if (isCbs) {
             targetTable = "BRECON.CBS_TXN";
-            targetColumns = CBS_COLUMNS;
+            targetColumns = CBS_COLUMNS; // 91 columns
         } else {
             targetTable = "BRECON." + type.toUpperCase() + "_TRANSACTION_DATA";
             targetColumns = DB_COLUMNS;
         }
 
-        logger.info("Uploading file [{}] as [{}] into table [{}]", file.getOriginalFilename(), type, targetTable);
+        logger.info("Uploading file [{}] as [{}] into table [{}] with {} target columns", 
+                    file.getOriginalFilename(), type, targetTable, targetColumns.length);
 
         List<Object[]> batchParams = new ArrayList<>();
         Timestamp currentTime = new Timestamp(System.currentTimeMillis());
@@ -164,21 +186,22 @@ public class SourceDataUploadService {
                     Object[] rowValues = new Object[targetColumns.length];
                     boolean hasData = false;
 
+                    // STRICT BOUND: i < targetColumns.length
                     for (int i = 0; i < targetColumns.length; i++) {
                         String col = targetColumns[i];
                         if ("ENTRY_TIME".equals(col)) {
                             rowValues[i] = currentTime;
                         } else if ("ENTRY_USER".equals(col)) {
                             rowValues[i] = effectiveUser;
-                        } else if ("DEL_FLAG".equals(col)) {
+                        } else if ("DEL_FLAG".equals(col) && !isCbs) {
                             rowValues[i] = "N";
-                        } else if ("ENTITY_FLAG".equals(col)) {
+                        } else if ("ENTITY_FLAG".equals(col) && !isCbs) {
                             rowValues[i] = "Y";
-                        } else if ("MODIFY_FLAG".equals(col)) {
+                        } else if ("MODIFY_FLAG".equals(col) && !isCbs) {
                             rowValues[i] = "N";
                         } else {
                             Integer idx = colIndexMap.get(cleanKey(col));
-                            if (idx != null && idx < tokens.length) {
+                            if (idx != null && idx >= 0 && idx < tokens.length) {
                                 String val = tokens[idx].trim().replaceAll("^\"|\"$", "");
                                 if (!val.isEmpty()) {
                                     hasData = true;
@@ -203,58 +226,30 @@ public class SourceDataUploadService {
                  Workbook workbook = WorkbookFactory.create(is)) {
 
                 Sheet sheet = workbook.getSheetAt(0);
-                if (sheet == null || sheet.getPhysicalNumberOfRows() == 0) return 0;
+                if (sheet == null || sheet.getPhysicalNumberOfRows() <= 1) return 0;
 
-                Row headerRow = sheet.getRow(0);
-                if (headerRow == null) return 0;
-
-                Map<String, Integer> colIndexMap = new HashMap<>();
-                for (Cell cell : headerRow) {
-                    String rawName = formatter.formatCellValue(cell);
-                    String normalized = cleanKey(rawName);
-                    if (!normalized.isEmpty()) {
-                        colIndexMap.put(normalized, cell.getColumnIndex());
-                    }
-                }
+                int totalCols = targetColumns.length; // Exactly 91 for CBS
 
                 for (int r = 1; r <= sheet.getLastRowNum(); r++) {
                     Row row = sheet.getRow(r);
                     if (row == null) continue;
 
-                    Object[] rowValues = new Object[targetColumns.length];
+                    Object[] rowValues = new Object[totalCols];
                     boolean hasData = false;
 
-                    for (int i = 0; i < targetColumns.length; i++) {
-                        String col = targetColumns[i];
-
-                        if ("ENTRY_TIME".equals(col)) {
-                            rowValues[i] = currentTime;
-                        } else if ("ENTRY_USER".equals(col)) {
-                            rowValues[i] = effectiveUser;
-                        } else if ("DEL_FLAG".equals(col)) {
-                            rowValues[i] = "N";
-                        } else if ("ENTITY_FLAG".equals(col)) {
-                            rowValues[i] = "Y";
-                        } else if ("MODIFY_FLAG".equals(col)) {
-                            rowValues[i] = "N";
-                        } else {
-                            Integer cellIndex = colIndexMap.get(cleanKey(col));
-                            if (cellIndex != null) {
-                                Cell cell = row.getCell(cellIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
-                                if (cell != null) {
-                                    String cellStr = formatter.formatCellValue(cell).trim();
-                                    if (!cellStr.isEmpty()) {
-                                        hasData = true;
-                                        rowValues[i] = cellStr;
-                                    } else {
-                                        rowValues[i] = null;
-                                    }
-                                } else {
-                                    rowValues[i] = null;
-                                }
+                    for (int c = 0; c < totalCols; c++) {
+                        // Read strictly cells 0 to 90 from the Excel row
+                        Cell cell = row.getCell(c, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                        if (cell != null) {
+                            String cellStr = formatter.formatCellValue(cell).trim();
+                            if (!cellStr.isEmpty()) {
+                                hasData = true;
+                                rowValues[c] = cellStr;
                             } else {
-                                rowValues[i] = null;
+                                rowValues[c] = null;
                             }
+                        } else {
+                            rowValues[c] = null;
                         }
                     }
 
@@ -269,6 +264,7 @@ public class SourceDataUploadService {
             return 0;
         }
 
+        // Build INSERT SQL without invoking metadata parser
         StringBuilder sql = new StringBuilder("INSERT INTO ").append(targetTable).append(" (");
         StringBuilder placeholders = new StringBuilder(" VALUES (");
         for (int i = 0; i < targetColumns.length; i++) {
@@ -281,7 +277,29 @@ public class SourceDataUploadService {
         }
         sql.append(")").append(placeholders).append(")");
 
-        int[] updateCounts = jdbcTemplate.batchUpdate(sql.toString(), batchParams);
+        final int numColumns = targetColumns.length;
+
+        // Bypasses OracleParameterMetaDataParser to prevent the ArrayIndexOutOfBoundsException: 91
+        int[] updateCounts = jdbcTemplate.batchUpdate(sql.toString(), new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                Object[] row = batchParams.get(i);
+                for (int colIndex = 0; colIndex < numColumns; colIndex++) {
+                    Object val = (colIndex < row.length) ? row[colIndex] : null;
+                    if (val != null) {
+                        ps.setString(colIndex + 1, val.toString());
+                    } else {
+                        ps.setNull(colIndex + 1, Types.VARCHAR);
+                    }
+                }
+            }
+
+            @Override
+            public int getBatchSize() {
+                return batchParams.size();
+            }
+        });
+
         logger.info("Successfully inserted {} records into {}", updateCounts.length, targetTable);
         return updateCounts.length;
     }

@@ -1928,6 +1928,8 @@ public class BRECONNavigationController {
 		}
 	}
 
+	// source data mapping
+	
 	@RequestMapping(value = "SourceData", method = { RequestMethod.GET, RequestMethod.POST })
 	public String SourceData(@RequestParam(required = false) String formmode,
 			@RequestParam(required = false) String userid, Model md) {
@@ -1940,10 +1942,16 @@ public class BRECONNavigationController {
 		return "SourceData";
 	}
 	
+	//fatca mapping
+	
 	@GetMapping("/FATCA")
-    public String loadFATCA() {
-        return "FATCA";
-    }
+	public String fatcaPage(Model model, HttpServletRequest request) {
+	    String userId = (String) request.getSession().getAttribute("USERID");
+	    String userName = (String) request.getSession().getAttribute("USERNAME");
+	    model.addAttribute("userId", userId);
+	    model.addAttribute("userName", userName);
+	    return "FATCA"; // loads src/main/resources/templates/FATCA.html
+	}
 	
 	
 	@GetMapping("/CRS")

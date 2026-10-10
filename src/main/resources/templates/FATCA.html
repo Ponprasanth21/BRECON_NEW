@@ -722,20 +722,18 @@
     const notice = document.getElementById("fatcaNotice");
     const editModal = document.getElementById("fatcaEditModal");
 
-    /*
-     * Demonstration data is kept in browser memory.
-     * Replace this array with records returned by your Spring Boot API.
-     */
     let records = [];
-    let nextId = 1;
 
-    function showNotice(message) {
+    function showNotice(message, isError) {
         notice.textContent = message;
         notice.style.display = "block";
+        notice.style.backgroundColor = isError ? "#fde8e8" : "#edf6fa";
+        notice.style.borderColor = isError ? "#b94b4b" : "#c8dce7";
+        notice.style.color = isError ? "#a52d2d" : "#17394e";
     }
 
     function escapeHtml(value) {
-        return String(value).replace(/[&<>"']/g, function (char) {
+        return String(value || "").replace(/[&<>"']/g, function (char) {
             return {
                 "&": "&amp;",
                 "<": "&lt;",
@@ -746,23 +744,40 @@
         });
     }
 
-    function updateSummary() {
-        document.getElementById("totalRecords").textContent = records.length;
+    // Fetches live data from Oracle DB (BRECON.FACTA_TRANSCATION_DATA)
+    function loadDashboardData() {
+        fetch("./getFatcaDashboardData")
+            .then(function (res) {
+                return res.json();
+            })
+            .then(function (data) {
+                document.getElementById("totalRecords").textContent = data.totalRecords || 0;
+                document.getElementById("pendingRecords").textContent = data.pendingRecords || 0;
+                document.getElementById("completedRecords").textContent = data.completedRecords || 0;
+                document.getElementById("errorRecords").textContent = data.errorRecords || 0;
 
-        document.getElementById("pendingRecords").textContent =
-            records.filter(r => r.status === "Pending").length;
+                records = (data.records || []).map(function (r, index) {
+                    return {
+                        id: index + 1,
+                        fileName: r.ENTITY_NAME || "FATCA Account",
+                        reference: r.REF_NO || r.UNIQUE_REF_ID || "N/A",
+                        uploadDate: r.UPLOAD_DATE || "Recent",
+                        recordCount: r.AMOUNT_ORG ? Number(r.AMOUNT_ORG).toLocaleString() : "0",
+                        status: (r.STATUS === "A" || r.STATUS === "COMPLETED") ? "Completed" : 
+                                (r.STATUS === "ERROR" ? "Error" : "Pending")
+                    };
+                });
 
-        document.getElementById("completedRecords").textContent =
-            records.filter(r => r.status === "Completed").length;
-
-        document.getElementById("errorRecords").textContent =
-            records.filter(r => r.status === "Error").length;
+                renderTable();
+            })
+            .catch(function (err) {
+                console.error("Failed to load FATCA data:", err);
+                showNotice("Error fetching records from server: " + err, true);
+            });
     }
 
     function getFilteredRecords() {
-        const search = document.getElementById("fatcaSearch")
-            .value.toLowerCase().trim();
-
+        const search = document.getElementById("fatcaSearch").value.toLowerCase().trim();
         const status = document.getElementById("fatcaStatusFilter").value;
 
         return records.filter(function (record) {
@@ -772,39 +787,32 @@
                 record.status.toLowerCase().includes(search);
 
             const matchesStatus = !status || record.status === status;
-
             return matchesSearch && matchesStatus;
         });
     }
 
     function renderTable() {
         const filtered = getFilteredRecords();
-
-        document.getElementById("fatcaVisibleCount").textContent =
-            filtered.length;
-
+        document.getElementById("fatcaVisibleCount").textContent = filtered.length;
         tableBody.replaceChildren();
 
         if (filtered.length === 0) {
             const row = document.createElement("tr");
             const cell = document.createElement("td");
-
             cell.colSpan = 8;
             cell.className = "fatca-empty";
             cell.innerHTML =
                 '<i class="fa fa-folder-open-o"></i>' +
-                'No FATCA records found.<br>' +
-                '<small>Upload a file or change your search filters.</small>';
+                'No FATCA records found in database.<br>' +
+                '<small>Click Upload to ingest files into Oracle DB.</small>';
 
             row.appendChild(cell);
             tableBody.appendChild(row);
-            updateSummary();
             return;
         }
 
         filtered.forEach(function (record, index) {
             const row = document.createElement("tr");
-
             const statusClass = {
                 Pending: "fatca-status-pending",
                 Completed: "fatca-status-completed",
@@ -816,23 +824,23 @@
                 <td>${escapeHtml(record.fileName)}</td>
                 <td>${escapeHtml(record.reference)}</td>
                 <td>${escapeHtml(record.uploadDate)}</td>
-                <td>${Number(record.recordCount) || 0}</td>
+                <td>${escapeHtml(record.recordCount)}</td>
                 <td>
                     <span class="fatca-status ${statusClass}">
                         ${escapeHtml(record.status)}
                     </span>
                 </td>
                 <td>
-                    <button type="button"
-                            class="fatca-btn fatca-btn-small fatca-btn-green"
-                            data-download="${record.id}">
+                    <a href="./downloadFatcaXml" class="fatca-btn fatca-btn-small fatca-btn-green" title="Download Regulatory XML">
                         <i class="fa fa-file-code-o"></i> XML
-                    </button>
+                    </a>
                 </td>
                 <td>
-                    <button type="button"
-                            class="fatca-btn fatca-btn-small"
-                            data-edit="${record.id}">
+                    <button type="button" class="fatca-btn fatca-btn-small" 
+                            data-ref="${escapeHtml(record.reference)}" 
+                            data-name="${escapeHtml(record.fileName)}" 
+                            data-count="${escapeHtml(record.recordCount)}" 
+                            data-status="${escapeHtml(record.status)}">
                         <i class="fa fa-pencil"></i> Edit
                     </button>
                 </td>
@@ -840,239 +848,156 @@
 
             tableBody.appendChild(row);
         });
-
-        updateSummary();
     }
 
-    function downloadXml(record) {
-        /*
-         * This creates a basic XML file from the list metadata.
-         * Replace with the server-generated FATCA reporting XML
-         * when your XML generation endpoint is available.
-         */
-        const xmlEscape = value => String(value).replace(/[<>&'"]/g, ch => ({
-            "<": "&lt;",
-            ">": "&gt;",
-            "&": "&amp;",
-            "'": "&apos;",
-            '"': "&quot;"
-        })[ch]);
-
-        const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<FATCARecord>
-    <FileName>${xmlEscape(record.fileName)}</FileName>
-    <ReferenceID>${xmlEscape(record.reference)}</ReferenceID>
-    <UploadDate>${xmlEscape(record.uploadDate)}</UploadDate>
-    <RecordCount>${Number(record.recordCount) || 0}</RecordCount>
-    <Status>${xmlEscape(record.status)}</Status>
-</FATCARecord>`;
-
-        const blob = new Blob([xml], {
-            type: "application/xml;charset=utf-8"
-        });
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-
-        link.href = url;
-        link.download = record.fileName.replace(/\.[^.]+$/, "") + ".xml";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        URL.revokeObjectURL(url);
-    }
-
-    function openEdit(recordId) {
-        const record = records.find(r => r.id === recordId);
-        if (!record) return;
-
-        document.getElementById("editRecordId").value = record.id;
-        document.getElementById("editFileName").value = record.fileName;
-        document.getElementById("editReference").value = record.reference;
-        document.getElementById("editRecordCount").value = record.recordCount;
-        document.getElementById("editStatus").value = record.status;
-
-        editModal.classList.add("open");
-    }
-
-    function closeEdit() {
-        editModal.classList.remove("open");
-    }
-
+    // Direct Database File Ingestion
     document.getElementById("fatcaUploadBtn").addEventListener("click", function () {
         uploadInput.click();
     });
 
     uploadInput.addEventListener("change", function () {
-        Array.from(uploadInput.files || []).forEach(function (file) {
-            records.push({
-                id: nextId++,
-                fileName: file.name,
-                reference: "FATCA-" + Date.now() + "-" + nextId,
-                uploadDate: new Date().toLocaleString(),
-                recordCount: 0,
-                status: "Pending",
-                originalFile: file
-            });
+        if (!uploadInput.files || uploadInput.files.length === 0) return;
+
+        const file = uploadInput.files[0];
+        const formData = new FormData();
+        formData.append("file", file);
+
+        showNotice("Uploading and parsing " + file.name + " into BRECON.FACTA_TRANSCATION_DATA...", false);
+
+        fetch("./uploadFatcaFile", {
+            method: "POST",
+            body: formData
+        })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (res) {
+            if (res.status === "SUCCESS") {
+                showNotice("Upload Success: " + res.message, false);
+                loadDashboardData(); // Refreshes table and KPI summary from database
+            } else {
+                showNotice("Upload Failed: " + (res.message || "Unknown error"), true);
+            }
+        })
+        .catch(function (err) {
+            console.error("Upload error:", err);
+            showNotice("Error uploading file to server: " + err, true);
+        })
+        .finally(function () {
+            uploadInput.value = "";
         });
-
-        uploadInput.value = "";
-        renderTable();
-
-        if (records.length) {
-            showNotice(
-                "File selected and added to the demonstration list. " +
-                "Connect the backend to validate and save it to the database."
-            );
-        }
     });
 
+    // Row Edit Click Handler
     tableBody.addEventListener("click", function (event) {
-        const editButton = event.target.closest("[data-edit]");
-        const downloadButton = event.target.closest("[data-download]");
+        const btn = event.target.closest("button[data-ref]");
+        if (!btn) return;
 
-        if (editButton) {
-            openEdit(Number(editButton.dataset.edit));
-        }
+        document.getElementById("editReference").value = btn.dataset.ref;
+        document.getElementById("editFileName").value = btn.dataset.name;
+        document.getElementById("editRecordCount").value = parseInt(btn.dataset.count.replace(/[^0-9]/g, '')) || 0;
+        document.getElementById("editStatus").value = btn.dataset.status;
 
-        if (downloadButton) {
-            const record = records.find(
-                r => r.id === Number(downloadButton.dataset.download)
-            );
-
-            if (record) downloadXml(record);
-        }
+        editModal.classList.add("open");
     });
 
-    document.getElementById("fatcaEditForm")
-        .addEventListener("submit", function (event) {
-            event.preventDefault();
+    function closeEdit() {
+        editModal.classList.remove("open");
+    }
 
-            const id = Number(document.getElementById("editRecordId").value);
-            const record = records.find(r => r.id === id);
-
-            if (!record) return;
-
-            record.fileName =
-                document.getElementById("editFileName").value.trim();
-
-            record.reference =
-                document.getElementById("editReference").value.trim();
-
-            record.recordCount =
-                Number(document.getElementById("editRecordCount").value);
-
-            record.status =
-                document.getElementById("editStatus").value;
-
-            closeEdit();
-            renderTable();
-
-            showNotice(
-                "Record updated in the demonstration list. " +
-                "Connect the update API to persist changes in the database."
-            );
-        });
-
-    document.getElementById("fatcaCloseModal")
-        .addEventListener("click", closeEdit);
-
-    document.getElementById("fatcaCancelEdit")
-        .addEventListener("click", closeEdit);
+    document.getElementById("fatcaCloseModal").addEventListener("click", closeEdit);
+    document.getElementById("fatcaCancelEdit").addEventListener("click", closeEdit);
 
     editModal.addEventListener("click", function (event) {
         if (event.target === editModal) closeEdit();
     });
 
-    document.getElementById("fatcaSearch")
-        .addEventListener("input", renderTable);
+    // Persist Record Edit into Database
+    document.getElementById("fatcaEditForm").addEventListener("submit", function (event) {
+        event.preventDefault();
 
-    document.getElementById("fatcaStatusFilter")
-        .addEventListener("change", renderTable);
+        const refNo = document.getElementById("editReference").value;
+        const status = document.getElementById("editStatus").value;
 
-    document.getElementById("fatcaResetBtn")
-        .addEventListener("click", function () {
-            document.getElementById("fatcaSearch").value = "";
-            document.getElementById("fatcaStatusFilter").value = "";
-            notice.style.display = "none";
-            renderTable();
-        });
+        const formData = new URLSearchParams();
+        formData.append("refNo", refNo);
+        formData.append("status", status);
 
-    document.getElementById("fatcaDownloadAllBtn")
-        .addEventListener("click", function () {
-            const filtered = getFilteredRecords();
-
-            if (filtered.length === 0) {
-                showNotice("There are no FATCA records to download.");
-                return;
-            }
-
-            filtered.forEach(function (record) {
-                downloadXml(record);
-            });
-        });
-
-    document.getElementById("fatcaExtractBtn")
-        .addEventListener("click", function () {
-            const filtered = getFilteredRecords();
-
-            if (filtered.length === 0) {
-                showNotice("There are no FATCA records to extract.");
-                return;
-            }
-
-            const columns = [
-                "File Name",
-                "Reference ID",
-                "Upload Date & Time",
-                "Record Count",
-                "Status"
-            ];
-
-            const csvEscape = value =>
-                '"' + String(value ?? "").replace(/"/g, '""') + '"';
-
-            const rows = filtered.map(record => [
-                record.fileName,
-                record.reference,
-                record.uploadDate,
-                record.recordCount,
-                record.status
-            ]);
-
-            const csv = [columns, ...rows]
-                .map(row => row.map(csvEscape).join(","))
-                .join("\r\n");
-
-            const blob = new Blob(["\uFEFF", csv], {
-                type: "text/csv;charset=utf-8;"
-            });
-
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-
-            link.href = url;
-            link.download = "FATCA_Extract.csv";
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-
-            URL.revokeObjectURL(url);
-        });
-
-    document.getElementById("fatcaHomeBtn")
-        .addEventListener("click", function () {
-            const home = document.getElementById("Home");
-
-            if (home && typeof contentLoad === "function") {
-                contentLoad(home);
+        fetch("./updateFatcaRecord", {
+            method: "POST",
+            body: formData
+        })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (res) {
+            if (res.status === "SUCCESS") {
+                showNotice("Record updated successfully in database.", false);
+                closeEdit();
+                loadDashboardData();
             } else {
-                window.history.back();
+                showNotice("Failed to update record in database: " + (res.message || ""), true);
             }
+        })
+        .catch(function (err) {
+            console.error("Update error:", err);
+            showNotice("Error saving changes: " + err, true);
         });
+    });
 
-    renderTable();
+    // Filters and Search
+    document.getElementById("fatcaSearch").addEventListener("input", renderTable);
+    document.getElementById("fatcaStatusFilter").addEventListener("change", renderTable);
+
+    document.getElementById("fatcaResetBtn").addEventListener("click", function () {
+        document.getElementById("fatcaSearch").value = "";
+        document.getElementById("fatcaStatusFilter").value = "";
+        notice.style.display = "none";
+        loadDashboardData();
+    });
+
+    // Download XML generated from the database
+    document.getElementById("fatcaDownloadAllBtn").addEventListener("click", function () {
+        window.location.href = "./downloadFatcaXml";
+    });
+
+    // Extract table data to CSV
+    document.getElementById("fatcaExtractBtn").addEventListener("click", function () {
+        const filtered = getFilteredRecords();
+        if (filtered.length === 0) {
+            showNotice("There are no records to extract.", true);
+            return;
+        }
+
+        const columns = ["File Name", "Reference ID", "Upload Date & Time", "Record Count", "Status"];
+        const csvEscape = value => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+
+        const rows = filtered.map(r => [r.fileName, r.reference, r.uploadDate, r.recordCount, r.status]);
+        const csv = [columns, ...rows].map(row => row.map(csvEscape).join(",")).join("\r\n");
+
+        const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = "FATCA_Extract.csv";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("fatcaHomeBtn").addEventListener("click", function () {
+        const home = document.getElementById("Home");
+        if (home && typeof contentLoad === "function") {
+            contentLoad(home);
+        } else {
+            window.history.back();
+        }
+    });
+
+    // Initial load on page view
+    loadDashboardData();
 })();
 </script>
 
