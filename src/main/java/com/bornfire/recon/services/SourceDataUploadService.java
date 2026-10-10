@@ -103,6 +103,16 @@ public class SourceDataUploadService {
         "TRAN_FREE_CODE1", "TRAN_FREE_CODE2"
     };
 
+ // 34 Visanet EP745 Columns matching BRECON_CARD_EP745_DATA_TABLE
+    private static final String[] EPIN745_COLUMNS = new String[] {
+        "BATCH_NUM", "TRAN_DATE", "TRAN_TIME", "CARD_NUM", "RET_REF_NUM", "TRACE_NUM",
+        "ISSUER_ID", "TRAN_TYPE", "PROCESS_CODE", "ENT_MODE", "CN_STP", "RSP_CD",
+        "TRAN_AMOUNT", "TRAN_CURRENCY", "SETT_AMOUNT", "SETT_INDICATOR", "CA_ID",
+        "NAT_INTNAT", "ENTITY_FLG", "MODIFY_FLG", "DEL_FLG", "ENTRY_USER", "MODIFY_USER",
+        "VERIFY_USER", "ENTRY_TIME", "MODIFY_TIME", "VERIFY_TIME", "REPORT_CONFIRM",
+        "REPORT_MOVED", "MATCHING_CRITERIA", "MATCHING_DETAIL", "SRL_NUM", "RECON_TYPE", "RECON_FLAG"
+    };
+    
     private String cleanKey(String col) {
         if (col == null) return "";
         String s = col.trim().toUpperCase();
@@ -115,17 +125,41 @@ public class SourceDataUploadService {
         return s.replaceAll("[^A-Z0-9_]", "");
     }
 
+// =========================================================================
+    // 1. MAIN TRANSACTION FILE UPLOAD ROUTER
+    // =========================================================================
     @Transactional
     public int uploadTransactionFile(MultipartFile file, String type, String userId) throws Exception {
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
         boolean isCbs = "CBS".equalsIgnoreCase(type);
         boolean isEpin = "EPIN".equalsIgnoreCase(type);
 
+        // Flexible alias matching for Visanet EP745
+     // Flexible matching including VISANET, EPIN745, EP745
+        boolean isEpin745 = "VISANET".equalsIgnoreCase(type) ||
+                            "VISA_NET".equalsIgnoreCase(type) ||
+                            "EPIN745".equalsIgnoreCase(type) || 
+                            "EP745".equalsIgnoreCase(type) || 
+                            "VISA_EPIN745".equalsIgnoreCase(type) ||
+                            "VISA_EPIN_745".equalsIgnoreCase(type);
+
+        if (isEpin745 && (fileName.endsWith(".txt") || fileName.endsWith(".csv") || !fileName.contains("."))) {
+            logger.info("Routing Visanet file [{}] to uploadEpin745File with type [{}]", file.getOriginalFilename(), type);
+            return uploadEpin745File(file, userId);
+        }
+
+        // 1. Raw text handling for EPIN (Standard Base II)
         if (isEpin && fileName.endsWith(".txt")) {
             String reportDateStr = new SimpleDateFormat("dd-MM-yy").format(new Date());
             int count = uploadRawEpinTextFile(file, reportDateStr);
             executeCompanyEpinProcedure(reportDateStr);
             return count;
+        }
+
+        // 2. Dedicated routing for Visanet EP745 files (.txt or .csv)
+        if (isEpin745 && (fileName.endsWith(".txt") || fileName.endsWith(".csv"))) {
+            logger.info("Routing EPIN745 file [{}] to dedicated parser uploadEpin745File", file.getOriginalFilename());
+            return uploadEpin745File(file, userId);
         }
 
         String targetTable;
@@ -137,12 +171,12 @@ public class SourceDataUploadService {
         } else if ("POS".equalsIgnoreCase(type)) {
             targetTable = "BRECON.POS_TRANSATION_DATA";
             targetColumns = DB_COLUMNS;
-        } else if ("EPIN".equalsIgnoreCase(type)) {
+        } else if (isEpin) {
             targetTable = "BRECON.VISA_EPIN";
             targetColumns = DB_COLUMNS;
-        } else if ("EPIN745".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.VISA_EPIN745";
-            targetColumns = DB_COLUMNS;
+        } else if (isEpin745) {
+            targetTable = "BRECON.BRECON_CARD_EP745_DATA_TABLE";
+            targetColumns = EPIN745_COLUMNS;
         } else if (isCbs) {
             targetTable = "BRECON.CBS_TXN";
             targetColumns = CBS_COLUMNS; // 91 columns
@@ -186,18 +220,17 @@ public class SourceDataUploadService {
                     Object[] rowValues = new Object[targetColumns.length];
                     boolean hasData = false;
 
-                    // STRICT BOUND: i < targetColumns.length
                     for (int i = 0; i < targetColumns.length; i++) {
                         String col = targetColumns[i];
                         if ("ENTRY_TIME".equals(col)) {
                             rowValues[i] = currentTime;
                         } else if ("ENTRY_USER".equals(col)) {
                             rowValues[i] = effectiveUser;
-                        } else if ("DEL_FLAG".equals(col) && !isCbs) {
+                        } else if ("DEL_FLAG".equals(col) && !isCbs && !isEpin745) {
                             rowValues[i] = "N";
-                        } else if ("ENTITY_FLAG".equals(col) && !isCbs) {
+                        } else if ("ENTITY_FLAG".equals(col) && !isCbs && !isEpin745) {
                             rowValues[i] = "Y";
-                        } else if ("MODIFY_FLAG".equals(col) && !isCbs) {
+                        } else if ("MODIFY_FLAG".equals(col) && !isCbs && !isEpin745) {
                             rowValues[i] = "N";
                         } else {
                             Integer idx = colIndexMap.get(cleanKey(col));
@@ -228,7 +261,7 @@ public class SourceDataUploadService {
                 Sheet sheet = workbook.getSheetAt(0);
                 if (sheet == null || sheet.getPhysicalNumberOfRows() <= 1) return 0;
 
-                int totalCols = targetColumns.length; // Exactly 91 for CBS
+                int totalCols = targetColumns.length;
 
                 for (int r = 1; r <= sheet.getLastRowNum(); r++) {
                     Row row = sheet.getRow(r);
@@ -238,7 +271,6 @@ public class SourceDataUploadService {
                     boolean hasData = false;
 
                     for (int c = 0; c < totalCols; c++) {
-                        // Read strictly cells 0 to 90 from the Excel row
                         Cell cell = row.getCell(c, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
                         if (cell != null) {
                             String cellStr = formatter.formatCellValue(cell).trim();
@@ -279,7 +311,6 @@ public class SourceDataUploadService {
 
         final int numColumns = targetColumns.length;
 
-        // Bypasses OracleParameterMetaDataParser to prevent the ArrayIndexOutOfBoundsException: 91
         int[] updateCounts = jdbcTemplate.batchUpdate(sql.toString(), new BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement ps, int i) throws SQLException {
@@ -304,7 +335,143 @@ public class SourceDataUploadService {
         return updateCounts.length;
     }
 
-    public void exportDataToExcel(String type, HttpServletResponse response) throws Exception {
+    // =========================================================================
+    // 2. DEDICATED VISANET EP745 INGESTION (INSERTS INTO BRECON_CARD_EP745_DATA_TABLE)
+    // =========================================================================
+@Transactional
+    public int uploadEpin745File(MultipartFile file, String userId) throws Exception {
+        List<Object[]> batchParams = new ArrayList<>();
+        java.sql.Date entryDate = new java.sql.Date(System.currentTimeMillis());
+        String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
+        int totalScanned = 0;
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                totalScanned++;
+
+                line = line.replace("\f", "").replace("\r", "");
+
+                // Skip headers, separators, empty lines
+                if (line.trim().length() < 70) {
+                    continue;
+                }
+
+                String padded = String.format("%-140s", line);
+
+                String batchNum = padded.substring(2, 4).trim();
+                String cardNum = padded.substring(20, 36).trim();
+
+                // 1. Must be Visa card (starts with 4 or 5)
+                boolean isVisaCard = cardNum.startsWith("4") || cardNum.startsWith("5");
+
+                // 2. Ignore control batch headers
+                boolean notIgnoredBatch = !batchNum.equals("RE") && !batchNum.equals("RO") && !batchNum.equals("AT");
+
+                // 3. Ignore POS ENTRY and DUP/ORI text lines
+                boolean notExcluded = !padded.contains("POS ENTRY") && !padded.contains("DUP/ORI");
+
+                // ❌ REMOVED: The != '0.00' filter has been removed to allow all 32 transactions
+                if (isVisaCard && notIgnoredBatch && notExcluded) {
+                    String tranDate = padded.substring(5, 10).trim();
+                    String tranTime = padded.substring(11, 19).trim();
+                    String rrn = padded.substring(40, 52).trim();
+                    String traceNum = padded.substring(53, 59).trim();
+                    String issuerId = padded.substring(60, 66).trim();
+                    String tranType = padded.substring(72, 76).trim();
+                    String processCode = padded.substring(77, 83).trim();
+                    String entMode = padded.substring(84, 87).trim();
+                    String cnStp = padded.substring(93, 95).trim();
+                    String rspCd = padded.substring(97, 99).trim();
+
+                    String tranAmtStr = padded.substring(100, 113).replaceAll("[^0-9.-]", "").trim();
+                    Double tranAmt = null;
+                    if (!tranAmtStr.isEmpty()) {
+                        try { tranAmt = Double.parseDouble(tranAmtStr); } catch (Exception ignored) {}
+                    }
+
+                    String tranCurr = padded.substring(114, 118).trim();
+
+                    String settAmtRaw = padded.substring(118, 130).replaceAll("[^0-9.-]", "").trim();
+                    Double settAmt = null;
+                    if (!settAmtRaw.isEmpty()) {
+                        try { settAmt = Double.parseDouble(settAmtRaw); } catch (Exception ignored) {}
+                    }
+
+                    String settInd = padded.substring(130, 132).trim();
+
+                    batchParams.add(new Object[] {
+                        batchNum,
+                        tranDate,
+                        tranTime,
+                        cardNum,
+                        rrn,
+                        traceNum,
+                        issuerId,
+                        tranType,
+                        processCode,
+                        entMode,
+                        cnStp,
+                        rspCd,
+                        tranAmt,
+                        tranCurr,
+                        settAmt,
+                        settInd,
+                        "VISA CAMEA",
+                        "Y",
+                        "N",
+                        "N",
+                        effectiveUser,
+                        entryDate
+                    });
+                }
+            }
+        }
+
+        logger.info("Visanet Scan: read {} lines, qualified {} transactions", totalScanned, batchParams.size());
+
+        if (batchParams.isEmpty()) {
+            return 0;
+        }
+
+        String sql = "INSERT INTO BRECON.BRECON_CARD_EP745_DATA_TABLE (" +
+                     "BATCH_NUM, TRAN_DATE, TRAN_TIME, CARD_NUM, RET_REF_NUM, TRACE_NUM, " +
+                     "ISSUER_ID, TRAN_TYPE, PROCESS_CODE, ENT_MODE, CN_STP, RSP_CD, " +
+                     "TRAN_AMOUNT, TRAN_CURRENCY, SETT_AMOUNT, SETT_INDICATOR, NAT_INTNAT, " +
+                     "ENTITY_FLG, MODIFY_FLG, DEL_FLG, ENTRY_USER, ENTRY_TIME, SRL_NUM) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)";
+
+        int[] updateCounts = jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                Object[] row = batchParams.get(i);
+                for (int col = 0; col < row.length; col++) {
+                    Object val = row[col];
+                    if (val == null) {
+                        ps.setNull(col + 1, Types.VARCHAR);
+                    } else if (val instanceof Double) {
+                        ps.setDouble(col + 1, (Double) val);
+                    } else if (val instanceof java.sql.Date) {
+                        ps.setDate(col + 1, (java.sql.Date) val);
+                    } else {
+                        ps.setString(col + 1, val.toString());
+                    }
+                }
+            }
+
+            @Override
+            public int getBatchSize() {
+                return batchParams.size();
+            }
+        });
+
+        logger.info("Successfully inserted {} records into BRECON.BRECON_CARD_EP745_DATA_TABLE", updateCounts.length);
+        return updateCounts.length;
+    }	
+    
+	public void exportDataToExcel(String type, HttpServletResponse response) throws Exception {
         String targetTable;
         boolean isCbs = "CBS".equalsIgnoreCase(type);
 

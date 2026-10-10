@@ -2,7 +2,7 @@
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-<link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
+    <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BRECON</title>
@@ -131,7 +131,7 @@
             font-weight: bold;
         }
 
-        /* Dropdowns (Upload & Excel) */
+        /* Dropdowns */
         .dropdown-header-cell { overflow: visible !important; }
         .action-dropdown { position: relative; width: 100%; height: 42px; }
 
@@ -242,6 +242,26 @@
             font-size: 13px;
         }
 
+        .badge-success-count {
+            background: #dcfce7;
+            color: #15803d;
+            font-weight: bold;
+            padding: 3px 10px;
+            border-radius: 12px;
+            border: 1px solid #bbf7d0;
+            display: inline-block;
+        }
+
+        .badge-zero-count {
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: bold;
+            padding: 3px 10px;
+            border-radius: 12px;
+            border: 1px solid #fecaca;
+            display: inline-block;
+        }
+
         .no-data {
             text-align: center !important;
             color: var(--muted) !important;
@@ -306,7 +326,7 @@
                 $xlDd.toggleClass('open');
             });
 
-            // Click outside closes both menus
+            // Click outside closes menus
             $(document).on('click', function (e) {
                 if (!$(e.target).closest('#uploadDropdown').length) { $upDd.removeClass('open'); }
                 if (!$(e.target).closest('#excelDropdown').length) { $xlDd.removeClass('open'); }
@@ -346,7 +366,7 @@
                 formData.append("file", file);
                 formData.append("type", currentUploadType);
 
-                $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Uploading & storing ' + file.name + ' in database (' + currentUploadType + ')...');
+                $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Uploading & parsing ' + file.name + ' (' + currentUploadType + ')...');
 
                 $.ajax({
                     url: 'SourceDataUpload',
@@ -359,17 +379,22 @@
                         var now = new Date();
                         var formattedDate = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+                        // Extract inserted row count returned from Spring Boot
+                        var rowsCount = (res && typeof res.insertedRows !== 'undefined') ? res.insertedRows : 0;
+
                         var record = {
                             id: Date.now(),
                             fileName: file.name,
                             uploadDate: formattedDate,
                             fileSize: (file.size / 1024).toFixed(2) + " KB",
-                            recordsInserted: res.insertedRows || 0
+                            recordsInserted: rowsCount
                         };
 
                         uploadedFilesStore[currentUploadType].push(record);
                         switchCategory(currentUploadType);
                         updateBadges();
+
+                        alert("Upload Complete! " + rowsCount + " row(s) inserted into the database for " + currentUploadType + ".");
                     },
                     error: function (xhr) {
                         $('#uploadStatusMsg').hide();
@@ -393,12 +418,19 @@
         function updateBadges() {
             ['CBS', 'ATM', 'POS', 'EPIN', 'VISANET'].forEach(function (cat) {
                 var btn = $('[data-header-for="' + cat + '"]');
-                var count = uploadedFilesStore[cat].length;
+                var files = uploadedFilesStore[cat];
                 var badge = btn.find('.source-badge');
 
-                badge.text(count);
-                if (count > 0) btn.addClass('has-data');
-                else btn.removeClass('has-data');
+                // Sum all inserted rows for this category
+                var totalRows = 0;
+                files.forEach(function (f) { totalRows += f.recordsInserted; });
+
+                badge.text(totalRows + " rows");
+                if (totalRows > 0) {
+                    btn.addClass('has-data');
+                } else {
+                    btn.removeClass('has-data');
+                }
             });
         }
 
@@ -407,7 +439,10 @@
             var $tbody = $('#dedicatedFileTableBody');
             $tbody.empty();
 
-            $('#categoryFileCount').text(files.length + " file(s) found");
+            var totalRowsCategory = 0;
+            files.forEach(function (f) { totalRowsCategory += f.recordsInserted; });
+
+            $('#categoryFileCount').text(files.length + " file(s) | " + totalRowsCategory + " total rows in DB");
 
             if (files.length === 0) {
                 $tbody.append(
@@ -415,7 +450,7 @@
                         '<td colspan="4" class="no-data">' +
                             '<i class="fa fa-folder-open-o"></i>' +
                             'No files uploaded for <b>' + activeCategory + '</b> yet.<br>' +
-                            '<span style="font-size:12px; color:#888;">Select <b>Upload &gt; ' + activeCategory + '</b> to upload Excel files.</span>' +
+                            '<span style="font-size:12px; color:#888;">Select <b>Upload &gt; ' + activeCategory + '</b> to upload files.</span>' +
                         '</td>' +
                     '</tr>'
                 );
@@ -423,62 +458,56 @@
             }
 
             files.forEach(function (file) {
+                var badgeClass = file.recordsInserted > 0 ? 'badge-success-count' : 'badge-zero-count';
                 var rowHtml =
                     '<tr>' +
-                        '<td style="width: 40%;">' +
+                        '<td style="width: 35%;">' +
                             '<div class="file-name-cell">' +
-                                '<i class="fa fa-file-excel-o"></i>' +
+                                '<i class="fa fa-file-text-o"></i>' +
                                 '<span>' + file.fileName + '</span>' +
                             '</div>' +
                         '</td>' +
                         '<td style="width: 25%; color: #475569;"><i class="fa fa-clock-o" style="margin-right:6px; color:#94a3b8;"></i>' + file.uploadDate + '</td>' +
                         '<td style="width: 20%;">' + file.fileSize + '</td>' +
-                        '<td style="width: 15%;"><span style="background:#e2e8f0; padding:3px 10px; border-radius:12px; font-size:12px;">' + file.recordsInserted + ' rows inserted</span></td>' +
+                        '<td style="width: 20%;">' +
+                            '<span class="' + badgeClass + '">' +
+                                '<i class="fa fa-check-circle"></i> ' + file.recordsInserted + ' rows inserted' +
+                            '</span>' +
+                        '</td>' +
                     '</tr>';
                 $tbody.append(rowHtml);
             });
         }
 
-        // Dedicated Excel Download Method
         function downloadCategoryExcel(type) {
             window.location.href = "SourceDataExportExcel?type=" + encodeURIComponent(type);
         }
 
-        function extractData() { console.log("Data Extract"); }
-		
-		
-		//reconsilanation script
-		
-		function extractData() {
-		    if (!confirm("Start 3-way VISA reconciliation (VISA + CBS + Switch)?")) {
-		        return;
-		    }
+        function extractData() {
+            if (!confirm("Start 3-way VISA reconciliation (VISA + CBS + Switch)?")) {
+                return;
+            }
 
-		    $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Executing VISA Reconciliation process...');
+            $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Executing VISA Reconciliation process...');
 
-		    $.ajax({
-		        url: 'runVisaReconciliation',
-		        type: 'POST',
-		        data: { reconDate: '' }, // Leave empty for all dates or pass specific date
-		        success: function(res) {
-		            $('#uploadStatusMsg').hide();
-		            alert(res.message);
-		            // Optional: prompt to download the refund report if exceptions were caught
-		            if (confirm("Reconciliation complete. Download Failed Transaction Refund Report now?")) {
-		                window.location.href = 'downloadFailedRefundReport';
-		            }
-		        },
-		        error: function(xhr) {
-		            $('#uploadStatusMsg').hide();
-		            var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
-		            alert("Reconciliation failed: " + err);
-		        }
-		    });
-		}
-		
-		
-		
-		
+            $.ajax({
+                url: 'runVisaReconciliation',
+                type: 'POST',
+                data: { reconDate: '' },
+                success: function(res) {
+                    $('#uploadStatusMsg').hide();
+                    alert(res.message);
+                    if (confirm("Reconciliation complete. Download Failed Transaction Refund Report now?")) {
+                        window.location.href = 'downloadFailedRefundReport';
+                    }
+                },
+                error: function(xhr) {
+                    $('#uploadStatusMsg').hide();
+                    var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+                    alert("Reconciliation failed: " + err);
+                }
+            });
+        }
     </script>
 </head>
 
@@ -500,31 +529,31 @@
                             <th style="width:14%;">
                                 <button type="button" class="source-header-clickable" data-header-for="CBS" onclick="switchCategory('CBS')">
                                     <span>CBS</span>
-                                    <span class="source-badge">0</span>
+                                    <span class="source-badge">0 rows</span>
                                 </button>
                             </th>
                             <th style="width:12%;">
                                 <button type="button" class="source-header-clickable active" data-header-for="ATM" onclick="switchCategory('ATM')">
                                     <span>ATM</span>
-                                    <span class="source-badge">0</span>
+                                    <span class="source-badge">0 rows</span>
                                 </button>
                             </th>
                             <th style="width:12%;">
                                 <button type="button" class="source-header-clickable" data-header-for="POS" onclick="switchCategory('POS')">
                                     <span>POS</span>
-                                    <span class="source-badge">0</span>
+                                    <span class="source-badge">0 rows</span>
                                 </button>
                             </th>
                             <th style="width:12%;">
                                 <button type="button" class="source-header-clickable" data-header-for="EPIN" onclick="switchCategory('EPIN')">
                                     <span>EPIN</span>
-                                    <span class="source-badge">0</span>
+                                    <span class="source-badge">0 rows</span>
                                 </button>
                             </th>
                             <th style="width:12%;">
                                 <button type="button" class="source-header-clickable" data-header-for="VISANET" onclick="switchCategory('VISANET')">
                                     <span>VISANET</span>
-                                    <span class="source-badge">0</span>
+                                    <span class="source-badge">0 rows</span>
                                 </button>
                             </th>
 
@@ -595,7 +624,7 @@
                                 <td colspan="4" class="no-data">
                                     <i class="fa fa-folder-open-o"></i>
                                     No files uploaded for <b>ATM</b> yet.<br>
-                                    <span style="font-size:12px; color:#888;">Select <b>Upload &gt; ATM</b> to add an Excel file.</span>
+                                    <span style="font-size:12px; color:#888;">Select <b>Upload &gt; ATM</b> to add a file.</span>
                                 </td>
                             </tr>
                         </tbody>

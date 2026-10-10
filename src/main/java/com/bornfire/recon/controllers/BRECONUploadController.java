@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -110,11 +111,13 @@ public class BRECONUploadController {
 	
 	
 	// file upload controller for source data
-	
-	@Autowired
+	// =========================================================================
+    // FILE UPLOAD CONTROLLER FOR SOURCE DATA (SINGLE UNIFIED ENDPOINT)
+    // =========================================================================
+    @Autowired
     private com.bornfire.recon.services.SourceDataUploadService sourceDataUploadService;
 
-	@PostMapping(value = "SourceDataUpload")
+    @PostMapping(value = "SourceDataUpload")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> sourceDataUpload(
             @RequestParam("file") MultipartFile file,
@@ -128,6 +131,7 @@ public class BRECONUploadController {
             int insertedRows = sourceDataUploadService.uploadTransactionFile(file, type, userId);
 
             response.put("status", "SUCCESS");
+            response.put("message", "File uploaded successfully!");
             response.put("type", type);
             response.put("fileName", file.getOriginalFilename());
             response.put("fileSize", (file.getSize() / 1024) + " KB");
@@ -135,9 +139,8 @@ public class BRECONUploadController {
             return ResponseEntity.ok(response);
         } catch (Throwable e) {
             logger.error("UPLOAD ERROR DETAILS:", e);
-            e.printStackTrace(); // Prints the exact line number to Eclipse Console
+            e.printStackTrace();
             
-            // Build meaningful message for browser alert
             String errorDetail = e.getClass().getSimpleName() + ": " + 
                                  (e.getMessage() != null ? e.getMessage() : "No message");
             if (e.getStackTrace().length > 0) {
@@ -150,10 +153,10 @@ public class BRECONUploadController {
             return ResponseEntity.badRequest().body(response);
         }
     }
-    
-    
-    // download the data from sourcedata
 
+    // =========================================================================
+    // DOWNLOAD THE DATA FROM SOURCEDATA (SINGLE ENDPOINT)
+    // =========================================================================
     @GetMapping("/SourceDataExportExcel")
     public void sourceDataExportExcel(
             @RequestParam("type") String type, 
@@ -164,6 +167,8 @@ public class BRECONUploadController {
             logger.error("Error generating Excel download for " + type, e);
         }
     }
+
+ 
 
     //reconsilanation
     
