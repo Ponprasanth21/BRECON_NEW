@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-<link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
+    <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>CRS Reconciliation</title>
 </head>
 <body>
@@ -15,10 +16,16 @@
 #crsContent {
     font-family: Arial, sans-serif;
     color: #111;
+    font-size: 13px;
+}
+
+#crsContent * {
+    box-sizing: border-box;
 }
 
 #crsContent .crs-wrapper {
-    width: 86%;
+    width: 84%;
+    max-width: 1600px;
     margin: 36px auto;
 }
 
@@ -30,7 +37,7 @@
 }
 
 #crsContent .crs-header {
-    height: 44px;
+    height: 48px;
     background: linear-gradient(180deg,#386b7e,#2c5667);
     color: #fff;
     display: flex;
@@ -42,67 +49,140 @@
 }
 
 #crsContent .crs-body {
-    padding: 14px;
+    padding: 15px;
 }
 
-#crsContent .crs-tabs {
+#crsContent .crs-stats {
     display: grid;
     grid-template-columns: repeat(4,minmax(0,1fr));
-    background: #e9edf1;
-    border: 1px solid #d5dce2;
-    border-radius: 9px 9px 0 0;
-    overflow: hidden;
+    gap: 14px;
+    margin-bottom: 18px;
 }
 
-#crsContent .crs-tab {
-    height: 42px;
-    padding: 0 13px;
+#crsContent .crs-stat {
+    min-height: 89px;
+    border: 1px solid #d5e0e9;
+    border-radius: 9px;
+    padding: 14px 15px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    border: none;
-    border-right: 1px solid #d5dce2;
-    border-bottom: 2px solid #386b7e;
-    background: #e9edf1;
-    color: #17394e;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-#crsContent .crs-tab.active {
+    gap: 14px;
     background: #fff;
-    box-shadow: inset 0 -3px #386b7e;
 }
 
-#crsContent .crs-count {
-    background: #cbd5e1;
-    border-radius: 12px;
-    padding: 2px 7px;
-    font-size: 11px;
+#crsContent .crs-stat-icon {
+    width: 43px;
+    height: 43px;
+    flex: 0 0 43px;
+    border-radius: 10px;
+    background: #e4edf2;
+    color: #326579;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+#crsContent .crs-stat-label {
+    font-size: 12px;
+    margin-bottom: 8px;
+    color: #111;
+}
+
+#crsContent .crs-stat-value {
+    font-size: 21px;
+    font-weight: bold;
+    line-height: 1;
+    color: #111;
 }
 
 #crsContent .crs-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    background: #e9edf1;
-    border: 1px solid #d5dce2;
-    border-top: none;
+    display: grid;
+    grid-template-columns: minmax(200px,1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
 }
 
-#crsContent .crs-action {
-    padding: 12px 15px;
-    border: none;
-    border-right: 1px solid #d5dce2;
-    background: #e9edf1;
-    color: #17394e;
+#crsContent .crs-search {
+    position: relative;
+    max-width: 420px;
+    width: 100%;
+}
+
+#crsContent .crs-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 9px;
+    font-size: 19px;
+    color: #456477;
+}
+
+#crsContent .crs-search input {
+    width: 100%;
+    height: 39px;
+    border: 1px solid #cbd7e2;
+    border-radius: 6px;
+    padding: 0 12px 0 36px;
+    font-size: 12px;
+    outline: none;
+    color: #111;
+}
+
+#crsContent .crs-search input:focus,
+#crsContent .crs-filter:focus {
+    border-color: #386b7e;
+    box-shadow: 0 0 0 2px rgba(56,107,126,.12);
+}
+
+#crsContent .crs-filter {
+    height: 39px;
+    min-width: 140px;
+    border: 1px solid #cbd7e2;
+    border-radius: 6px;
+    padding: 0 12px;
+    background: #fff;
     font-size: 13px;
+    color: #111;
+}
+
+#crsContent .crs-actions {
+    display: flex;
+    gap: 9px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+#crsContent .crs-btn {
+    min-height: 37px;
+    padding: 0 13px;
+    border: 1px solid #326579;
+    border-radius: 5px;
+    background: #fff;
+    color: #17394e;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
+    white-space: nowrap;
 }
 
-#crsContent .crs-action:hover,
-#crsContent .crs-dropdown-menu button:hover {
-    background: #dce5eb;
+#crsContent .crs-btn:hover {
+    background: #eaf1f5;
+}
+
+#crsContent .crs-btn-primary {
+    background: #326579;
+    color: #fff;
+}
+
+#crsContent .crs-btn-primary:hover {
+    background: #274f60;
+}
+
+#crsContent .crs-btn-export {
+    border-color: #198754;
+    color: #157347;
 }
 
 #crsContent .crs-dropdown {
@@ -112,12 +192,13 @@
 #crsContent .crs-dropdown-menu {
     display: none;
     position: absolute;
-    top: 100%;
-    left: 0;
+    top: calc(100% + 3px);
+    right: 0;
     min-width: 175px;
     background: #fff;
     border: 1px solid #ccd5dd;
     box-shadow: 0 8px 18px rgba(0,0,0,.15);
+    border-radius: 5px;
     z-index: 1000;
 }
 
@@ -133,7 +214,48 @@
     border: none;
     background: #fff;
     color: #111;
+    font-size: 12px;
     cursor: pointer;
+}
+
+#crsContent .crs-dropdown-menu button:hover {
+    background: #eaf1f5;
+}
+
+#crsContent .crs-tabs {
+    display: flex;
+    gap: 7px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+#crsContent .crs-tab {
+    border: 1px solid #d5e0e9;
+    border-radius: 5px;
+    padding: 8px 12px;
+    background: #f7f9fb;
+    color: #17394e;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+#crsContent .crs-tab.active {
+    background: #326579;
+    color: #fff;
+    border-color: #326579;
+}
+
+#crsContent .crs-count {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: rgba(130,150,165,.2);
+    font-size: 11px;
+}
+
+#crsContent .crs-tab.active .crs-count {
+    background: rgba(255,255,255,.2);
 }
 
 #crsContent .crs-file-heading {
@@ -141,42 +263,44 @@
     justify-content: space-between;
     align-items: center;
     gap: 10px;
+    min-height: 47px;
     padding: 12px 14px;
-    background: #f8fafc;
-    border: 1px solid #d5dce2;
-    border-top: none;
+    background: #f7f9fb;
+    border: 1px solid #d5e0e9;
+    border-radius: 7px 7px 0 0;
     font-size: 13px;
 }
 
 #crsContent .crs-file-heading strong {
-    color: #386b7e;
+    color: #326579;
 }
 
 #crsContent .crs-table-container {
-    min-height: 200px;
+    min-height: 215px;
     overflow-x: auto;
-    border: 1px solid #d5dce2;
+    border: 1px solid #d5e0e9;
     border-top: none;
-    border-radius: 0 0 9px 9px;
+    border-radius: 0 0 7px 7px;
 }
 
 #crsContent .crs-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 #crsContent .crs-table th {
-    background: #f1f5f9;
+    height: 45px;
+    background: #e8eef2;
     color: #17394e;
-    padding: 12px 14px;
+    padding: 12px 13px;
     text-align: left;
-    border-bottom: 1px solid #d5dce2;
+    border-bottom: 2px solid #326579;
     white-space: nowrap;
 }
 
 #crsContent .crs-table td {
-    padding: 12px 14px;
+    padding: 12px 13px;
     border-bottom: 1px solid #e4e9ee;
     color: #111;
 }
@@ -186,67 +310,120 @@
 }
 
 #crsContent .crs-empty {
-    height: 160px;
+    height: 165px;
     text-align: center;
     vertical-align: middle;
-    color: #526474 !important;
+    color: #36566b !important;
     line-height: 2;
 }
 
 #crsContent .crs-empty small {
-    font-size: 12px;
+    font-size: 11px;
 }
 
-#crsContent .crs-footer {
-    border-top: 1px solid #e3e8ec;
-    padding: 10px;
-    text-align: center;
-}
-
-#crsContent .crs-footer button {
-    background: #fff;
+#crsContent .crs-status {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 12px;
+    background: #e8edf2;
     color: #17394e;
-    border: 1px solid #9aaab7;
-    border-radius: 5px;
-    padding: 7px 13px;
-    margin: 0 3px;
-    cursor: pointer;
-}
-
-#crsContent .crs-footer button:hover {
-    background: #e9edf1;
+    font-size: 11px;
 }
 
 #crsContent .crs-message {
     display: none;
     padding: 10px 14px;
-    font-size: 13px;
+    margin-bottom: 12px;
+    font-size: 12px;
     background: #e8f2ff;
-    border: 1px solid #d5dce2;
+    border: 1px solid #cbdff5;
+    border-radius: 5px;
 }
 
-@media(max-width:900px) {
+#crsContent .crs-footer {
+    border-top: 1px solid #e3e8ec;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+#crsContent .crs-footer-label {
+    color: #17394e;
+    font-size: 12px;
+}
+
+#crsContent .crs-footer-actions {
+    display: flex;
+    gap: 8px;
+}
+
+@media(max-width:1100px) {
     #crsContent .crs-wrapper {
-        width: 96%;
+        width: 94%;
+    }
+
+    #crsContent .crs-toolbar {
+        grid-template-columns: 1fr auto;
+    }
+
+    #crsContent .crs-search {
+        max-width: none;
+    }
+
+    #crsContent .crs-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
     }
 }
 
-@media(max-width:600px) {
+@media(max-width:700px) {
     #crsContent .crs-wrapper {
-        width: 100%;
-        margin: 12px auto;
+        width: 96%;
+        margin: 15px auto;
     }
 
     #crsContent .crs-body {
-        padding: 8px;
+        padding: 10px;
     }
 
-    #crsContent .crs-tabs {
+    #crsContent .crs-stats {
         grid-template-columns: repeat(2,minmax(0,1fr));
+        gap: 8px;
+    }
+
+    #crsContent .crs-stat {
+        padding: 10px;
+        gap: 8px;
+    }
+
+    #crsContent .crs-stat-icon {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+        font-size: 18px;
+    }
+
+    #crsContent .crs-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    #crsContent .crs-filter {
+        width: 100%;
+    }
+
+    #crsContent .crs-actions {
+        grid-column: auto;
     }
 
     #crsContent .crs-table {
-        min-width: 600px;
+        min-width: 850px;
+    }
+
+    #crsContent .crs-footer {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }
 </style>
@@ -255,91 +432,141 @@
     <div class="crs-card">
 
         <div class="crs-header">
-            <span>▥ &nbsp; CRS Reconciliation</span>
+            CRS Reconciliation Management
         </div>
 
         <div class="crs-body">
 
+            <!-- Summary cards -->
+            <div class="crs-stats">
+                <div class="crs-stat">
+                    <div class="crs-stat-icon">▤</div>
+                    <div>
+                        <div class="crs-stat-label">Total Records</div>
+                        <div class="crs-stat-value" data-stat="total">0</div>
+                    </div>
+                </div>
+
+                <div class="crs-stat">
+                    <div class="crs-stat-icon">◷</div>
+                    <div>
+                        <div class="crs-stat-label">Pending</div>
+                        <div class="crs-stat-value" data-stat="pending">0</div>
+                    </div>
+                </div>
+
+                <div class="crs-stat">
+                    <div class="crs-stat-icon">✓</div>
+                    <div>
+                        <div class="crs-stat-label">Completed</div>
+                        <div class="crs-stat-value" data-stat="completed">0</div>
+                    </div>
+                </div>
+
+                <div class="crs-stat">
+                    <div class="crs-stat-icon">!</div>
+                    <div>
+                        <div class="crs-stat-label">Errors</div>
+                        <div class="crs-stat-value" data-stat="errors">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search, filter and actions -->
+            <div class="crs-toolbar">
+
+                <div class="crs-search">
+                    <span class="crs-search-icon">⌕</span>
+                    <input type="search" data-search
+                           placeholder="Search file name, reference or status...">
+                </div>
+
+                <select class="crs-filter" data-status-filter>
+                    <option value="ALL">All Statuses</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="ERROR">Errors</option>
+                </select>
+
+                <div class="crs-actions">
+
+                    <div class="crs-dropdown">
+                        <button type="button" class="crs-btn crs-btn-primary">
+                            ⇧ Upload
+                        </button>
+                        <div class="crs-dropdown-menu">
+                            <button type="button" data-upload="CBS">Upload CBS File</button>
+                            <button type="button" data-upload="CRS">Upload CRS File</button>
+                        </div>
+                    </div>
+
+                    <div class="crs-dropdown">
+                        <button type="button" class="crs-btn crs-btn-export">
+                            ▣ Download Excel
+                        </button>
+                        <div class="crs-dropdown-menu">
+                            <button type="button" data-export="CBS">Export CBS</button>
+                            <button type="button" data-export="CRS">Export CRS</button>
+                            <button type="button" data-export="MATCHED">Export Matched</button>
+                            <button type="button" data-export="UNMATCHED">Export Unmatched</button>
+                        </div>
+                    </div>
+
+                    <button type="button" class="crs-btn" data-extract>
+                        ⇩ Extract
+                    </button>
+
+                    <input type="file" data-file-input
+                           accept=".csv,.xlsx,.xls" hidden>
+                </div>
+            </div>
+
+            <!-- Record tabs -->
             <div class="crs-tabs">
-                <button type="button" class="crs-tab active"
-                        data-type="CBS">
+                <button type="button" class="crs-tab active" data-type="CBS">
                     CBS <span class="crs-count">0</span>
                 </button>
-
                 <button type="button" class="crs-tab" data-type="CRS">
                     CRS <span class="crs-count">0</span>
                 </button>
-
                 <button type="button" class="crs-tab" data-type="MATCHED">
                     Matched <span class="crs-count">0</span>
                 </button>
-
                 <button type="button" class="crs-tab" data-type="UNMATCHED">
                     Unmatched <span class="crs-count">0</span>
                 </button>
             </div>
 
-            <div class="crs-toolbar">
-
-                <div class="crs-dropdown">
-                    <button type="button" class="crs-action">
-                        ⇧ Upload &nbsp; ▾
-                    </button>
-
-                    <div class="crs-dropdown-menu">
-                        <button type="button" data-upload="CBS">CBS File</button>
-                        <button type="button" data-upload="CRS">CRS File</button>
-                    </div>
-                </div>
-
-                <div class="crs-dropdown">
-                    <button type="button" class="crs-action">
-                        ▣ EXCEL &nbsp; ▾
-                    </button>
-
-                    <div class="crs-dropdown-menu">
-                        <button type="button" data-export="CBS">Export CBS</button>
-                        <button type="button" data-export="CRS">Export CRS</button>
-                        <button type="button" data-export="MATCHED">Matched Records</button>
-                        <button type="button" data-export="UNMATCHED">Unmatched Records</button>
-                    </div>
-                </div>
-
-                <button type="button" class="crs-action" data-extract>
-                    ⇩ EXTRACT
-                </button>
-
-                <input type="file" data-file-input
-                       accept=".csv,.xlsx,.xls" hidden>
-            </div>
-
-            <div class="crs-message" role="status"></div>
+            <div class="crs-message" role="status" aria-live="polite"></div>
 
             <div class="crs-file-heading">
                 <span>
-                    Uploaded File(s) for:
+                    <strong>☷</strong>
+                    &nbsp; CRS Records List —
                     <strong data-active-type>CBS</strong>
                 </span>
-                <span data-record-count>0 file(s) found</span>
+                <span data-record-count>Total: 0 records</span>
             </div>
 
             <div class="crs-table-container">
                 <table class="crs-table">
                     <thead>
                         <tr>
+                            <th>S.No</th>
                             <th>File Name</th>
+                            <th>Reference ID</th>
                             <th>Upload Date &amp; Time</th>
+                            <th>Record Count</th>
+                            <th>Status</th>
                             <th>File Size</th>
-                            <th>Status / Rows Inserted</th>
                         </tr>
                     </thead>
-
                     <tbody data-table-body>
                         <tr>
-                            <td colspan="4" class="crs-empty">
-                                No files uploaded for CBS yet.
+                            <td colspan="7" class="crs-empty">
+                                No CRS records found.
                                 <br>
-                                <small>Select Upload &gt; CBS File to choose a file.</small>
+                                <small>Upload a file or change your search filters.</small>
                             </td>
                         </tr>
                     </tbody>
@@ -349,13 +576,18 @@
         </div>
 
         <div class="crs-footer">
-            <button type="button" data-home>
-                ⌂ Home
-            </button>
-
-            <button type="button" data-back>
-                ❮ Back
-            </button>
+            <span class="crs-footer-label">CRS Reconciliation Management</span>
+            <div class="crs-footer-actions">
+                <button type="button" class="crs-btn" data-refresh>
+                    ↻ Refresh List
+                </button>
+                <button type="button" class="crs-btn" data-home>
+                    ⌂ Home
+                </button>
+                <button type="button" class="crs-btn" data-back>
+                    ❮ Back
+                </button>
+            </div>
         </div>
 
     </div>
@@ -365,14 +597,12 @@
 (function () {
     const root = document.getElementById("crsContent");
 
-    if (!root || root.dataset.initialized === "true") {
-        return;
-    }
-
+    if (!root || root.dataset.initialized === "true") return;
     root.dataset.initialized = "true";
 
     let activeType = "CBS";
     let uploadType = "CBS";
+    let nextId = 1;
 
     const files = {
         CBS: [],
@@ -386,46 +616,99 @@
     const activeLabel = root.querySelector("[data-active-type]");
     const recordCount = root.querySelector("[data-record-count]");
     const message = root.querySelector(".crs-message");
+    const searchInput = root.querySelector("[data-search]");
+    const statusFilter = root.querySelector("[data-status-filter]");
 
     function notify(text) {
         message.textContent = text;
         message.style.display = "block";
     }
 
+    function getAllFiles() {
+        return files.CBS.concat(files.CRS);
+    }
+
+    function getStatus(file) {
+        return file.status.toUpperCase();
+    }
+
+    function renderStats() {
+        const all = getAllFiles();
+
+        root.querySelector('[data-stat="total"]').textContent = all.length;
+        root.querySelector('[data-stat="pending"]').textContent =
+            all.filter(f => getStatus(f) === "PENDING").length;
+        root.querySelector('[data-stat="completed"]').textContent =
+            all.filter(f => getStatus(f) === "COMPLETED").length;
+        root.querySelector('[data-stat="errors"]').textContent =
+            all.filter(f => getStatus(f) === "ERROR").length;
+    }
+
     function render() {
         activeLabel.textContent = activeType;
+
+        const query = searchInput.value.trim().toLowerCase();
+        const filterStatus = statusFilter.value;
+
+        const visibleFiles = files[activeType].filter(function (file) {
+            const matchesSearch =
+                file.name.toLowerCase().includes(query) ||
+                file.reference.toLowerCase().includes(query) ||
+                file.status.toLowerCase().includes(query);
+
+            const matchesStatus =
+                filterStatus === "ALL" ||
+                getStatus(file) === filterStatus;
+
+            return matchesSearch && matchesStatus;
+        });
+
         recordCount.textContent =
-            files[activeType].length + " file(s) found";
+            "Total: " + visibleFiles.length + " records";
 
         tableBody.replaceChildren();
 
-        if (files[activeType].length === 0) {
+        if (visibleFiles.length === 0) {
             const row = document.createElement("tr");
             const cell = document.createElement("td");
 
-            cell.colSpan = 4;
+            cell.colSpan = 7;
             cell.className = "crs-empty";
-            cell.textContent =
-                "No files uploaded for " + activeType + " yet.";
+
+            const title = document.createElement("div");
+            title.textContent = "No CRS records found.";
 
             const small = document.createElement("small");
-            small.textContent = " Select Upload to choose a file.";
-            cell.appendChild(document.createElement("br"));
-            cell.appendChild(small);
+            small.textContent =
+                "Upload a file or change your search filters.";
+
+            cell.append(title, document.createElement("br"), small);
             row.appendChild(cell);
             tableBody.appendChild(row);
         } else {
-            files[activeType].forEach(function (file) {
+            visibleFiles.forEach(function (file, index) {
                 const row = document.createElement("tr");
 
                 [
+                    index + 1,
                     file.name,
+                    file.reference,
                     file.date,
-                    file.size,
-                    file.status
-                ].forEach(function (value) {
+                    file.recordCount,
+                    file.status,
+                    file.size
+                ].forEach(function (value, columnIndex) {
                     const cell = document.createElement("td");
-                    cell.textContent = value;
+
+                    if (columnIndex === 5) {
+                        const badge = document.createElement("span");
+                        badge.className = "crs-status";
+                        badge.textContent = value;
+                        cell.appendChild(badge);
+                    } else {
+                        cell.textContent = value;
+                    }
+
                     row.appendChild(cell);
                 });
 
@@ -441,6 +724,14 @@
 
             tab.querySelector(".crs-count").textContent =
                 files[tab.dataset.type].length;
+        });
+
+        renderStats();
+    }
+
+    function closeMenus() {
+        root.querySelectorAll(".crs-dropdown").forEach(function (menu) {
+            menu.classList.remove("open");
         });
     }
 
@@ -459,24 +750,24 @@
         if (uploadButton && root.contains(uploadButton)) {
             uploadType = uploadButton.dataset.upload;
             fileInput.value = "";
-            fileInput.click();
             closeMenus();
+            fileInput.click();
             return;
         }
 
         const exportButton = event.target.closest("[data-export]");
 
         if (exportButton && root.contains(exportButton)) {
+            const type = exportButton.dataset.export;
             closeMenus();
-            notify(
-                "Connect the backend Excel export endpoint for " +
-                exportButton.dataset.export + "."
-            );
+
+            notify("Excel export for " + type +
+                " requires a backend export endpoint.");
             return;
         }
 
         const dropdownButton = event.target.closest(
-            ".crs-dropdown > .crs-action"
+            ".crs-dropdown > .crs-btn"
         );
 
         if (dropdownButton && root.contains(dropdownButton)) {
@@ -485,29 +776,39 @@
 
             closeMenus();
 
-            if (opening) {
-                menu.classList.add("open");
-            }
+            if (opening) menu.classList.add("open");
             return;
         }
 
         if (event.target.closest("[data-extract]")) {
-            notify("Connect the backend extraction endpoint.");
+            notify("Connect the backend extraction endpoint to process reconciliation data.");
+            return;
+        }
+
+        if (event.target.closest("[data-refresh]")) {
+            render();
+            notify("List refreshed. Records shown are the files selected in this page.");
             return;
         }
 
         if (event.target.closest("[data-home]")) {
             const home = document.getElementById("Home");
+
             if (home && typeof contentLoad === "function") {
                 contentLoad(home);
+            } else {
+                notify("Connect the Home button to your application's home route.");
             }
             return;
         }
 
         if (event.target.closest("[data-back]")) {
             const source = document.getElementById("SourceData");
+
             if (source && typeof contentLoad === "function") {
                 contentLoad(source);
+            } else {
+                window.history.back();
             }
             return;
         }
@@ -517,36 +818,38 @@
         }
     });
 
-    function closeMenus() {
-        root.querySelectorAll(".crs-dropdown").forEach(function (menu) {
-            menu.classList.remove("open");
-        });
-    }
-
     fileInput.addEventListener("change", function () {
-        const file = fileInput.files[0];
-        if (!file) return;
+        const selected = Array.from(fileInput.files || []);
 
-        files[uploadType].push({
-            name: file.name,
-            date: new Date().toLocaleString(),
-            size: (file.size / 1024).toFixed(2) + " KB",
-            status: "Selected - not uploaded"
+        if (selected.length === 0) return;
+
+        selected.forEach(function (file) {
+            files[uploadType].push({
+                id: nextId++,
+                name: file.name,
+                reference: "LOCAL-" + Date.now() + "-" + nextId,
+                date: new Date().toLocaleString(),
+                size: (file.size / 1024).toFixed(2) + " KB",
+                recordCount: "-",
+                status: "Pending"
+            });
         });
 
         activeType = uploadType;
+        searchInput.value = "";
+        statusFilter.value = "ALL";
         render();
 
-        notify(
-            "File selected successfully. Connect the server upload endpoint to save it."
-        );
+        notify("File selected locally. Server upload and database insertion are not yet connected.");
     });
+
+    searchInput.addEventListener("input", render);
+    statusFilter.addEventListener("change", render);
 
     render();
 })();
 </script>
 
 </div>
-
 </body>
 </html>
