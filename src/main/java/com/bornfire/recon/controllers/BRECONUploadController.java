@@ -117,6 +117,11 @@ public class BRECONUploadController {
     @Autowired
     private com.bornfire.recon.services.SourceDataUploadService sourceDataUploadService;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+
+    // Single unified upload endpoint
     @PostMapping(value = "SourceDataUpload")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> sourceDataUpload(
@@ -129,6 +134,7 @@ public class BRECONUploadController {
 
         try {
             int insertedRows = sourceDataUploadService.uploadTransactionFile(file, type, userId);
+            int currentTotalRows = fetchLiveRowCount(type);
 
             response.put("status", "SUCCESS");
             response.put("message", "File uploaded successfully!");
@@ -136,25 +142,55 @@ public class BRECONUploadController {
             response.put("fileName", file.getOriginalFilename());
             response.put("fileSize", (file.getSize() / 1024) + " KB");
             response.put("insertedRows", insertedRows);
+            response.put("totalRowsInDb", currentTotalRows);
             return ResponseEntity.ok(response);
         } catch (Throwable e) {
             logger.error("UPLOAD ERROR DETAILS:", e);
-            e.printStackTrace();
-            
-            String errorDetail = e.getClass().getSimpleName() + ": " + 
-                                 (e.getMessage() != null ? e.getMessage() : "No message");
-            if (e.getStackTrace().length > 0) {
-                StackTraceElement top = e.getStackTrace()[0];
-                errorDetail += " at " + top.getFileName() + ":" + top.getLineNumber();
-            }
-            
             response.put("status", "ERROR");
-            response.put("message", errorDetail);
+            response.put("message", e.getMessage() != null ? e.getMessage() : "Upload processing failed");
             return ResponseEntity.badRequest().body(response);
         }
     }
 
-    // =========================================================================
+    // Endpoint to retrieve live row counts from Oracle tables
+    @GetMapping("/getSourceDataCounts")
+    @ResponseBody
+    public ResponseEntity<Map<String, Integer>> getSourceDataCounts() {
+        Map<String, Integer> counts = new HashMap<>();
+        counts.put("CBS", fetchLiveRowCount("CBS"));
+        counts.put("ATM", fetchLiveRowCount("ATM"));
+        counts.put("POS", fetchLiveRowCount("POS"));
+        counts.put("EPIN", fetchLiveRowCount("EPIN"));
+        counts.put("VISANET", fetchLiveRowCount("VISANET"));
+        return ResponseEntity.ok(counts);
+    }
+
+    private int fetchLiveRowCount(String type) {
+        String table;
+        if ("ATM".equalsIgnoreCase(type)) {
+            table = "BRECON.ATM_TRANSACTION_DATA";
+        } else if ("POS".equalsIgnoreCase(type)) {
+            table = "BRECON.POS_TRANSATION_DATA";
+        } else if ("CBS".equalsIgnoreCase(type)) {
+            table = "BRECON.CBS_TXN";
+        } else if ("EPIN".equalsIgnoreCase(type)) {
+            table = "BRECON.BRECON_CARD_EPIN_DATA_TABLE";
+        } else if ("VISANET".equalsIgnoreCase(type) || "EPIN745".equalsIgnoreCase(type) || "EP745".equalsIgnoreCase(type)) {
+            table = "BRECON.BRECON_CARD_EP745_DATA_TABLE";
+        } else {
+            return 0;
+        }
+
+        try {
+            Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class);
+            return count != null ? count : 0;
+        } catch (Exception ex) {
+            logger.warn("Table {} count unavailable: {}", table, ex.getMessage());
+            return 0;
+        }
+    }
+    
+     // =========================================================================
     // DOWNLOAD THE DATA FROM SOURCEDATA (SINGLE ENDPOINT)
     // =========================================================================
     @GetMapping("/SourceDataExportExcel")
@@ -204,8 +240,7 @@ public class BRECONUploadController {
     
     // home page analytics
     
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+
     
     @GetMapping("/getReconAnalytics")
     @ResponseBody
@@ -330,6 +365,19 @@ public class BRECONUploadController {
 		     return ResponseEntity.ok(res);
 		 }
 		
+		 @GetMapping("/getFatcaRecordDetails")
+		    @ResponseBody
+		    public ResponseEntity<Map<String, Object>> getFatcaRecordDetails(@RequestParam("refNo") String refNo) {
+		        try {
+		            Map<String, Object> data = fatcaService.getFatcaRecordDetails(refNo);
+		            return ResponseEntity.ok(data);
+		        } catch (Exception e) {
+		            Map<String, Object> err = new HashMap<>();
+		            err.put("error", e.getMessage());
+		            return ResponseEntity.badRequest().body(err);
+		        }
+		    }
+		 
 		 @GetMapping("/downloadFatcaXml")
 		 public void downloadFatcaXml(HttpServletResponse response) {
 		     try {
@@ -343,7 +391,22 @@ public class BRECONUploadController {
 		         logger.error("Error downloading FATCA XML", e);
 		     }
 		 }
- 
+		 
+		 @GetMapping("/downloadSingleFatcaXml")
+		 public void downloadSingleFatcaXml(@RequestParam("refNo") String refNo, HttpServletResponse response) {
+		     try {
+		         // Generate XML containing only that single record
+		         String xmlContent = fatcaService.generateSingleFatcaXml(refNo);
+		         
+		         response.setContentType("application/xml");
+		         response.setHeader("Content-Disposition", 
+		                 "attachment; filename=\"FATCA_" + refNo + ".xml\"");
+		         response.getOutputStream().write(xmlContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		         response.getOutputStream().flush();
+		     } catch (Exception e) {
+		         logger.error("Error downloading single record XML for " + refNo, e);
+		     }
+		 }
  
     
     

@@ -128,7 +128,7 @@ public class SourceDataUploadService {
 // =========================================================================
     // 1. MAIN TRANSACTION FILE UPLOAD ROUTER
     // =========================================================================
-    @Transactional
+    @Transactional(timeout = 300)
     public int uploadTransactionFile(MultipartFile file, String type, String userId) throws Exception {
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
         boolean isCbs = "CBS".equalsIgnoreCase(type);
@@ -148,12 +148,55 @@ public class SourceDataUploadService {
             return uploadEpin745File(file, userId);
         }
 
-        // 1. Raw text handling for EPIN (Standard Base II)
+     // 1. Raw text handling for EPIN (Standard Base II)
         if (isEpin && fileName.endsWith(".txt")) {
             String reportDateStr = new SimpleDateFormat("dd-MM-yy").format(new Date());
-            int count = uploadRawEpinTextFile(file, reportDateStr);
+
+            // 1. Clear staging table so old file text does not accumulate
+            try {
+                jdbcTemplate.update(
+                    "DELETE FROM BRECON.BRECON_EPIN_TEXT_TABLE WHERE UP_DATE = TO_DATE(?, 'DD-MM-YY')", 
+                    reportDateStr
+                );
+            } catch (Exception ex) {
+                // If UP_DATE column does not exist, truncate staging completely
+                try {
+                    jdbcTemplate.update("TRUNCATE TABLE BRECON.BRECON_EPIN_TEXT_TABLE");
+                } catch (Exception ignored) {}
+            }
+
+            // 2. Clear parsed destination table for this date
+            try {
+                jdbcTemplate.update(
+                    "DELETE FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE WHERE TO_CHAR(ENTRY_TIME, 'DD-MM-YY') = ?", 
+                    reportDateStr
+                );
+            } catch (Exception ex) {
+                try {
+                    jdbcTemplate.update("TRUNCATE TABLE BRECON.BRECON_CARD_EPIN_DATA_TABLE");
+                } catch (Exception ignored) {}
+            }
+
+            // 3. Upload only the fresh lines of the uploaded file into staging
+            uploadRawEpinTextFile(file, reportDateStr);
+
+            // 4. Run the company procedure to parse fresh data
             executeCompanyEpinProcedure(reportDateStr);
-            return count;
+
+            // 5. Query the EXACT current count of rows in the parsed table
+            Integer currentCount = 0;
+            try {
+                currentCount = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE", 
+                    Integer.class
+                );
+            } catch (Exception e) {
+                logger.error("Failed to query BRECON_CARD_EPIN_DATA_TABLE count", e);
+            }
+
+            int finalCount = (currentCount != null) ? currentCount : 0;
+            logger.info("Fresh parsed records in BRECON_CARD_EPIN_DATA_TABLE: {}", finalCount);
+            return finalCount;
         }
 
         // 2. Dedicated routing for Visanet EP745 files (.txt or .csv)

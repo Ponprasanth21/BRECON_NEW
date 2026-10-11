@@ -6,47 +6,58 @@
     <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
     <title>BRECON | FATCA</title>
 
-    <link rel="icon" type="image/png"
-          th:href="@{/images/favicon_bob.png}">
-
-    <!-- Use your application's existing Font Awesome stylesheet if available -->
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
-    <style>
+   <style>
         * {
             box-sizing: border-box;
         }
 
-        body {
+        /* Lock outer screen so the browser window never creates an outer vertical scrollbar */
+        html, body {
             margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
             background: #f2f5f7;
             font-family: Arial, Helvetica, sans-serif;
             color: #111;
         }
 
+        /* Takes full vertical space below the top menu bar */
         .fatca-page {
-            width: 86%;
-            max-width: 1600px;
-            margin: 35px auto;
+            width: 96%;
+            max-width: 1700px;
+            margin: 6px auto;
+            height: calc(100vh - 58px);
+            display: flex;
+            flex-direction: column;
         }
 
         .fatca-card {
             background: #fff;
-            border-radius: 13px;
-            box-shadow: 0 10px 30px rgba(31, 55, 68, .14);
-            overflow: visible;
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(31, 55, 68, .12);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
         }
 
         .fatca-title {
-            min-height: 46px;
-            padding: 12px 18px;
+            height: 38px;
+            min-height: 38px;
+            padding: 0 16px;
             background: linear-gradient(180deg, #386b7e, #2c5667);
             color: #fff;
-            text-align: center;
-            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
             font-weight: 700;
-            border-radius: 13px 13px 0 0;
+            border-radius: 10px 10px 0 0;
+            letter-spacing: .3px;
         }
 
         .fatca-title i {
@@ -54,302 +65,407 @@
         }
 
         .fatca-content {
-            padding: 15px;
+            padding: 8px 14px 4px 14px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Crucial: allows child table to size dynamically without overflow */
+            overflow: hidden;
         }
 
         /* Summary cards */
-
         .fatca-summary {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 14px;
-            margin-bottom: 18px;
+            gap: 10px;
+            margin-bottom: 6px;
         }
 
         .fatca-stat {
             display: flex;
             align-items: center;
-            gap: 13px;
-            padding: 15px;
+            gap: 10px;
+            padding: 6px 12px;
             background: #fff;
             border: 1px solid #dce4e9;
-            border-radius: 9px;
+            border-radius: 7px;
         }
 
         .fatca-stat-icon {
-            width: 43px;
-            height: 43px;
+            width: 34px;
+            height: 34px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 9px;
+            border-radius: 7px;
             background: #e3edf2;
             color: #315f73;
-            font-size: 19px;
+            font-size: 16px;
         }
 
         .fatca-stat-label {
-            font-size: 12px;
-            margin-bottom: 6px;
+            font-size: 11.5px;
+            margin-bottom: 2px;
             color: #263746;
+            font-weight: 600;
         }
 
         .fatca-stat-value {
-            font-size: 22px;
+            font-size: 19px;
             font-weight: 700;
             color: #111;
+            line-height: 1.1;
         }
 
-        /* Search section */
-
+        /* Search & Filter toolbar */
         .fatca-filter {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 15px;
+            gap: 8px;
+            margin-bottom: 6px;
         }
 
         .fatca-search {
             position: relative;
             flex: 1;
             min-width: 220px;
-            max-width: 420px;
+            max-width: 400px;
         }
 
         .fatca-search i {
             position: absolute;
-            left: 12px;
-            top: 12px;
+            left: 10px;
+            top: 10px;
             color: #526474;
+            font-size: 13px;
         }
 
         .fatca-search input {
             width: 100%;
-            height: 38px;
-            padding: 8px 12px 8px 35px;
+            height: 33px;
+            padding: 4px 10px 4px 30px;
             border: 1px solid #cbd5dc;
-            border-radius: 6px;
-            font-size: 13px;
+            border-radius: 5px;
+            font-size: 12.5px;
             outline: none;
         }
 
         .fatca-search input:focus,
-        .fatca-filter select:focus,
-        .fatca-modal input:focus {
+        .fatca-filter select:focus {
             border-color: #386b7e;
             box-shadow: 0 0 0 2px rgba(56,107,126,.12);
         }
 
         .fatca-filter select {
-            height: 38px;
-            min-width: 140px;
-            padding: 0 10px;
+            height: 33px;
+            min-width: 130px;
+            padding: 0 8px;
             border: 1px solid #cbd5dc;
-            border-radius: 6px;
+            border-radius: 5px;
             background: #fff;
             color: #111;
+            font-size: 12.5px;
         }
 
         /* Action buttons */
-
         .fatca-actions {
             display: flex;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 9px;
+            gap: 6px;
         }
 
         .fatca-btn {
-            min-height: 36px;
+            height: 33px;
+            min-height: 33px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 7px;
-            padding: 8px 13px;
+            gap: 5px;
+            padding: 0 12px;
             border: 1px solid #315f73;
             border-radius: 5px;
             background: #fff;
             color: #264e61;
-            font-size: 12px;
+            font-size: 12.5px;
             font-weight: 700;
             cursor: pointer;
             text-decoration: none;
+            transition: all .15s ease;
         }
 
-        .fatca-btn:hover {
-            background: #eaf1f4;
-        }
-
-        .fatca-btn-primary {
-            color: #fff;
-            background: #315f73;
-        }
-
-        .fatca-btn-primary:hover {
-            background: #244b5e;
-            color: #fff;
-        }
-
-        .fatca-btn-green {
-            border-color: #287a52;
-            color: #226844;
-        }
-
-        .fatca-btn-green:hover {
-            background: #e8f5ee;
-        }
-
-        .fatca-btn-dark {
-            border-color: #465560;
-            color: #263746;
-        }
-
-        .fatca-btn-danger {
-            border-color: #b94b4b;
-            color: #a52d2d;
-        }
+        .fatca-btn:hover { background: #eaf1f4; }
+        .fatca-btn-primary { color: #fff; background: #315f73; }
+        .fatca-btn-primary:hover { background: #244b5e; color: #fff; }
+        .fatca-btn-green { border-color: #287a52; color: #226844; }
+        .fatca-btn-green:hover { background: #e8f5ee; }
+        .fatca-btn-dark { border-color: #465560; color: #263746; }
 
         .fatca-btn-small {
-            min-height: 29px;
-            padding: 5px 9px;
-            font-size: 11px;
+            height: 25px;
+            min-height: 25px;
+            padding: 0 9px;
+            font-size: 11.5px;
+            border-radius: 4px;
         }
 
-        .fatca-file-input {
-            display: none;
-        }
+        .fatca-file-input { display: none; }
 
         .fatca-notice {
             display: none;
-            padding: 10px 13px;
-            margin-bottom: 14px;
+            padding: 6px 10px;
+            margin-bottom: 6px;
             border: 1px solid #c8dce7;
             border-radius: 5px;
             background: #edf6fa;
             color: #17394e;
-            font-size: 13px;
+            font-size: 12px;
         }
 
-        /* Table */
-
+        /* Table & List Header */
         .fatca-list-heading {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 13px 14px;
+            padding: 6px 12px;
             background: #f7f9fb;
             border: 1px solid #d5dfe5;
             border-bottom: none;
-            border-radius: 8px 8px 0 0;
-            font-size: 13px;
+            border-radius: 7px 7px 0 0;
+            font-size: 12.5px;
+            font-weight: bold;
         }
-
-        .fatca-list-heading strong {
-            color: #315f73;
-        }
+        .fatca-list-heading strong { color: #315f73; }
 
         .fatca-table-wrap {
             width: 100%;
-            overflow-x: auto;
+            flex: 1;
+            min-height: 0; /* Prevents overflow pushing elements off screen */
             border: 1px solid #d5dfe5;
-            border-radius: 0 0 8px 8px;
+            border-radius: 0 0 7px 7px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            background: #fff;
         }
 
         .fatca-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
+            font-size: 12.5px;
+            table-layout: fixed;
         }
 
         .fatca-table thead th {
-            padding: 13px 12px;
+            padding: 6px 10px;
             background: #e9eef2;
             color: #17394e;
             text-align: left;
             white-space: nowrap;
             border-bottom: 2px solid #386b7e;
+            font-size: 12px;
+            font-weight: 700;
         }
 
+        /* Compact row height so all 10 records stay visible on laptop displays */
         .fatca-table tbody td {
-            padding: 12px;
-            border-bottom: 1px solid #e5eaee;
+            padding: 4px 10px;
+            border-bottom: 1px solid #edf1f4;
             vertical-align: middle;
             color: #111;
+            font-size: 12.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .fatca-table tbody tr:nth-child(even) {
-            background: #f8fafb;
-        }
+        .fatca-table tbody tr:nth-child(even) { background: #f8fafb; }
+        .fatca-table tbody tr:hover { background: #edf4f7; }
 
-        .fatca-table tbody tr:hover {
-            background: #edf4f7;
+        .ref-link {
+            color: #0284c7;
+            font-weight: 700;
+            text-decoration: underline;
+            cursor: pointer;
         }
-
-        .fatca-empty {
-            height: 170px;
-            text-align: center;
-            color: #526474 !important;
-            line-height: 2;
-        }
-
-        .fatca-empty i {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 28px;
-            color: #a6b8c3;
-        }
+        .ref-link:hover { color: #0369a1; }
 
         .fatca-status {
             display: inline-block;
-            padding: 4px 9px;
-            border-radius: 12px;
-            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 10.5px;
             font-weight: 700;
             white-space: nowrap;
         }
+        .fatca-status-pending { background: #fff2d6; color: #815b0b; }
+        .fatca-status-completed { background: #def3e6; color: #21683f; }
+        .fatca-status-error { background: #fde8e8; color: #a32d2d; }
 
-        .fatca-status-pending {
-            background: #fff2d6;
-            color: #815b0b;
+        /* Pagination bar */
+        .fatca-pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 12px;
+            background: #fbfcfd;
+            border-top: 1px solid #d5dfe5;
+            font-size: 12px;
+            min-height: 36px;
         }
 
-        .fatca-status-completed {
-            background: #def3e6;
-            color: #21683f;
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
-        .fatca-status-error {
-            background: #fde8e8;
-            color: #a32d2d;
+        .page-btn {
+            min-width: 27px;
+            height: 27px;
+            padding: 0 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #cbd5dc;
+            border-radius: 4px;
+            background: #ffffff;
+            color: #263746;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .15s ease;
         }
 
+        .page-btn:hover:not(:disabled) {
+            background: #eaf1f4;
+            border-color: #315f73;
+            color: #315f73;
+        }
+
+        .page-btn.active {
+            background: #315f73;
+            color: #ffffff;
+            border-color: #315f73;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        /* Bottom footer */
         .fatca-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 12px 16px;
+            padding: 4px 14px;
             border-top: 1px solid #e1e7eb;
+            background: #fff;
+            border-radius: 0 0 10px 10px;
+            height: 38px;
         }
 
         .fatca-footer-text {
-            font-size: 12px;
-            color: #263746;
+            font-size: 11.5px;
+            color: #475569;
+            font-weight: 600;
         }
 
-        /* Edit modal */
+        /* Floating popup dialogs */
+        .fatca-multi-popup {
+            position: fixed;
+            width: 440px;
+            max-width: 90vw;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+            border: 1px solid #bcd0dc;
+            z-index: 10000;
+            animation: popupFadeIn .18s ease-out;
+            overflow: hidden;
+        }
 
+        @keyframes popupFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        .fatca-popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: linear-gradient(180deg, #386b7e, #2c5667);
+            color: #ffffff;
+            font-size: 13.5px;
+            font-weight: bold;
+            cursor: move;
+        }
+
+        .fatca-popup-close-x {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 20px;
+            line-height: 1;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 4px;
+            transition: color .15s ease;
+        }
+
+        .fatca-popup-close-x:hover {
+            color: #fca5a5;
+        }
+
+        .fatca-popup-body {
+            padding: 12px 16px;
+            max-height: 420px;
+            overflow-y: auto;
+            background: #fdfdfd;
+        }
+
+        .fatca-human-kv {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            padding: 6px 0;
+            border-bottom: 1px solid #edf2f5;
+            font-size: 12.5px;
+            line-height: 1.35;
+        }
+
+        .fatca-human-kv:last-child {
+            border-bottom: none;
+        }
+
+        .fatca-human-label {
+            font-weight: bold;
+            color: #334e68;
+        }
+
+        .fatca-human-value {
+            color: #102a43;
+            word-break: break-word;
+        }
+
+        .fatca-popup-footer {
+            padding: 8px 14px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+
+        /* Edit Modal */
         .fatca-modal {
             display: none;
             position: fixed;
             inset: 0;
-            z-index: 9999;
+            z-index: 10500;
             padding: 20px;
             align-items: center;
             justify-content: center;
@@ -362,7 +478,7 @@
 
         .fatca-modal-box {
             width: 100%;
-            max-width: 540px;
+            max-width: 500px;
             max-height: 90vh;
             overflow-y: auto;
             background: #fff;
@@ -374,10 +490,10 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 18px;
+            padding: 12px 16px;
             background: #315f73;
             color: #fff;
-            font-size: 15px;
+            font-size: 14.5px;
             font-weight: 700;
         }
 
@@ -385,21 +501,21 @@
             border: none;
             background: transparent;
             color: #fff;
-            font-size: 24px;
+            font-size: 22px;
             cursor: pointer;
         }
 
         .fatca-modal-body {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 14px;
-            padding: 20px;
+            gap: 12px;
+            padding: 16px;
         }
 
         .fatca-field {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 5px;
         }
 
         .fatca-field.full {
@@ -407,7 +523,7 @@
         }
 
         .fatca-field label {
-            font-size: 12px;
+            font-size: 11.5px;
             font-weight: 700;
             color: #263746;
         }
@@ -415,11 +531,11 @@
         .fatca-field input,
         .fatca-field select {
             width: 100%;
-            height: 37px;
-            padding: 8px 10px;
+            height: 34px;
+            padding: 6px 10px;
             border: 1px solid #cbd5dc;
             border-radius: 5px;
-            font-size: 13px;
+            font-size: 12.5px;
             color: #111;
             background: #fff;
         }
@@ -427,68 +543,9 @@
         .fatca-modal-footer {
             display: flex;
             justify-content: flex-end;
-            gap: 8px;
-            padding: 12px 20px;
+            gap: 6px;
+            padding: 10px 16px;
             border-top: 1px solid #e5eaee;
-        }
-
-        @media(max-width: 1000px) {
-            .fatca-page {
-                width: 95%;
-            }
-
-            .fatca-summary {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-
-        @media(max-width: 600px) {
-            .fatca-page {
-                width: 100%;
-                margin: 15px auto;
-            }
-
-            .fatca-content {
-                padding: 9px;
-            }
-
-            .fatca-summary {
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-            }
-
-            .fatca-stat {
-                padding: 10px;
-                gap: 8px;
-            }
-
-            .fatca-stat-value {
-                font-size: 18px;
-            }
-
-            .fatca-filter {
-                align-items: stretch;
-            }
-
-            .fatca-search {
-                max-width: none;
-            }
-
-            .fatca-actions {
-                width: 100%;
-            }
-
-            .fatca-actions .fatca-btn {
-                flex: 1 1 auto;
-            }
-
-            .fatca-modal-body {
-                grid-template-columns: 1fr;
-            }
-
-            .fatca-field.full {
-                grid-column: auto;
-            }
         }
     </style>
 </head>
@@ -510,11 +567,8 @@
 
             <!-- Summary cards -->
             <div class="fatca-summary">
-
                 <div class="fatca-stat">
-                    <div class="fatca-stat-icon">
-                        <i class="fa fa-files-o"></i>
-                    </div>
+                    <div class="fatca-stat-icon"><i class="fa fa-files-o"></i></div>
                     <div>
                         <div class="fatca-stat-label">Total Records</div>
                         <div class="fatca-stat-value" id="totalRecords">0</div>
@@ -522,9 +576,7 @@
                 </div>
 
                 <div class="fatca-stat">
-                    <div class="fatca-stat-icon">
-                        <i class="fa fa-clock-o"></i>
-                    </div>
+                    <div class="fatca-stat-icon"><i class="fa fa-clock-o"></i></div>
                     <div>
                         <div class="fatca-stat-label">Pending</div>
                         <div class="fatca-stat-value" id="pendingRecords">0</div>
@@ -532,9 +584,7 @@
                 </div>
 
                 <div class="fatca-stat">
-                    <div class="fatca-stat-icon">
-                        <i class="fa fa-check-circle"></i>
-                    </div>
+                    <div class="fatca-stat-icon"><i class="fa fa-check-circle"></i></div>
                     <div>
                         <div class="fatca-stat-label">Completed</div>
                         <div class="fatca-stat-value" id="completedRecords">0</div>
@@ -542,24 +592,19 @@
                 </div>
 
                 <div class="fatca-stat">
-                    <div class="fatca-stat-icon">
-                        <i class="fa fa-exclamation-circle"></i>
-                    </div>
+                    <div class="fatca-stat-icon"><i class="fa fa-exclamation-circle"></i></div>
                     <div>
                         <div class="fatca-stat-label">Errors</div>
                         <div class="fatca-stat-value" id="errorRecords">0</div>
                     </div>
                 </div>
-
             </div>
 
             <!-- Search and actions -->
             <div class="fatca-filter">
-
                 <div class="fatca-search">
                     <i class="fa fa-search"></i>
-                    <input type="text" id="fatcaSearch"
-                           placeholder="Search file name, reference or status...">
+                    <input type="text" id="fatcaSearch" placeholder="Search file name, reference or status...">
                 </div>
 
                 <select id="fatcaStatusFilter" aria-label="Filter by status">
@@ -570,26 +615,19 @@
                 </select>
 
                 <div class="fatca-actions">
+                    <input type="file" id="fatcaUploadInput" class="fatca-file-input" accept=".xml,.csv,.xlsx,.xls">
 
-                    <input type="file" id="fatcaUploadInput"
-                           class="fatca-file-input"
-                           accept=".xml,.csv,.xlsx,.xls">
-
-                    <button type="button" class="fatca-btn fatca-btn-primary"
-                            id="fatcaUploadBtn">
+                    <button type="button" class="fatca-btn fatca-btn-primary" id="fatcaUploadBtn">
                         <i class="fa fa-upload"></i> Upload
                     </button>
 
-                    <button type="button" class="fatca-btn fatca-btn-green"
-                            id="fatcaDownloadAllBtn">
+                    <button type="button" class="fatca-btn fatca-btn-green" id="fatcaDownloadAllBtn">
                         <i class="fa fa-file-code-o"></i> Download XML
                     </button>
 
-                    <button type="button" class="fatca-btn fatca-btn-dark"
-                            id="fatcaExtractBtn">
+                    <button type="button" class="fatca-btn fatca-btn-dark" id="fatcaExtractBtn">
                         <i class="fa fa-download"></i> Extract
                     </button>
-
                 </div>
             </div>
 
@@ -601,10 +639,8 @@
                     <i class="fa fa-list"></i>
                     &nbsp; FATCA Records List
                 </span>
-
                 <span>
-                    Total: <strong id="fatcaVisibleCount">0</strong>
-                    records
+                    Total: <strong id="fatcaVisibleCount">0</strong> records
                 </span>
             </div>
 
@@ -612,45 +648,43 @@
                 <table class="fatca-table">
                     <thead>
                         <tr>
-                            <th>S.No</th>
-                            <th>File Name</th>
-                            <th>Reference ID</th>
-                            <th>Upload Date &amp; Time</th>
-                            <th>Record Count</th>
-                            <th>Status</th>
-                            <th>Download XML</th>
-                            <th>Edit</th>
+                            <th style="width: 5%;">S.No</th>
+                            <th style="width: 20%;">File Name</th>
+                            <th style="width: 20%;">Reference ID</th>
+                            <th style="width: 17%;">Upload Date &amp; Time</th>
+                            <th style="width: 10%;">Record Count</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 10%;">Download XML</th>
+                            <th style="width: 8%;">Edit</th>
                         </tr>
                     </thead>
-
                     <tbody id="fatcaTableBody">
                         <tr>
                             <td colspan="8" class="fatca-empty">
                                 <i class="fa fa-folder-open-o"></i>
-                                No FATCA records available.
-                                <br>
+                                No FATCA records available.<br>
                                 <small>Click Upload to select a file.</small>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+
+                <!-- 10-Item Pagination Controls -->
+                <div class="fatca-pagination-bar" id="paginationBar">
+                    <span id="pageInfoText" style="color: #475569;">Showing 0 to 0 of 0 entries</span>
+                    <div class="pagination-controls" id="paginationControls"></div>
+                </div>
             </div>
 
         </div>
 
         <div class="fatca-footer">
-            <span class="fatca-footer-text">
-                FATCA Reporting Management
-            </span>
-
+            <span class="fatca-footer-text">FATCA Reporting Management</span>
             <div class="fatca-actions">
-                <button type="button" class="fatca-btn"
-                        id="fatcaResetBtn">
+                <button type="button" class="fatca-btn" id="fatcaResetBtn">
                     <i class="fa fa-refresh"></i> Refresh List
                 </button>
-
-                <button type="button" class="fatca-btn"
-                        id="fatcaHomeBtn">
+                <button type="button" class="fatca-btn" id="fatcaHomeBtn">
                     <i class="fa fa-home"></i> Home
                 </button>
             </div>
@@ -659,35 +693,24 @@
     </section>
 </main>
 
+<!-- Container where multiple popups can open together -->
+<div id="multiPopupContainer"></div>
+
 <!-- Edit record modal -->
 <div class="fatca-modal" id="fatcaEditModal">
     <div class="fatca-modal-box">
-
         <div class="fatca-modal-header">
             <span><i class="fa fa-pencil"></i> Edit FATCA Record</span>
-            <button type="button" class="fatca-modal-close"
-                    id="fatcaCloseModal">&times;</button>
+            <button type="button" class="fatca-modal-close" id="fatcaCloseModal">&times;</button>
         </div>
 
         <form id="fatcaEditForm">
             <div class="fatca-modal-body">
-
-                <input type="hidden" id="editRecordId">
+                <input type="hidden" id="editReference">
 
                 <div class="fatca-field full">
                     <label for="editFileName">File Name</label>
                     <input type="text" id="editFileName" required>
-                </div>
-
-                <div class="fatca-field">
-                    <label for="editReference">Reference ID</label>
-                    <input type="text" id="editReference" required>
-                </div>
-
-                <div class="fatca-field">
-                    <label for="editRecordCount">Record Count</label>
-                    <input type="number" id="editRecordCount"
-                           min="0" required>
                 </div>
 
                 <div class="fatca-field full">
@@ -698,24 +721,213 @@
                         <option value="Error">Error</option>
                     </select>
                 </div>
-
             </div>
 
             <div class="fatca-modal-footer">
-                <button type="button" class="fatca-btn"
-                        id="fatcaCancelEdit">Cancel</button>
-
-                <button type="submit"
-                        class="fatca-btn fatca-btn-primary">
+                <button type="button" class="fatca-btn" id="fatcaCancelEdit">Cancel</button>
+                <button type="submit" class="fatca-btn fatca-btn-primary">
                     <i class="fa fa-save"></i> Save Changes
                 </button>
             </div>
         </form>
-
     </div>
 </div>
 
 <script>
+// Row XML Single Download Handler
+function downloadRowXml(refNo) {
+    if (!refNo || refNo === "N/A") {
+        alert("Reference ID is missing for this record.");
+        return;
+    }
+    window.location.href = "./downloadSingleFatcaXml?refNo=" + encodeURIComponent(refNo);
+}
+
+// MULTI-POPUP SYSTEM: Open as many popups simultaneously as clicked
+let popupCount = 0;
+
+function openRecordPopup(refNo) {
+    if (!refNo || refNo === "N/A") {
+        alert("Invalid Reference ID");
+        return;
+    }
+
+    popupCount++;
+    const popupId = "fatca_popup_" + Date.now() + "_" + popupCount;
+    
+    // Stagger positioning so multiple open popups don't completely overlap
+    const offset = (popupCount % 7) * 26;
+    const topPos = Math.min(100 + offset, window.innerHeight - 450);
+    const leftPos = Math.min(140 + offset, window.innerWidth - 480);
+
+    const container = document.getElementById("multiPopupContainer");
+
+    const popupEl = document.createElement("div");
+    popupEl.className = "fatca-multi-popup";
+    popupEl.id = popupId;
+    popupEl.style.top = topPos + "px";
+    popupEl.style.left = leftPos + "px";
+
+    popupEl.innerHTML = `
+        <div class="fatca-popup-header">
+            <span><i class="fa fa-user-circle"></i> Customer Record: ${escapeHtml(refNo)}</span>
+            <button type="button" class="fatca-popup-close-x" onclick="closePopup('${popupId}')" title="Close Popup">&times;</button>
+        </div>
+        <div class="fatca-popup-body" id="body_${popupId}">
+            <div style="text-align: center; padding: 25px; color: #64748b;">
+                <i class="fa fa-spinner fa-spin" style="font-size: 20px;"></i><br>
+                Loading record from database...
+            </div>
+        </div>
+        <div class="fatca-popup-footer">
+            <button type="button" class="fatca-btn fatca-btn-small fatca-btn-green" onclick="downloadRowXml('${refNo}')">
+                <i class="fa fa-file-code-o"></i> Download XML
+            </button>
+            <button type="button" class="fatca-btn fatca-btn-small" onclick="closePopup('${popupId}')">Close</button>
+        </div>
+    `;
+
+    container.appendChild(popupEl);
+    makePopupDraggable(popupEl);
+
+    // Fetch live record details and render in human language
+    fetch("./getFatcaRecordDetails?refNo=" + encodeURIComponent(refNo))
+        .then(res => res.json())
+        .then(data => {
+            const body = document.getElementById("body_" + popupId);
+            if (!body) return;
+
+            if (data.error) {
+                body.innerHTML = `<div style="color: #b91c1c; padding: 15px;">Failed to load: ${escapeHtml(data.error)}</div>`;
+                return;
+            }
+
+            // Map database codes into human-readable descriptions
+            const entityTypeDesc = {
+                'B': 'Borrower',
+                'G': 'Guarantor',
+                'JB': 'Joint Borrower'
+            }[data.ENTITY_TYPE] || (data.ENTITY_TYPE || 'N/A');
+
+            const creditTypeDesc = {
+                'LOA': 'Loan Account',
+                'OD': 'Overdraft',
+                'CC': 'Credit Card'
+            }[data.CREDIT_TYPE] || (data.CREDIT_TYPE || 'Standard Credit');
+
+            const recordStatusDesc = {
+                'A': 'Active Account',
+                'C': 'Closed Account'
+            }[data.RECORD_STATUS] || (data.RECORD_STATUS || 'Active');
+
+            body.innerHTML = `
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Reference ID</span>
+                    <span class="fatca-human-value"><b>${escapeHtml(data.REF_NO || refNo)}</b></span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Unique Record ID</span>
+                    <span class="fatca-human-value">${escapeHtml(data.UNIQUE_REF_ID || 'N/A')}</span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Entity Code (ID/PAN)</span>
+                    <span class="fatca-human-value"><b>${escapeHtml(data.ENTITY_CODE || 'N/A')}</b></span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Customer Role</span>
+                    <span class="fatca-human-value">${escapeHtml(entityTypeDesc)}</span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Country Code</span>
+                    <span class="fatca-human-value">${escapeHtml(data.COUNTRY_CODE || 'MU')}</span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Account Status</span>
+                    <span class="fatca-human-value"><span class="fatca-status fatca-status-completed">${escapeHtml(recordStatusDesc)}</span></span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Credit Type</span>
+                    <span class="fatca-human-value">${escapeHtml(creditTypeDesc)}</span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Currency</span>
+                    <span class="fatca-human-value">${escapeHtml(data.CURRENCY || 'MUR')}</span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Sanction / Balance</span>
+                    <span class="fatca-human-value">${data.SANCT_LIM ? Number(data.SANCT_LIM).toLocaleString() : '0.00'}</span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Arrears Amount</span>
+                    <span class="fatca-human-value" style="color: #b91c1c; font-weight: bold;">
+                        ${data.AMOUNT_ARREAR ? Number(data.AMOUNT_ARREAR).toLocaleString() : '0.00'}
+                    </span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Default Date</span>
+                    <span class="fatca-human-value">${escapeHtml(data.DATE_DEFAULT || 'N/A')}</span>
+                </div>
+                <div class="fatca-human-kv">
+                    <span class="fatca-human-label">Classification Code</span>
+                    <span class="fatca-human-value">${escapeHtml(data.TYPE_CLASS || 'N/A')}</span>
+                </div>
+            `;
+        })
+        .catch(err => {
+            const body = document.getElementById("body_" + popupId);
+            if (body) {
+                body.innerHTML = `<div style="color: #b91c1c; padding: 15px;">Connection error: ${escapeHtml(err)}</div>`;
+            }
+        });
+}
+
+function closePopup(popupId) {
+    const el = document.getElementById(popupId);
+    if (el) el.remove();
+}
+
+function makePopupDraggable(el) {
+    const header = el.querySelector(".fatca-popup-header");
+    let isDragging = false;
+    let startX, startY, origX, origY;
+
+    header.addEventListener("mousedown", e => {
+        if (e.target.classList.contains("fatca-popup-close-x")) return;
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        origX = el.offsetLeft;
+        origY = el.offsetTop;
+        el.style.zIndex = ++popupCount + 10000;
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+    });
+
+    function onMouseMove(e) {
+        if (!isDragging) return;
+        el.style.left = origX + (e.clientX - startX) + "px";
+        el.style.top = origY + (e.clientY - startY) + "px";
+    }
+
+    function onMouseUp() {
+        isDragging = false;
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+    }
+}
+
+function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, function (char) {
+        return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        }[char];
+    });
+}
+
 (function () {
     const tableBody = document.getElementById("fatcaTableBody");
     const uploadInput = document.getElementById("fatcaUploadInput");
@@ -723,6 +935,8 @@
     const editModal = document.getElementById("fatcaEditModal");
 
     let records = [];
+    let currentPage = 1;
+    const pageSize = 10; // Exactly 10 records per page
 
     function showNotice(message, isError) {
         notice.textContent = message;
@@ -732,29 +946,14 @@
         notice.style.color = isError ? "#a52d2d" : "#17394e";
     }
 
-    function escapeHtml(value) {
-        return String(value || "").replace(/[&<>"']/g, function (char) {
-            return {
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': "&quot;",
-                "'": "&#39;"
-            }[char];
-        });
-    }
-
-    // Fetches live data from Oracle DB (BRECON.FACTA_TRANSCATION_DATA)
     function loadDashboardData() {
         fetch("./getFatcaDashboardData")
-            .then(function (res) {
-                return res.json();
-            })
-            .then(function (data) {
-                document.getElementById("totalRecords").textContent = data.totalRecords || 0;
-                document.getElementById("pendingRecords").textContent = data.pendingRecords || 0;
-                document.getElementById("completedRecords").textContent = data.completedRecords || 0;
-                document.getElementById("errorRecords").textContent = data.errorRecords || 0;
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("totalRecords").textContent = (data.totalRecords || 0).toLocaleString();
+                document.getElementById("pendingRecords").textContent = (data.pendingRecords || 0).toLocaleString();
+                document.getElementById("completedRecords").textContent = (data.completedRecords || 0).toLocaleString();
+                document.getElementById("errorRecords").textContent = (data.errorRecords || 0).toLocaleString();
 
                 records = (data.records || []).map(function (r, index) {
                     return {
@@ -768,11 +967,12 @@
                     };
                 });
 
+                currentPage = 1;
                 renderTable();
             })
-            .catch(function (err) {
+            .catch(err => {
                 console.error("Failed to load FATCA data:", err);
-                showNotice("Error fetching records from server: " + err, true);
+                showNotice("Error fetching records: " + err, true);
             });
     }
 
@@ -793,10 +993,28 @@
 
     function renderTable() {
         const filtered = getFilteredRecords();
-        document.getElementById("fatcaVisibleCount").textContent = filtered.length;
+        const totalItems = filtered.length;
+        const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, totalItems);
+        const pageItems = filtered.slice(startIndex, endIndex);
+
+        document.getElementById("fatcaVisibleCount").textContent = totalItems.toLocaleString();
+
+        const pageInfoText = document.getElementById("pageInfoText");
+        if (totalItems === 0) {
+            pageInfoText.textContent = "Showing 0 to 0 of 0 entries";
+        } else {
+            pageInfoText.textContent = `Showing ${(startIndex + 1).toLocaleString()} to ${endIndex.toLocaleString()} of ${totalItems.toLocaleString()} entries`;
+        }
+
         tableBody.replaceChildren();
 
-        if (filtered.length === 0) {
+        if (pageItems.length === 0) {
             const row = document.createElement("tr");
             const cell = document.createElement("td");
             cell.colSpan = 8;
@@ -808,11 +1026,13 @@
 
             row.appendChild(cell);
             tableBody.appendChild(row);
+            renderPagination(0, 1);
             return;
         }
 
-        filtered.forEach(function (record, index) {
+        pageItems.forEach(function (record, i) {
             const row = document.createElement("tr");
+            const actualIndex = startIndex + i + 1;
             const statusClass = {
                 Pending: "fatca-status-pending",
                 Completed: "fatca-status-completed",
@@ -820,9 +1040,14 @@
             }[record.status] || "fatca-status-pending";
 
             row.innerHTML = `
-                <td>${index + 1}</td>
+                <td>${actualIndex}</td>
                 <td>${escapeHtml(record.fileName)}</td>
-                <td>${escapeHtml(record.reference)}</td>
+                <td>
+                    <!-- Click Reference ID to open human readable popup -->
+                    <span class="ref-link" onclick="openRecordPopup('${escapeHtml(record.reference)}')" title="Click to view details in popup">
+                        ${escapeHtml(record.reference)}
+                    </span>
+                </td>
                 <td>${escapeHtml(record.uploadDate)}</td>
                 <td>${escapeHtml(record.recordCount)}</td>
                 <td>
@@ -831,15 +1056,16 @@
                     </span>
                 </td>
                 <td>
-                    <a href="./downloadFatcaXml" class="fatca-btn fatca-btn-small fatca-btn-green" title="Download Regulatory XML">
+                    <button type="button" class="fatca-btn fatca-btn-small fatca-btn-green" 
+                            onclick="downloadRowXml('${escapeHtml(record.reference)}')" 
+                            title="Download single record XML">
                         <i class="fa fa-file-code-o"></i> XML
-                    </a>
+                    </button>
                 </td>
                 <td>
                     <button type="button" class="fatca-btn fatca-btn-small" 
                             data-ref="${escapeHtml(record.reference)}" 
                             data-name="${escapeHtml(record.fileName)}" 
-                            data-count="${escapeHtml(record.recordCount)}" 
                             data-status="${escapeHtml(record.status)}">
                         <i class="fa fa-pencil"></i> Edit
                     </button>
@@ -848,12 +1074,78 @@
 
             tableBody.appendChild(row);
         });
+
+        renderPagination(totalItems, totalPages);
     }
 
-    // Direct Database File Ingestion
-    document.getElementById("fatcaUploadBtn").addEventListener("click", function () {
-        uploadInput.click();
+    // Render Previous / Next and page buttons
+    function renderPagination(totalItems, totalPages) {
+        const controls = document.getElementById("paginationControls");
+        controls.innerHTML = "";
+
+        if (totalItems <= pageSize) return;
+
+        // Previous button
+        const prevBtn = document.createElement("button");
+        prevBtn.type = "button";
+        prevBtn.className = "page-btn";
+        prevBtn.innerHTML = '<i class="fa fa-chevron-left"></i>';
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.onclick = () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable();
+            }
+        };
+        controls.appendChild(prevBtn);
+
+        // Numbered buttons (sliding window of max 5 buttons)
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+
+        for (let p = startPage; p <= endPage; p++) {
+            const pageBtn = document.createElement("button");
+            pageBtn.type = "button";
+            pageBtn.className = "page-btn" + (p === currentPage ? " active" : "");
+            pageBtn.textContent = p;
+            pageBtn.onclick = () => {
+                currentPage = p;
+                renderTable();
+            };
+            controls.appendChild(pageBtn);
+        }
+
+        // Next button
+        const nextBtn = document.createElement("button");
+        nextBtn.type = "button";
+        nextBtn.className = "page-btn";
+        nextBtn.innerHTML = '<i class="fa fa-chevron-right"></i>';
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.onclick = () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable();
+            }
+        };
+        controls.appendChild(nextBtn);
+    }
+
+    // Search and filter inputs reset to Page 1
+    document.getElementById("fatcaSearch").addEventListener("input", () => {
+        currentPage = 1;
+        renderTable();
     });
+
+    document.getElementById("fatcaStatusFilter").addEventListener("change", () => {
+        currentPage = 1;
+        renderTable();
+    });
+
+    // File Upload Execution
+    document.getElementById("fatcaUploadBtn").addEventListener("click", () => uploadInput.click());
 
     uploadInput.addEventListener("change", function () {
         if (!uploadInput.files || uploadInput.files.length === 0) return;
@@ -862,28 +1154,25 @@
         const formData = new FormData();
         formData.append("file", file);
 
-        showNotice("Uploading and parsing " + file.name + " into BRECON.FACTA_TRANSCATION_DATA...", false);
+        showNotice("Uploading " + file.name + " into database...", false);
 
         fetch("./uploadFatcaFile", {
             method: "POST",
             body: formData
         })
-        .then(function (response) {
-            return response.json();
-        })
-        .then(function (res) {
+        .then(res => res.json())
+        .then(res => {
             if (res.status === "SUCCESS") {
                 showNotice("Upload Success: " + res.message, false);
-                loadDashboardData(); // Refreshes table and KPI summary from database
+                loadDashboardData();
             } else {
                 showNotice("Upload Failed: " + (res.message || "Unknown error"), true);
             }
         })
-        .catch(function (err) {
-            console.error("Upload error:", err);
-            showNotice("Error uploading file to server: " + err, true);
+        .catch(err => {
+            showNotice("Error uploading file: " + err, true);
         })
-        .finally(function () {
+        .finally(() => {
             uploadInput.value = "";
         });
     });
@@ -895,7 +1184,6 @@
 
         document.getElementById("editReference").value = btn.dataset.ref;
         document.getElementById("editFileName").value = btn.dataset.name;
-        document.getElementById("editRecordCount").value = parseInt(btn.dataset.count.replace(/[^0-9]/g, '')) || 0;
         document.getElementById("editStatus").value = btn.dataset.status;
 
         editModal.classList.add("open");
@@ -908,11 +1196,6 @@
     document.getElementById("fatcaCloseModal").addEventListener("click", closeEdit);
     document.getElementById("fatcaCancelEdit").addEventListener("click", closeEdit);
 
-    editModal.addEventListener("click", function (event) {
-        if (event.target === editModal) closeEdit();
-    });
-
-    // Persist Record Edit into Database
     document.getElementById("fatcaEditForm").addEventListener("submit", function (event) {
         event.preventDefault();
 
@@ -927,41 +1210,33 @@
             method: "POST",
             body: formData
         })
-        .then(function (response) {
-            return response.json();
-        })
-        .then(function (res) {
+        .then(res => res.json())
+        .then(res => {
             if (res.status === "SUCCESS") {
-                showNotice("Record updated successfully in database.", false);
+                showNotice("Record updated successfully.", false);
                 closeEdit();
                 loadDashboardData();
             } else {
-                showNotice("Failed to update record in database: " + (res.message || ""), true);
+                showNotice("Failed to update record: " + (res.message || ""), true);
             }
         })
-        .catch(function (err) {
-            console.error("Update error:", err);
+        .catch(err => {
             showNotice("Error saving changes: " + err, true);
         });
     });
-
-    // Filters and Search
-    document.getElementById("fatcaSearch").addEventListener("input", renderTable);
-    document.getElementById("fatcaStatusFilter").addEventListener("change", renderTable);
 
     document.getElementById("fatcaResetBtn").addEventListener("click", function () {
         document.getElementById("fatcaSearch").value = "";
         document.getElementById("fatcaStatusFilter").value = "";
         notice.style.display = "none";
+        currentPage = 1;
         loadDashboardData();
     });
 
-    // Download XML generated from the database
     document.getElementById("fatcaDownloadAllBtn").addEventListener("click", function () {
         window.location.href = "./downloadFatcaXml";
     });
 
-    // Extract table data to CSV
     document.getElementById("fatcaExtractBtn").addEventListener("click", function () {
         const filtered = getFilteredRecords();
         if (filtered.length === 0) {
@@ -996,11 +1271,10 @@
         }
     });
 
-    // Initial load on page view
+    // Initial load
     loadDashboardData();
 })();
 </script>
 
 </body>
 </html>
-

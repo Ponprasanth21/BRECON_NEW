@@ -292,223 +292,255 @@
         .source-btn:hover { background: var(--head-bg); border-color: var(--brand); color: #000; }
     </style>
 
-    <script>
-        var currentUploadType = "";
-        var activeCategory = "ATM";
+	<script>
+	    var currentUploadType = "";
+	    var activeCategory = "ATM";
 
-        var uploadedFilesStore = {
-            CBS: [],
-            ATM: [],
-            POS: [],
-            EPIN: [],
-            VISANET: []
-        };
+	    // Store live database row counts synced directly with Oracle
+	    var dbRowCounts = {
+	        CBS: 0,
+	        ATM: 0,
+	        POS: 0,
+	        EPIN: 0,
+	        VISANET: 0
+	    };
 
-        $(function () {
-            var $upDd   = $('#uploadDropdown');
-            var $upBtn  = $('#uploadButton');
-            var $xlDd   = $('#excelDropdown');
-            var $xlBtn  = $('#excelButton');
+	    // Stores files uploaded during the current browser session
+	    var uploadedFilesStore = {
+	        CBS: [],
+	        ATM: [],
+	        POS: [],
+	        EPIN: [],
+	        VISANET: []
+	    };
 
-            // Upload Dropdown toggle
-            $upBtn.on('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                $xlDd.removeClass('open');
-                $upDd.toggleClass('open');
-            });
+	    $(function () {
+	        var $upDd   = $('#uploadDropdown');
+	        var $upBtn  = $('#uploadButton');
+	        var $xlDd   = $('#excelDropdown');
+	        var $xlBtn  = $('#excelButton');
 
-            // Excel Dropdown toggle
-            $xlBtn.on('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                $upDd.removeClass('open');
-                $xlDd.toggleClass('open');
-            });
+	        // Fetch live table row counts immediately on page load
+	        refreshLiveDbCounts();
 
-            // Click outside closes menus
-            $(document).on('click', function (e) {
-                if (!$(e.target).closest('#uploadDropdown').length) { $upDd.removeClass('open'); }
-                if (!$(e.target).closest('#excelDropdown').length) { $xlDd.removeClass('open'); }
-            });
+	        // Upload Dropdown toggle
+	        $upBtn.on('click', function (e) {
+	            e.preventDefault();
+	            e.stopPropagation();
+	            $xlDd.removeClass('open');
+	            $upDd.toggleClass('open');
+	        });
 
-            // Keyboard Escape closes dropdowns
-            $(document).on('keydown', function (e) {
-                if (e.key === 'Escape') {
-                    $upDd.removeClass('open');
-                    $xlDd.removeClass('open');
-                }
-            });
+	        // Excel Dropdown toggle
+	        $xlBtn.on('click', function (e) {
+	            e.preventDefault();
+	            e.stopPropagation();
+	            $upDd.removeClass('open');
+	            $xlDd.toggleClass('open');
+	        });
 
-            // Trigger file input for Upload
-            $('#uploadMenu a').on('click', function (e) {
-                e.preventDefault();
-                currentUploadType = $(this).data('type');
-                $upDd.removeClass('open');
-                $('#excelFileInput').val('');
-                $('#excelFileInput').click();
-            });
+	        // Click outside closes dropdowns
+	        $(document).on('click', function (e) {
+	            if (!$(e.target).closest('#uploadDropdown').length) { $upDd.removeClass('open'); }
+	            if (!$(e.target).closest('#excelDropdown').length) { $xlDd.removeClass('open'); }
+	        });
 
-            // Trigger Excel Download
-            $('#excelMenu a').on('click', function (e) {
-                e.preventDefault();
-                var downloadType = $(this).data('type');
-                $xlDd.removeClass('open');
-                downloadCategoryExcel(downloadType);
-            });
+	        // Escape closes dropdowns
+	        $(document).on('keydown', function (e) {
+	            if (e.key === 'Escape') {
+	                $upDd.removeClass('open');
+	                $xlDd.removeClass('open');
+	            }
+	        });
 
-            // Upload execution
-            $('#excelFileInput').on('change', function (e) {
-                var file = e.target.files[0];
-                if (!file) return;
+	        // Trigger file input for Upload
+	        $('#uploadMenu a').on('click', function (e) {
+	            e.preventDefault();
+	            currentUploadType = $(this).data('type');
+	            $upDd.removeClass('open');
+	            $('#excelFileInput').val('');
+	            $('#excelFileInput').click();
+	        });
 
-                var formData = new FormData();
-                formData.append("file", file);
-                formData.append("type", currentUploadType);
+	        // Trigger Excel Download
+	        $('#excelMenu a').on('click', function (e) {
+	            e.preventDefault();
+	            var downloadType = $(this).data('type');
+	            $xlDd.removeClass('open');
+	            downloadCategoryExcel(downloadType);
+	        });
 
-                $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Uploading & parsing ' + file.name + ' (' + currentUploadType + ')...');
+	        // Upload execution
+	        $('#excelFileInput').on('change', function (e) {
+	            var file = e.target.files[0];
+	            if (!file) return;
 
-                $.ajax({
-                    url: 'SourceDataUpload',
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function (res) {
-                        $('#uploadStatusMsg').hide();
-                        var now = new Date();
-                        var formattedDate = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+	            var formData = new FormData();
+	            formData.append("file", file);
+	            formData.append("type", currentUploadType);
 
-                        // Extract inserted row count returned from Spring Boot
-                        var rowsCount = (res && typeof res.insertedRows !== 'undefined') ? res.insertedRows : 0;
+	            $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Uploading & parsing ' + file.name + ' (' + currentUploadType + ')...');
 
-                        var record = {
-                            id: Date.now(),
-                            fileName: file.name,
-                            uploadDate: formattedDate,
-                            fileSize: (file.size / 1024).toFixed(2) + " KB",
-                            recordsInserted: rowsCount
-                        };
+	            $.ajax({
+	                url: 'SourceDataUpload',
+	                type: 'POST',
+	                data: formData,
+	                processData: false,
+	                contentType: false,
+	                success: function (res) {
+	                    $('#uploadStatusMsg').hide();
+	                    var now = new Date();
+	                    var formattedDate = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-                        uploadedFilesStore[currentUploadType].push(record);
-                        switchCategory(currentUploadType);
-                        updateBadges();
+	                    var rowsInserted = (res && typeof res.insertedRows !== 'undefined') ? res.insertedRows : 0;
+	                    var totalInDb = (res && typeof res.totalRowsInDb !== 'undefined') ? res.totalRowsInDb : rowsInserted;
 
-                        alert("Upload Complete! " + rowsCount + " row(s) inserted into the database for " + currentUploadType + ".");
-                    },
-                    error: function (xhr) {
-                        $('#uploadStatusMsg').hide();
-                        var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
-                        alert("Database upload failed: " + err);
-                    }
-                });
-            });
+	                    // Update current category live count directly
+	                    dbRowCounts[currentUploadType] = totalInDb;
 
-            switchCategory('ATM');
-        });
+	                    var record = {
+	                        id: Date.now(),
+	                        fileName: file.name,
+	                        uploadDate: formattedDate,
+	                        fileSize: (file.size / 1024).toFixed(2) + " KB",
+	                        recordsInserted: rowsInserted
+	                    };
 
-        function switchCategory(cat) {
-            activeCategory = cat;
-            $('.source-header-clickable').removeClass('active');
-            $('[data-header-for="' + cat + '"]').addClass('active');
-            $('#activeCategoryName').text(cat);
-            renderDedicatedList();
-        }
+	                    // Replace current category record so counts do not accumulate in-memory
+	                    uploadedFilesStore[currentUploadType] = [record];
 
-        function updateBadges() {
-            ['CBS', 'ATM', 'POS', 'EPIN', 'VISANET'].forEach(function (cat) {
-                var btn = $('[data-header-for="' + cat + '"]');
-                var files = uploadedFilesStore[cat];
-                var badge = btn.find('.source-badge');
+	                    switchCategory(currentUploadType);
+	                    updateBadges();
 
-                // Sum all inserted rows for this category
-                var totalRows = 0;
-                files.forEach(function (f) { totalRows += f.recordsInserted; });
+	                    alert("Upload Complete!\n" + rowsInserted + " rows uploaded from file.\nCurrent live records in DB: " + totalInDb);
+	                },
+	                error: function (xhr) {
+	                    $('#uploadStatusMsg').hide();
+	                    var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+	                    alert("Database upload failed: " + err);
+	                }
+	            });
+	        });
 
-                badge.text(totalRows + " rows");
-                if (totalRows > 0) {
-                    btn.addClass('has-data');
-                } else {
-                    btn.removeClass('has-data');
-                }
-            });
-        }
+	        switchCategory('ATM');
+	    });
 
-        function renderDedicatedList() {
-            var files = uploadedFilesStore[activeCategory];
-            var $tbody = $('#dedicatedFileTableBody');
-            $tbody.empty();
+	    // Pulls actual SELECT COUNT(*) from Oracle for all tables
+	    function refreshLiveDbCounts() {
+	        $.ajax({
+	            url: 'getSourceDataCounts',
+	            type: 'GET',
+	            success: function (counts) {
+	                if (counts) {
+	                    dbRowCounts = counts;
+	                    updateBadges();
+	                    renderDedicatedList();
+	                }
+	            },
+	            error: function (err) {
+	                console.warn("Could not fetch initial database counts", err);
+	            }
+	        });
+	    }
 
-            var totalRowsCategory = 0;
-            files.forEach(function (f) { totalRowsCategory += f.recordsInserted; });
+	    function switchCategory(cat) {
+	        activeCategory = cat;
+	        $('.source-header-clickable').removeClass('active');
+	        $('[data-header-for="' + cat + '"]').addClass('active');
+	        $('#activeCategoryName').text(cat);
+	        renderDedicatedList();
+	    }
 
-            $('#categoryFileCount').text(files.length + " file(s) | " + totalRowsCategory + " total rows in DB");
+	    function updateBadges() {
+	        ['CBS', 'ATM', 'POS', 'EPIN', 'VISANET'].forEach(function (cat) {
+	            var btn = $('[data-header-for="' + cat + '"]');
+	            var liveCount = dbRowCounts[cat] || 0;
+	            var badge = btn.find('.source-badge');
 
-            if (files.length === 0) {
-                $tbody.append(
-                    '<tr>' +
-                        '<td colspan="4" class="no-data">' +
-                            '<i class="fa fa-folder-open-o"></i>' +
-                            'No files uploaded for <b>' + activeCategory + '</b> yet.<br>' +
-                            '<span style="font-size:12px; color:#888;">Select <b>Upload &gt; ' + activeCategory + '</b> to upload files.</span>' +
-                        '</td>' +
-                    '</tr>'
-                );
-                return;
-            }
+	            badge.text(liveCount.toLocaleString() + " rows");
 
-            files.forEach(function (file) {
-                var badgeClass = file.recordsInserted > 0 ? 'badge-success-count' : 'badge-zero-count';
-                var rowHtml =
-                    '<tr>' +
-                        '<td style="width: 35%;">' +
-                            '<div class="file-name-cell">' +
-                                '<i class="fa fa-file-text-o"></i>' +
-                                '<span>' + file.fileName + '</span>' +
-                            '</div>' +
-                        '</td>' +
-                        '<td style="width: 25%; color: #475569;"><i class="fa fa-clock-o" style="margin-right:6px; color:#94a3b8;"></i>' + file.uploadDate + '</td>' +
-                        '<td style="width: 20%;">' + file.fileSize + '</td>' +
-                        '<td style="width: 20%;">' +
-                            '<span class="' + badgeClass + '">' +
-                                '<i class="fa fa-check-circle"></i> ' + file.recordsInserted + ' rows inserted' +
-                            '</span>' +
-                        '</td>' +
-                    '</tr>';
-                $tbody.append(rowHtml);
-            });
-        }
+	            if (liveCount > 0) {
+	                btn.addClass('has-data');
+	            } else {
+	                btn.removeClass('has-data');
+	            }
+	        });
+	    }
 
-        function downloadCategoryExcel(type) {
-            window.location.href = "SourceDataExportExcel?type=" + encodeURIComponent(type);
-        }
+	    function renderDedicatedList() {
+	        var files = uploadedFilesStore[activeCategory] || [];
+	        var $tbody = $('#dedicatedFileTableBody');
+	        $tbody.empty();
 
-        function extractData() {
-            if (!confirm("Start 3-way VISA reconciliation (VISA + CBS + Switch)?")) {
-                return;
-            }
+	        var liveCount = dbRowCounts[activeCategory] || 0;
+	        $('#categoryFileCount').text(files.length + " file(s) | " + liveCount.toLocaleString() + " total records in DB");
 
-            $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Executing VISA Reconciliation process...');
+	        if (files.length === 0) {
+	            $tbody.append(
+	                '<tr>' +
+	                    '<td colspan="4" class="no-data">' +
+	                        '<i class="fa fa-folder-open-o"></i>' +
+	                        'No file uploaded this session for <b>' + activeCategory + '</b>.<br>' +
+	                        '<span style="font-size:12px; color:#555;">Live records currently in DB: <b>' + liveCount.toLocaleString() + '</b></span>' +
+	                    '</td>' +
+	                '</tr>'
+	            );
+	            return;
+	        }
 
-            $.ajax({
-                url: 'runVisaReconciliation',
-                type: 'POST',
-                data: { reconDate: '' },
-                success: function(res) {
-                    $('#uploadStatusMsg').hide();
-                    alert(res.message);
-                    if (confirm("Reconciliation complete. Download Failed Transaction Refund Report now?")) {
-                        window.location.href = 'downloadFailedRefundReport';
-                    }
-                },
-                error: function(xhr) {
-                    $('#uploadStatusMsg').hide();
-                    var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
-                    alert("Reconciliation failed: " + err);
-                }
-            });
-        }
-    </script>
+	        files.forEach(function (file) {
+	            var badgeClass = file.recordsInserted > 0 ? 'badge-success-count' : 'badge-zero-count';
+	            var rowHtml =
+	                '<tr>' +
+	                    '<td style="width: 35%;">' +
+	                        '<div class="file-name-cell">' +
+	                            '<i class="fa fa-file-text-o"></i>' +
+	                            '<span>' + file.fileName + '</span>' +
+	                        '</div>' +
+	                    '</td>' +
+	                    '<td style="width: 25%; color: #475569;"><i class="fa fa-clock-o" style="margin-right:6px; color:#94a3b8;"></i>' + file.uploadDate + '</td>' +
+	                    '<td style="width: 20%;">' + file.fileSize + '</td>' +
+	                    '<td style="width: 20%;">' +
+	                        '<span class="' + badgeClass + '">' +
+	                            '<i class="fa fa-check-circle"></i> ' + file.recordsInserted.toLocaleString() + ' rows added' +
+	                        '</span>' +
+	                    '</td>' +
+	                '</tr>';
+	            $tbody.append(rowHtml);
+	        });
+	    }
+
+	    function downloadCategoryExcel(type) {
+	        window.location.href = "SourceDataExportExcel?type=" + encodeURIComponent(type);
+	    }
+
+	    function extractData() {
+	        if (!confirm("Start 3-way VISA reconciliation (VISA + CBS + Switch)?")) {
+	            return;
+	        }
+
+	        $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Executing VISA Reconciliation process...');
+
+	        $.ajax({
+	            url: 'runVisaReconciliation',
+	            type: 'POST',
+	            data: { reconDate: '' },
+	            success: function(res) {
+	                $('#uploadStatusMsg').hide();
+	                alert(res.message);
+	                refreshLiveDbCounts();
+	                if (confirm("Reconciliation complete. Download Failed Transaction Refund Report now?")) {
+	                    window.location.href = 'downloadFailedRefundReport';
+	                }
+	            },
+	            error: function(xhr) {
+	                $('#uploadStatusMsg').hide();
+	                var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+	                alert("Reconciliation failed: " + err);
+	            }
+	        });
+	    }
+	</script>
 </head>
 
 <body>

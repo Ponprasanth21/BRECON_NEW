@@ -350,4 +350,48 @@ public class FatcaManagementService {
                   .replace("\"", "&quot;")
                   .replace("'", "&apos;");
     }
+    
+    public String generateSingleFatcaXml(String refNo) {
+        // 1. Fetch only this specific record from DB
+        // e.g., using refNo or UNIQUE_REF_ID
+        Map<String, Object> row = jdbcTemplate.queryForMap(
+            "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE REF_NO = ? AND ROWNUM = 1", refNo);
+
+        // 2. Build the XML structure for just this one record
+        StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        xml.append("<MCIB>\n");
+        xml.append("  <BANK grp_id=\"BARB\">\n");
+        xml.append("    <CREDIT>\n");
+        xml.append("      <ENTITY_CODE>").append(row.get("ENTITY_CODE")).append("</ENTITY_CODE>\n");
+        xml.append("      <ENTITY_TYPE>").append(row.get("ENTITY_TYPE")).append("</ENTITY_TYPE>\n");
+        xml.append("      <COUNTRY_CODE>").append(row.get("COUNTRY_CODE")).append("</COUNTRY_CODE>\n");
+        xml.append("      <RECORD_STATUS>").append(row.get("RECORD_STATUS")).append("</RECORD_STATUS>\n");
+        xml.append("      <REF_NO>").append(row.get("REF_NO")).append("</REF_NO>\n");
+        xml.append("      <UNIQUE_REF_ID>").append(row.get("UNIQUE_REF_ID")).append("</UNIQUE_REF_ID>\n");
+        xml.append("      <CREDIT_TYPE>").append(row.get("CREDIT_TYPE")).append("</CREDIT_TYPE>\n");
+        xml.append("      <CURR>").append(row.get("CURRENCY") != null ? row.get("CURRENCY") : "").append("</CURR>\n");
+        xml.append("      <DATE_UPDATE>").append(row.get("DATE_UPDATE") != null ? row.get("DATE_UPDATE") : "").append("</DATE_UPDATE>\n");
+        xml.append("      <AMOUNT_ARRS>").append(row.get("AMOUNT_ARRS") != null ? row.get("AMOUNT_ARRS") : "").append("</AMOUNT_ARRS>\n");
+        xml.append("      <DATE_DEFAULT>").append(row.get("DATE_DEFAULT") != null ? row.get("DATE_DEFAULT") : "").append("</DATE_DEFAULT>\n");
+        xml.append("      <TYPE_CLASS>").append(row.get("TYPE_CLASS")).append("</TYPE_CLASS>\n");
+        xml.append("    </CREDIT>\n");
+        xml.append("  </BANK>\n");
+        xml.append("</MCIB>");
+
+        return xml.toString();
+    }
+    
+    public Map<String, Object> getFatcaRecordDetails(String refNo) {
+        String sql = "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE REF_NO = ? AND ROWNUM = 1";
+        try {
+            return jdbcTemplate.queryForMap(sql, refNo);
+        } catch (Exception ex) {
+            // Fallback by UNIQUE_REF_ID if refNo lookup fails
+            String sqlFallback = "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE UNIQUE_REF_ID = ? AND ROWNUM = 1";
+            return jdbcTemplate.queryForMap(sqlFallback, refNo);
+        }
+    }
+    
+    
 }
