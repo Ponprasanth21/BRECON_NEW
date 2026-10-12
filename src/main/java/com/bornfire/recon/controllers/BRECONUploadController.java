@@ -21,6 +21,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -356,8 +358,12 @@ public class BRECONUploadController {
     }
     
     
+ // =========================================================================
+    // 1. SINGLE RECORD DELETE (With explicit Transaction Commit)
+    // =========================================================================
     @PostMapping("/deleteFailedRecord")
     @ResponseBody
+    @Transactional(propagation = Propagation.REQUIRED)
     public ResponseEntity<Map<String, Object>> deleteFailedRecord(@RequestParam("failId") Long failId) {
         Map<String, Object> response = new HashMap<>();
         try {
@@ -375,15 +381,19 @@ public class BRECONUploadController {
                 return ResponseEntity.badRequest().body(response);
             }
         } catch (Exception e) {
+            logger.error("Error deleting failed record ID: {}", failId, e);
             response.put("status", "ERROR");
             response.put("message", "Database Error: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
     }
-    
-    
+
+    // =========================================================================
+    // 2. MULTIPLE RECORD BULK DELETE (With explicit Transaction Commit)
+    // =========================================================================
     @PostMapping("/deleteMultipleFailedRecords")
     @ResponseBody
+    @Transactional(propagation = Propagation.REQUIRED)
     public ResponseEntity<Map<String, Object>> deleteMultipleFailedRecords(@RequestParam("failIds") List<Long> failIds) {
         Map<String, Object> response = new HashMap<>();
 
@@ -394,7 +404,6 @@ public class BRECONUploadController {
         }
 
         try {
-            // Generates placeholders (?, ?, ...) for SQL IN clause
             String placeholders = String.join(",", Collections.nCopies(failIds.size(), "?"));
             String sql = "DELETE FROM BRECON.UPLOAD_FAILED_RECORDS WHERE FAIL_ID IN (" + placeholders + ")";
 
@@ -405,6 +414,33 @@ public class BRECONUploadController {
             response.put("message", rowsDeleted + " record(s) deleted successfully.");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            logger.error("Error bulk deleting records: {}", failIds, e);
+            response.put("status", "ERROR");
+            response.put("message", "Database Error: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // =========================================================================
+    // 3. DELETE ALL FAILED RECORDS (With explicit Transaction Commit)
+    // =========================================================================
+    @PostMapping("/deleteAllFailedRecords")
+    @ResponseBody
+    @Transactional(propagation = Propagation.REQUIRED)
+    public ResponseEntity<Map<String, Object>> deleteAllFailedRecords(@RequestParam("sourceType") String sourceType) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            int rowsDeleted = jdbcTemplate.update(
+                "DELETE FROM BRECON.UPLOAD_FAILED_RECORDS WHERE UPPER(SOURCE_TYPE) = UPPER(?) AND STATUS = 'PENDING'",
+                sourceType
+            );
+
+            response.put("status", "SUCCESS");
+            response.put("deletedCount", rowsDeleted);
+            response.put("message", "All " + rowsDeleted + " record(s) deleted successfully for " + sourceType.toUpperCase() + ".");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error deleting all failed records for type: {}", sourceType, e);
             response.put("status", "ERROR");
             response.put("message", "Database Error: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
@@ -480,6 +516,8 @@ public class BRECONUploadController {
             logger.error("Error generating failed records Excel export", e);
         }
     }
+    
+
 
     // =========================================================================
     // VISA RECONCILIATION & REPORTS

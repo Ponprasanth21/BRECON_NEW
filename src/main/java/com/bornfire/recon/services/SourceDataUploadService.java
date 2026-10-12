@@ -3,6 +3,7 @@ package com.bornfire.recon.services;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.CallableStatement;
 import java.sql.Connection;
@@ -31,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class SourceDataUploadService {
 
     private static final Logger logger = LoggerFactory.getLogger(SourceDataUploadService.class);
+    private static final int CHUNK_SIZE = 1000; // Optimal batch size for Oracle multi-column tables
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -103,32 +105,67 @@ public class SourceDataUploadService {
         if (col == null) return "";
         String s = col.trim().toUpperCase();
         if (s.contains("TRAN_RMKS")) return "TRAN_RMKS";
-        if (s.contains(".")) {
-            s = s.substring(s.lastIndexOf('.') + 1);
-        }
+        if (s.contains(".")) s = s.substring(s.lastIndexOf('.') + 1);
         return s.replaceAll("[^A-Z0-9_]", "");
     }
 
     // =========================================================================
-    // 1. MAIN TRANSACTION FILE UPLOAD (RETURNS BOTH INSERTED & FAILED COUNTS)
+    // FAST CELL EXTRACTOR (Compatible with POI 3.x, 4.x, and 5.x)
+    // =========================================================================
+    private String getFastCellValue(Cell cell) {
+        if (cell == null) return null;
+        try {
+            String typeStr = String.valueOf(cell.getCellType()).toUpperCase();
+
+            if (typeStr.contains("STRING") || "1".equals(typeStr)) {
+                String s = cell.getStringCellValue().trim();
+                return s.isEmpty() ? null : s;
+            } else if (typeStr.contains("NUMERIC") || "0".equals(typeStr)) {
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    Date date = cell.getDateCellValue();
+                    return date != null ? new SimpleDateFormat("yyyy-MM-dd").format(date) : null;
+                }
+                double num = cell.getNumericCellValue();
+                if (num == (long) num) {
+                    return String.valueOf((long) num);
+                }
+                return BigDecimal.valueOf(num).toPlainString();
+            } else if (typeStr.contains("BOOLEAN") || "4".equals(typeStr)) {
+                return String.valueOf(cell.getBooleanCellValue());
+            } else if (typeStr.contains("FORMULA") || "2".equals(typeStr)) {
+                try {
+                    return cell.getStringCellValue().trim();
+                } catch (Exception e) {
+                    double n = cell.getNumericCellValue();
+                    if (n == (long) n) return String.valueOf((long) n);
+                    return BigDecimal.valueOf(n).toPlainString();
+                }
+            } else {
+                return null;
+            }
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    // =========================================================================
+    // MAIN TRANSACTION FILE UPLOAD ROUTER
     // =========================================================================
     public Map<String, Object> uploadTransactionFile(MultipartFile file, String type, String userId) throws Exception {
         Map<String, Object> result = new HashMap<>();
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
         boolean isCbs = "CBS".equalsIgnoreCase(type);
         boolean isEpin = "EPIN".equalsIgnoreCase(type);
+        boolean isAtm = "ATM".equalsIgnoreCase(type);
+        boolean isPos = "POS".equalsIgnoreCase(type);
         boolean isEpin745 = "VISANET".equalsIgnoreCase(type) || "VISA_NET".equalsIgnoreCase(type) ||
                             "EPIN745".equalsIgnoreCase(type) || "EP745".equalsIgnoreCase(type);
 
-        // EPIN Text
+        // 1. EPIN Text Handler
         if (isEpin && fileName.endsWith(".txt")) {
             String reportDateStr = new SimpleDateFormat("dd-MM-yy").format(new Date());
-            try {
-                jdbcTemplate.update("DELETE FROM BRECON.BRECON_EPIN_TEXT_TABLE WHERE UP_DATE = TO_DATE(?, 'DD-MM-YY')", reportDateStr);
-            } catch (Exception ignored) {}
-            try {
-                jdbcTemplate.update("DELETE FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE WHERE TO_CHAR(ENTRY_TIME, 'DD-MM-YY') = ?", reportDateStr);
-            } catch (Exception ignored) {}
+            try { jdbcTemplate.update("TRUNCATE TABLE BRECON.BRECON_EPIN_TEXT_TABLE"); } catch (Exception ignored) {}
+            try { jdbcTemplate.update("DELETE FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE WHERE TO_CHAR(ENTRY_TIME, 'DD-MM-YY') = ?", reportDateStr); } catch (Exception ignored) {}
 
             uploadRawEpinTextFile(file, reportDateStr);
             executeCompanyEpinProcedure(reportDateStr);
@@ -139,7 +176,7 @@ public class SourceDataUploadService {
             return result;
         }
 
-        // EP745 Text
+        // 2. EP745 Text Handler
         if (isEpin745 && (fileName.endsWith(".txt") || fileName.endsWith(".csv"))) {
             int inserted = uploadEpin745File(file, userId);
             result.put("insertedRows", inserted);
@@ -147,169 +184,307 @@ public class SourceDataUploadService {
             return result;
         }
 
-        String targetTable = "ATM".equalsIgnoreCase(type) ? "BRECON.ATM_TRANSACTION_DATA" :
-                             "POS".equalsIgnoreCase(type) ? "BRECON.POS_TRANSATION_DATA" :
+        String targetTable = isAtm ? "BRECON.ATM_TRANSACTION_DATA" :
+                             isPos ? "BRECON.POS_TRANSATION_DATA" :
                              isCbs ? "BRECON.CBS_TXN" : "BRECON.BRECON_CARD_EP745_DATA_TABLE";
 
         String[] targetColumns = isCbs ? CBS_COLUMNS : isEpin745 ? EPIN745_COLUMNS : DB_COLUMNS;
-        int insertedCount = 0;
-        int failedCount = 0;
 
-        DataFormatter formatter = new DataFormatter();
-        try (InputStream is = file.getInputStream();
-             Workbook workbook = WorkbookFactory.create(is)) {
-
-            Sheet sheet = workbook.getSheetAt(0);
-            if (sheet == null || sheet.getPhysicalNumberOfRows() <= 1) {
-                result.put("insertedRows", 0);
-                result.put("failedRows", 0);
-                return result;
+        StringBuilder sql = new StringBuilder("INSERT INTO ").append(targetTable).append(" (");
+        StringBuilder placeholders = new StringBuilder(" VALUES (");
+        for (int i = 0; i < targetColumns.length; i++) {
+            sql.append("\"").append(targetColumns[i]).append("\"");
+            placeholders.append("?");
+            if (i < targetColumns.length - 1) {
+                sql.append(", ");
+                placeholders.append(", ");
             }
+        }
+        sql.append(")").append(placeholders).append(")");
+        final String insertSql = sql.toString();
+        final int numColumns = targetColumns.length;
 
-            // Map Headers
-            Row headerRow = sheet.getRow(0);
-            Map<String, Integer> colMap = new HashMap<>();
-            for (int c = 0; c < headerRow.getLastCellNum(); c++) {
-                Cell cell = headerRow.getCell(c);
-                if (cell != null) {
-                    colMap.put(cleanKey(formatter.formatCellValue(cell)), c);
+        Timestamp currentTime = new Timestamp(System.currentTimeMillis());
+        String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
+
+        int totalInserted = 0;
+        int totalFailed = 0;
+        List<Object[]> chunk = new ArrayList<>(CHUNK_SIZE);
+        long startTime = System.currentTimeMillis();
+
+        // --- CSV / TEXT STREAMING ---
+        if (fileName.endsWith(".csv") || fileName.endsWith(".txt")) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+                String headerLine = reader.readLine();
+                if (headerLine == null || headerLine.trim().isEmpty()) {
+                    result.put("insertedRows", 0);
+                    result.put("failedRows", 0);
+                    return result;
                 }
-            }
 
-            // Prepare single-row INSERT SQL
-            StringBuilder sql = new StringBuilder("INSERT INTO ").append(targetTable).append(" (");
-            StringBuilder ph = new StringBuilder(" VALUES (");
-            for (int i = 0; i < targetColumns.length; i++) {
-                sql.append("\"").append(targetColumns[i]).append("\"");
-                ph.append("?");
-                if (i < targetColumns.length - 1) {
-                    sql.append(", ");
-                    ph.append(", ");
+                String delimiter = headerLine.contains(",") ? "," : "\\|";
+                String[] headers = headerLine.split(delimiter);
+                Map<String, Integer> colIndexMap = new HashMap<>();
+                for (int i = 0; i < headers.length; i++) {
+                    String norm = cleanKey(headers[i]);
+                    if (!norm.isEmpty()) colIndexMap.put(norm, i);
                 }
-            }
-            sql.append(")").append(ph).append(")");
-            String insertSql = sql.toString();
 
-            Timestamp currentTime = new Timestamp(System.currentTimeMillis());
-            String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().isEmpty()) continue;
+                    String[] tokens = line.split(delimiter, -1);
+                    Object[] rowValues = new Object[numColumns];
+                    boolean hasData = false;
 
-            for (int r = 1; r <= sheet.getLastRowNum(); r++) {
-                Row row = sheet.getRow(r);
-                if (row == null) continue;
-
-                // Extract Validation Fields
-                String tranDt = getCellVal(row, colMap.get(cleanKey("TRAN_DT")), formatter);
-                String rrn = getCellVal(row, colMap.get(cleanKey("AUTHX_SEQ_NUM")), formatter);
-                String cardNo = getCellVal(row, colMap.get(cleanKey("HEADX_CRD_CARD_CRD_NUM")), formatter);
-                String authId = getCellVal(row, colMap.get(cleanKey("AUTHX_APPRV_CDE")), formatter);
-                String amtStr = getCellVal(row, colMap.get(cleanKey("AUTHX_AMT_1")), formatter);
-                String authTyp = getCellVal(row, colMap.get(cleanKey("AUTHX_TYP")), formatter);
-
-                if (authTyp.isEmpty()) authTyp = "210";
-
-                // --- 1. VALIDATION CHECKS (FOR ATM / POS) ---
-                if ("ATM".equalsIgnoreCase(type) || "POS".equalsIgnoreCase(type)) {
-                    if (rrn.isEmpty() || "null".equalsIgnoreCase(rrn)) {
-                        logFailedRecord(type, cardNo, "N/A", authId, amtStr, tranDt, "Missing Mandatory RRN");
-                        failedCount++;
-                        continue;
+                    for (int i = 0; i < numColumns; i++) {
+                        String col = targetColumns[i];
+                        if ("ENTRY_TIME".equals(col)) rowValues[i] = currentTime;
+                        else if ("ENTRY_USER".equals(col)) rowValues[i] = effectiveUser;
+                        else if ("DEL_FLAG".equals(col) && !isCbs && !isEpin745) rowValues[i] = "N";
+                        else if ("ENTITY_FLAG".equals(col) && !isCbs && !isEpin745) rowValues[i] = "Y";
+                        else if ("MODIFY_FLAG".equals(col) && !isCbs && !isEpin745) rowValues[i] = "N";
+                        else {
+                            Integer idx = colIndexMap.get(cleanKey(col));
+                            if (idx != null && idx >= 0 && idx < tokens.length) {
+                                String val = tokens[idx].trim().replaceAll("^\"|\"$", "");
+                                if (!val.isEmpty()) {
+                                    hasData = true;
+                                    rowValues[i] = val;
+                                }
+                            }
+                        }
                     }
 
-                    if (cardNo.length() < 13 || cardNo.length() > 19 || !cardNo.matches("^[0-9xX]+$")) {
-                        logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Invalid Card Number: Must be 13-19 digits or masked");
-                        failedCount++;
-                        continue;
+                    if (hasData) {
+                        chunk.add(rowValues);
+                        if (chunk.size() >= CHUNK_SIZE) {
+                            totalInserted += executeBatchChunk(insertSql, chunk, numColumns);
+                            chunk.clear();
+                        }
                     }
+                }
+            }
+        } 
+        // --- EXCEL STREAMING ---
+        else {
+            try (InputStream is = file.getInputStream();
+                 Workbook workbook = WorkbookFactory.create(is)) {
 
-                    try {
-                        double parsedAmt = Double.parseDouble(amtStr.replace(",", ""));
-                        if (parsedAmt < 0) {
-                            logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Amount Format Mismatch: Negative Amount");
-                            failedCount++;
+                Sheet sheet = workbook.getSheetAt(0);
+                if (sheet == null || sheet.getPhysicalNumberOfRows() <= 1) {
+                    result.put("insertedRows", 0);
+                    result.put("failedRows", 0);
+                    return result;
+                }
+
+                Row headerRow = sheet.getRow(0);
+                Map<String, Integer> colMap = new HashMap<>();
+                for (int c = 0; c < headerRow.getLastCellNum(); c++) {
+                    Cell cell = headerRow.getCell(c);
+                    if (cell != null) {
+                        String name = getFastCellValue(cell);
+                        if (name != null) colMap.put(cleanKey(name), c);
+                    }
+                }
+
+                int lastRow = sheet.getLastRowNum();
+
+                // BRANCH A: ATM & POS -> Row-by-row validation & logging to failure queue
+                if (isAtm || isPos) {
+                    for (int r = 1; r <= lastRow; r++) {
+                        Row row = sheet.getRow(r);
+                        if (row == null) continue;
+
+                        String tranDt  = getCellFast(row, colMap.get(cleanKey("TRAN_DT")));
+                        String rrn     = getCellFast(row, colMap.get(cleanKey("AUTHX_SEQ_NUM")));
+                        String cardNo  = getCellFast(row, colMap.get(cleanKey("HEADX_CRD_CARD_CRD_NUM")));
+                        String authId  = getCellFast(row, colMap.get(cleanKey("AUTHX_APPRV_CDE")));
+                        String amtStr  = getCellFast(row, colMap.get(cleanKey("AUTHX_AMT_1")));
+                        String authTyp = getCellFast(row, colMap.get(cleanKey("AUTHX_TYP")));
+                        if (authTyp == null || authTyp.isEmpty()) authTyp = "210";
+
+                        if (rrn == null || rrn.isEmpty() || "null".equalsIgnoreCase(rrn)) {
+                            logFailedRecord(type, cardNo, "N/A", authId, amtStr, tranDt, "Missing Mandatory RRN");
+                            totalFailed++;
                             continue;
                         }
-                    } catch (Exception ex) {
-                        logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Amount Format Mismatch: Non-numeric value");
-                        failedCount++;
-                        continue;
-                    }
 
-                    // Pre-check for duplicate in DB
-                    Integer exists = jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM " + targetTable + " " +
-                        "WHERE AUTHX_SEQ_NUM = ? AND AUTHX_APPRV_CDE = ? AND TRAN_DT = ? AND AUTHX_TYP = ?",
-                        Integer.class, rrn, authId, tranDt, authTyp
-                    );
+                        if (cardNo == null || cardNo.length() < 13 || cardNo.length() > 19 || !cardNo.matches("^[0-9xX]+$")) {
+                            logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Invalid Card Number: Must be 13-19 digits or masked");
+                            totalFailed++;
+                            continue;
+                        }
 
-                    if (exists != null && exists > 0) {
-                        logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Duplicate Record: Key already exists in Database");
-                        failedCount++;
-                        continue;
-                    }
-                }
-
-                // --- 2. PREPARE ROW PARAMS & EXECUTE INSERT ---
-                Object[] rowValues = new Object[targetColumns.length];
-                boolean hasData = false;
-
-                for (int i = 0; i < targetColumns.length; i++) {
-                    String col = targetColumns[i];
-                    if ("ENTRY_TIME".equals(col)) {
-                        rowValues[i] = currentTime;
-                    } else if ("ENTRY_USER".equals(col)) {
-                        rowValues[i] = effectiveUser;
-                    } else if ("DEL_FLAG".equals(col) && !isCbs && !isEpin745) {
-                        rowValues[i] = "N";
-                    } else if ("ENTITY_FLAG".equals(col) && !isCbs && !isEpin745) {
-                        rowValues[i] = "Y";
-                    } else if ("MODIFY_FLAG".equals(col) && !isCbs && !isEpin745) {
-                        rowValues[i] = "N";
-                    } else {
-                        Integer cIdx = colMap.get(cleanKey(col));
-                        if (cIdx != null) {
-                            String val = getCellVal(row, cIdx, formatter);
-                            if (!val.isEmpty()) {
-                                hasData = true;
-                                rowValues[i] = val;
-                            } else {
-                                rowValues[i] = null;
+                        try {
+                            double parsedAmt = Double.parseDouble((amtStr != null ? amtStr : "0").replace(",", ""));
+                            if (parsedAmt < 0) {
+                                logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Amount Format Mismatch: Negative Amount");
+                                totalFailed++;
+                                continue;
                             }
-                        } else {
-                            rowValues[i] = null;
+                        } catch (Exception ex) {
+                            logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Amount Format Mismatch: Non-numeric value");
+                            totalFailed++;
+                            continue;
+                        }
+
+                        Integer exists = jdbcTemplate.queryForObject(
+                            "SELECT COUNT(*) FROM " + targetTable + " " +
+                            "WHERE AUTHX_SEQ_NUM = ? AND AUTHX_APPRV_CDE = ? AND TRAN_DT = ? AND AUTHX_TYP = ?",
+                            Integer.class, rrn, authId, tranDt, authTyp
+                        );
+
+                        if (exists != null && exists > 0) {
+                            logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Duplicate Record: Key already exists in Database");
+                            totalFailed++;
+                            continue;
+                        }
+
+                        Object[] rowValues = new Object[numColumns];
+                        boolean hasData = false;
+                        for (int i = 0; i < numColumns; i++) {
+                            String col = targetColumns[i];
+                            if ("ENTRY_TIME".equals(col)) rowValues[i] = currentTime;
+                            else if ("ENTRY_USER".equals(col)) rowValues[i] = effectiveUser;
+                            else if ("DEL_FLAG".equals(col)) rowValues[i] = "N";
+                            else if ("ENTITY_FLAG".equals(col)) rowValues[i] = "Y";
+                            else if ("MODIFY_FLAG".equals(col)) rowValues[i] = "N";
+                            else {
+                                Integer cIdx = colMap.get(cleanKey(col));
+                                if (cIdx != null) {
+                                    String val = getCellFast(row, cIdx);
+                                    if (val != null) {
+                                        hasData = true;
+                                        rowValues[i] = val;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!hasData) continue;
+
+                        try {
+                            jdbcTemplate.update(insertSql, rowValues);
+                            totalInserted++;
+                        } catch (org.springframework.dao.DuplicateKeyException dke) {
+                            logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Duplicate Record: Constraint Violated");
+                            totalFailed++;
+                        } catch (Exception ex) {
+                            logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "DB Insert Error: " + ex.getMessage());
+                            totalFailed++;
                         }
                     }
-                }
+                } 
+                // BRANCH B: CBS & OTHERS -> 1000-Row Chunk Batch Streaming
+                else {
+                    for (int r = 1; r <= lastRow; r++) {
+                        Row row = sheet.getRow(r);
+                        if (row == null) continue;
 
-                if (!hasData) continue;
+                        Object[] rowValues = new Object[numColumns];
+                        boolean hasData = false;
 
-                try {
-                    jdbcTemplate.update(insertSql, rowValues);
-                    insertedCount++;
-                } catch (org.springframework.dao.DuplicateKeyException dke) {
-                    logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Duplicate Record: Constraint Violated");
-                    failedCount++;
-                } catch (Exception ex) {
-                    logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "DB Insert Error: " + ex.getMessage());
-                    failedCount++;
+                        for (int i = 0; i < numColumns; i++) {
+                            String col = targetColumns[i];
+                            if ("ENTRY_TIME".equals(col)) {
+                                rowValues[i] = currentTime;
+                            } else if ("ENTRY_USER".equals(col)) {
+                                rowValues[i] = effectiveUser;
+                            } else if ("DEL_FLAG".equals(col) && !isCbs && !isEpin745) {
+                                rowValues[i] = "N";
+                            } else if ("ENTITY_FLAG".equals(col) && !isCbs && !isEpin745) {
+                                rowValues[i] = "Y";
+                            } else if ("MODIFY_FLAG".equals(col) && !isCbs && !isEpin745) {
+                                rowValues[i] = "N";
+                            } else {
+                                Integer cIdx = colMap.get(cleanKey(col));
+                                if (cIdx != null) {
+                                    String val = getCellFast(row, cIdx);
+                                    if (val != null) {
+                                        hasData = true;
+                                        rowValues[i] = val;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (hasData) {
+                            chunk.add(rowValues);
+                            if (chunk.size() >= CHUNK_SIZE) {
+                                totalInserted += executeBatchChunk(insertSql, chunk, numColumns);
+                                chunk.clear();
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        result.put("insertedRows", insertedCount);
-        result.put("failedRows", failedCount);
+        // Flush remaining chunk
+        if (!chunk.isEmpty()) {
+            totalInserted += executeBatchChunk(insertSql, chunk, numColumns);
+            chunk.clear();
+        }
+
+        long elapsed = System.currentTimeMillis() - startTime;
+        logger.info("Upload Completed for [{}] in {} ms: {} rows inserted, {} rows failed", 
+                    type, elapsed, totalInserted, totalFailed);
+
+        result.put("insertedRows", totalInserted);
+        result.put("failedRows", totalFailed);
         return result;
     }
 
-    private String getCellVal(Row row, Integer idx, DataFormatter formatter) {
-        if (idx == null || idx < 0) return "";
+    private String getCellFast(Row row, Integer idx) {
+        if (row == null || idx == null || idx < 0) return null;
         Cell cell = row.getCell(idx, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
-        if (cell == null) return "";
-        return formatter.formatCellValue(cell).trim();
+        return getFastCellValue(cell);
+    }
+
+    private int executeBatchChunk(String sql, List<Object[]> batch, int numColumns) {
+        int[] counts = jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                Object[] row = batch.get(i);
+                for (int colIndex = 0; colIndex < numColumns; colIndex++) {
+                    Object val = (colIndex < row.length) ? row[colIndex] : null;
+                    if (val != null) {
+                        ps.setString(colIndex + 1, val.toString());
+                    } else {
+                        ps.setNull(colIndex + 1, Types.VARCHAR);
+                    }
+                }
+            }
+            @Override
+            public int getBatchSize() {
+                return batch.size();
+            }
+        });
+        return counts.length;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logFailedRecord(String src, String card, String rrn, String auth, String amt, String dt, String reason) {
         try {
+            // Check if this exact failure record is already logged as PENDING to prevent re-inserting it repeatedly
+            Integer existingPendingCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM BRECON.UPLOAD_FAILED_RECORDS " +
+                "WHERE UPPER(SOURCE_TYPE) = UPPER(?) " +
+                "  AND NVL(RAW_RRN, 'N/A') = NVL(?, 'N/A') " +
+                "  AND NVL(RAW_AUTH_ID, 'N/A') = NVL(?, 'N/A') " +
+                "  AND NVL(RAW_TRAN_DATE, 'N/A') = NVL(?, 'N/A') " +
+                "  AND STATUS = 'PENDING'",
+                Integer.class,
+                src, rrn, auth, dt
+            );
+
+            if (existingPendingCount != null && existingPendingCount > 0) {
+                // Already in the queue; skip duplicate entry
+                return;
+            }
+
+            // Insert single clean failure record
             jdbcTemplate.update(
                 "INSERT INTO BRECON.UPLOAD_FAILED_RECORDS " +
                 "(SOURCE_TYPE, RAW_CARD_NO, RAW_RRN, RAW_AUTH_ID, RAW_AMOUNT, RAW_TRAN_DATE, ERROR_REASON, STATUS) " +
@@ -321,7 +496,6 @@ public class SourceDataUploadService {
         }
     }
 
-    // EP745 Parser (same as existing)
     @Transactional
     public int uploadEpin745File(MultipartFile file, String userId) throws Exception {
         List<Object[]> batchParams = new ArrayList<>();

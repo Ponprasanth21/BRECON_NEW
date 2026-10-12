@@ -272,7 +272,7 @@
             border-radius: 6px;
         }
 
-        /* Buttons & Toolbar */
+        /* Toolbar & Action Buttons */
         .failed-toolbar {
             display: flex;
             align-items: center;
@@ -344,6 +344,22 @@
         }
         .bulk-delete-btn:hover { background: #b91c1c; }
 
+        .delete-all-btn {
+            background: #991b1b;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background .15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .delete-all-btn:hover { background: #7f1d1d; }
+
         .checkbox-cell {
             text-align: center !important;
             width: 38px;
@@ -352,6 +368,65 @@
             cursor: pointer;
             width: 15px;
             height: 15px;
+        }
+
+        /* Pagination Styles */
+        .table-pagination-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: #ffffff;
+            border-top: 1px solid var(--line);
+            font-size: 12.5px;
+            color: var(--ink);
+        }
+
+        .pagination-page-size-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pagination-page-size-wrap select {
+            padding: 3px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            font-size: 12px;
+            outline: none;
+            background: #ffffff;
+        }
+
+        .pagination-nav-wrap {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .pagination-btn {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: var(--ink);
+            cursor: pointer;
+            transition: all .15s ease;
+        }
+        .pagination-btn:hover:not(:disabled) {
+            background: var(--head-bg);
+            border-color: var(--brand);
+            color: var(--brand-dark);
+        }
+        .pagination-btn.active {
+            background: var(--brand);
+            color: #ffffff;
+            border-color: var(--brand);
+            font-weight: bold;
+        }
+        .pagination-btn:disabled {
+            background: #f1f5f9;
+            color: #94a3b8;
+            cursor: not-allowed;
+            border-color: #e2e8f0;
         }
 
         .no-data {
@@ -383,7 +458,7 @@
         }
         .source-btn:hover { background: var(--head-bg); border-color: var(--brand); color: #000; }
 
-        /* MODAL POPUPS (COMMON STYLING) */
+        /* MODAL POPUPS */
         .failed-modal-overlay {
             display: none;
             position: fixed;
@@ -516,7 +591,14 @@
         var dbRowCounts = { CBS: 0, ATM: 0, POS: 0, EPIN: 0, VISANET: 0 };
         var uploadedFilesStore = { CBS: [], ATM: [], POS: [], EPIN: [], VISANET: [] };
 
+        // Confirmation modal callback
         var currentConfirmCallback = null;
+
+        // Pagination & Multi-Selection Cache for Failed Records
+        var failedRecordsDataset = [];
+        var currentPageFailed = 1;
+        var pageSizeFailed = 10;
+        var selectedFailedIds = new Set();
 
         $(function () {
             var $upDd  = $('#uploadDropdown');
@@ -569,19 +651,39 @@
                 downloadCategoryExcel(downloadType);
             });
 
-            // Master "Select All" Checkbox
+            // Master "Select All" on current page
             $('#selectAllFailed').on('change', function () {
                 var checked = $(this).is(':checked');
-                $('.row-select-checkbox').prop('checked', checked);
+                $('.row-select-checkbox').each(function () {
+                    var id = String($(this).val());
+                    $(this).prop('checked', checked);
+                    if (checked) {
+                        selectedFailedIds.add(id);
+                    } else {
+                        selectedFailedIds.delete(id);
+                    }
+                });
                 updateBulkDeleteButton();
             });
 
-            // Row Checkbox
+            // Row-level Checkbox delegation
             $(document).on('change', '.row-select-checkbox', function () {
-                var total = $('.row-select-checkbox').length;
-                var checkedCount = $('.row-select-checkbox:checked').length;
-                $('#selectAllFailed').prop('checked', total > 0 && total === checkedCount);
+                var id = String($(this).val());
+                if ($(this).is(':checked')) {
+                    selectedFailedIds.add(id);
+                } else {
+                    selectedFailedIds.delete(id);
+                }
+
+                syncMasterCheckboxState();
                 updateBulkDeleteButton();
+            });
+
+            // Page Size Change handler
+            $('#pageSizeFailedSelect').on('change', function () {
+                pageSizeFailed = parseInt($(this).val(), 10);
+                currentPageFailed = 1;
+                renderFailedRecordsTable();
             });
 
             // File upload event
@@ -669,6 +771,7 @@
                     },
                     success: function (res) {
                         closeEditModal();
+                        selectedFailedIds.delete(String(failId));
                         refreshLiveDbCounts();
                         loadFailedRecords(activeCategory);
                         showAppAlert("success", "Successfully Submitted", res.message || "Record successfully updated and added to database without duplicates.");
@@ -731,7 +834,7 @@
         }
 
         function updateBulkDeleteButton() {
-            var selectedCount = $('.row-select-checkbox:checked').length;
+            var selectedCount = selectedFailedIds.size;
             if (selectedCount > 0) {
                 $('#bulkDeleteBtn').show().html('<i class="fa fa-trash"></i> Delete Selected (' + selectedCount + ')');
                 $('#downloadFailedBtn').html('<i class="fa fa-file-excel-o"></i> Download Selected (' + selectedCount + ')');
@@ -757,6 +860,9 @@
 
         function switchCategory(cat) {
             activeCategory = cat;
+            selectedFailedIds.clear();
+            currentPageFailed = 1;
+
             $('.source-header-clickable').removeClass('active');
             $('[data-header-for="' + cat + '"]').addClass('active');
             $('#activeCategoryName').text(cat);
@@ -817,64 +923,159 @@
             });
         }
 
+        // =========================================================================
+        // FAILED RECORDS PAGINATION & RENDERING ENGINE
+        // =========================================================================
         function loadFailedRecords(cat) {
-            $('#selectAllFailed').prop('checked', false);
-            updateBulkDeleteButton();
-
             $.ajax({
                 url: 'getUploadFailedRecords',
                 type: 'GET',
                 data: { sourceType: cat },
                 success: function (data) {
-                    var $tbody = $('#failedRecordsTableBody');
-                    $tbody.empty();
-                    var count = (data && data.length) ? data.length : 0;
-                    $('#failedCountBadge').text(count + " record(s)");
+                    failedRecordsDataset = data || [];
+                    var total = failedRecordsDataset.length;
+                    $('#failedCountBadge').text(total + " record(s)");
 
-                    if (!data || data.length === 0) {
-                        $('#downloadFailedBtn').hide();
-                        $tbody.append('<tr><td colspan="8" class="no-data"><i class="fa fa-check-circle-o" style="color:#22c55e;"></i>All records are valid! No upload failures for ' + cat + '.</td></tr>');
-                        return;
+                    // Remove cached IDs that no longer exist
+                    var currentIds = new Set(failedRecordsDataset.map(function(r) { return String(r.FAIL_ID); }));
+                    selectedFailedIds.forEach(function(id) {
+                        if (!currentIds.has(id)) {
+                            selectedFailedIds.delete(id);
+                        }
+                    });
+
+                    // Ensure page bounds
+                    var maxPage = Math.ceil(total / pageSizeFailed) || 1;
+                    if (currentPageFailed > maxPage) {
+                        currentPageFailed = maxPage;
                     }
 
-                    $('#downloadFailedBtn').show();
-
-                    data.forEach(function (r) {
-                        var cardNo   = r.RAW_CARD_NO || '';
-                        var rrn      = r.RAW_RRN || '';
-                        var authId   = r.RAW_AUTH_ID || '';
-                        var amt      = r.RAW_AMOUNT || '';
-                        var dt       = r.RAW_TRAN_DATE || '';
-                        var reason   = r.ERROR_REASON || 'Validation Mismatch';
-
-                        var rowHtml =
-                            '<tr>' +
-                                '<td class="checkbox-cell">' +
-                                    '<input type="checkbox" class="row-select-checkbox" value="' + r.FAIL_ID + '">' +
-                                '</td>' +
-                                '<td><b>' + cardNo + '</b></td>' +
-                                '<td>' + (rrn || 'N/A') + '</td>' +
-                                '<td>' + (authId || 'N/A') + '</td>' +
-                                '<td>' + amt + '</td>' +
-                                '<td>' + dt + '</td>' +
-                                '<td><span class="badge-error-pill">' + reason + '</span></td>' +
-                                '<td style="text-align: center;">' +
-                                    '<div class="action-btn-group">' +
-                                        '<button type="button" class="edit-fail-btn" ' +
-                                                'onclick="openEditModal(' + r.FAIL_ID + ', \'' + cardNo + '\', \'' + rrn + '\', \'' + authId + '\', \'' + amt + '\', \'' + dt + '\', \'' + reason + '\')">' +
-                                            '<i class="fa fa-pencil"></i> Edit &amp; Submit' +
-                                        '</button>' +
-                                        '<button type="button" class="delete-fail-btn" ' +
-                                                'onclick="deleteFailedRecord(' + r.FAIL_ID + ')">' +
-                                            '<i class="fa fa-trash"></i> Delete' +
-                                        '</button>' +
-                                    '</div>' +
-                                '</td>' +
-                            '</tr>';
-                        $tbody.append(rowHtml);
-                    });
+                    renderFailedRecordsTable();
                 }
             });
+        }
+
+        function renderFailedRecordsTable() {
+            var $tbody = $('#failedRecordsTableBody');
+            $tbody.empty();
+
+            var total = failedRecordsDataset.length;
+
+            if (total === 0) {
+                $('#downloadFailedBtn').hide();
+                $('#deleteAllFailedBtn').hide();
+                $('#failedPaginationBar').hide();
+                $tbody.append('<tr><td colspan="8" class="no-data"><i class="fa fa-check-circle-o" style="color:#22c55e;"></i>All records are valid! No upload failures for ' + activeCategory + '.</td></tr>');
+                $('#selectAllFailed').prop('checked', false);
+                updateBulkDeleteButton();
+                return;
+            }
+
+            $('#downloadFailedBtn').show();
+            $('#deleteAllFailedBtn').show();
+            $('#failedPaginationBar').show();
+
+            var startIndex = (currentPageFailed - 1) * pageSizeFailed;
+            var endIndex = Math.min(startIndex + pageSizeFailed, total);
+            var pageRecords = failedRecordsDataset.slice(startIndex, endIndex);
+
+            pageRecords.forEach(function (r) {
+                var failId   = String(r.FAIL_ID);
+                var cardNo   = r.RAW_CARD_NO || '';
+                var rrn      = r.RAW_RRN || '';
+                var authId   = r.RAW_AUTH_ID || '';
+                var amt      = r.RAW_AMOUNT || '';
+                var dt       = r.RAW_TRAN_DATE || '';
+                var reason   = r.ERROR_REASON || 'Validation Mismatch';
+                var isChecked = selectedFailedIds.has(failId) ? 'checked' : '';
+
+                var rowHtml =
+                    '<tr>' +
+                        '<td class="checkbox-cell">' +
+                            '<input type="checkbox" class="row-select-checkbox" value="' + failId + '" ' + isChecked + '>' +
+                        '</td>' +
+                        '<td><b>' + cardNo + '</b></td>' +
+                        '<td>' + (rrn || 'N/A') + '</td>' +
+                        '<td>' + (authId || 'N/A') + '</td>' +
+                        '<td>' + amt + '</td>' +
+                        '<td>' + dt + '</td>' +
+                        '<td><span class="badge-error-pill">' + reason + '</span></td>' +
+                        '<td style="text-align: center;">' +
+                            '<div class="action-btn-group">' +
+                                '<button type="button" class="edit-fail-btn" ' +
+                                        'onclick="openEditModal(' + failId + ', \'' + cardNo + '\', \'' + rrn + '\', \'' + authId + '\', \'' + amt + '\', \'' + dt + '\', \'' + reason + '\')">' +
+                                    '<i class="fa fa-pencil"></i> Edit &amp; Submit' +
+                                '</button>' +
+                                '<button type="button" class="delete-fail-btn" ' +
+                                        'onclick="deleteFailedRecord(' + failId + ')">' +
+                                    '<i class="fa fa-trash"></i> Delete' +
+                                '</button>' +
+                            '</div>' +
+                        '</td>' +
+                    '</tr>';
+                $tbody.append(rowHtml);
+            });
+
+            syncMasterCheckboxState();
+            updateBulkDeleteButton();
+            renderPaginationControls(total, startItem = startIndex + 1, endItem = endIndex);
+        }
+
+        function syncMasterCheckboxState() {
+            var $visible = $('.row-select-checkbox');
+            if ($visible.length === 0) {
+                $('#selectAllFailed').prop('checked', false);
+                return;
+            }
+            var allChecked = true;
+            $visible.each(function () {
+                if (!$(this).is(':checked')) {
+                    allChecked = false;
+                    return false;
+                }
+            });
+            $('#selectAllFailed').prop('checked', allChecked);
+        }
+
+        function renderPaginationControls(total, startItem, endItem) {
+            $('#paginationInfoText').text('Showing ' + startItem + ' to ' + endItem + ' of ' + total + ' records');
+
+            var totalPages = Math.ceil(total / pageSizeFailed);
+            var $nav = $('#paginationNavWrap');
+            $nav.empty();
+
+            var prevDisabled = currentPageFailed === 1 ? 'disabled' : '';
+            $nav.append('<button type="button" class="pagination-btn" ' + prevDisabled + ' onclick="changeFailedPage(' + (currentPageFailed - 1) + ')">&laquo; Prev</button>');
+
+            var startPage = Math.max(1, currentPageFailed - 2);
+            var endPage = Math.min(totalPages, currentPageFailed + 2);
+
+            if (startPage > 1) {
+                $nav.append('<button type="button" class="pagination-btn" onclick="changeFailedPage(1)">1</button>');
+                if (startPage > 2) {
+                    $nav.append('<span style="padding: 0 4px; color: #94a3b8;">...</span>');
+                }
+            }
+
+            for (var p = startPage; p <= endPage; p++) {
+                var activeClass = p === currentPageFailed ? 'active' : '';
+                $nav.append('<button type="button" class="pagination-btn ' + activeClass + '" onclick="changeFailedPage(' + p + ')">' + p + '</button>');
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    $nav.append('<span style="padding: 0 4px; color: #94a3b8;">...</span>');
+                }
+                $nav.append('<button type="button" class="pagination-btn" onclick="changeFailedPage(' + totalPages + ')">' + totalPages + '</button>');
+            }
+
+            var nextDisabled = currentPageFailed === totalPages ? 'disabled' : '';
+            $nav.append('<button type="button" class="pagination-btn" ' + nextDisabled + ' onclick="changeFailedPage(' + (currentPageFailed + 1) + ')">Next &raquo;</button>');
+        }
+
+        function changeFailedPage(page) {
+            currentPageFailed = page;
+            renderFailedRecordsTable();
         }
 
         // Single Record Delete
@@ -888,6 +1089,7 @@
                         type: 'POST',
                         data: { failId: failId },
                         success: function (res) {
+                            selectedFailedIds.delete(String(failId));
                             loadFailedRecords(activeCategory);
                             showAppAlert("success", "Successfully Deleted", res.message || "Record permanently removed from the failure queue.");
                         },
@@ -900,12 +1102,9 @@
             );
         }
 
-        // Multiple Records Bulk Delete
+        // Multiple Records Bulk Delete across all pages
         function deleteSelectedFailedRecords() {
-            var selectedIds = [];
-            $('.row-select-checkbox:checked').each(function () {
-                selectedIds.push($(this).val());
-            });
+            var selectedIds = Array.from(selectedFailedIds);
 
             if (selectedIds.length === 0) {
                 showAppAlert("info", "No Selection", "Please select at least one record to delete.");
@@ -922,6 +1121,7 @@
                         data: { failIds: selectedIds },
                         traditional: true,
                         success: function (res) {
+                            selectedFailedIds.clear();
                             loadFailedRecords(activeCategory);
                             showAppAlert("success", "Successfully Deleted", (res.deletedCount || selectedIds.length) + " rejected record(s) removed successfully.");
                         },
@@ -934,12 +1134,39 @@
             );
         }
 
+        // Delete ALL Failed / Duplicate Records for Active Category
+        function deleteAllFailedRecords() {
+            var total = failedRecordsDataset.length;
+            if (total === 0) {
+                showAppAlert("info", "No Records", "There are no rejected records to delete for " + activeCategory + ".");
+                return;
+            }
+
+            showAppConfirm(
+                "Delete All Confirmation",
+                "Are you sure you want to permanently delete ALL " + total + " rejected/duplicate record(s) for " + activeCategory + "?\n\nThis action cannot be undone.",
+                function () {
+                    $.ajax({
+                        url: 'deleteAllFailedRecords',
+                        type: 'POST',
+                        data: { sourceType: activeCategory },
+                        success: function (res) {
+                            selectedFailedIds.clear();
+                            loadFailedRecords(activeCategory);
+                            showAppAlert("success", "All Records Deleted", res.message || "All records have been cleared.");
+                        },
+                        error: function (xhr) {
+                            var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+                            showAppAlert("error", "Delete All Failed", err);
+                        }
+                    });
+                }
+            );
+        }
+
         // Download Failed Records with Custom Notification Popup
         function downloadFailedRecords() {
-            var selectedIds = [];
-            $('.row-select-checkbox:checked').each(function () {
-                selectedIds.push($(this).val());
-            });
+            var selectedIds = Array.from(selectedFailedIds);
 
             var countMsg = selectedIds.length > 0 
                 ? selectedIds.length + " selected record(s)" 
@@ -950,10 +1177,8 @@
                 url += "&failIds=" + selectedIds.join(",");
             }
 
-            // Trigger file download
             window.location.href = url;
 
-            // Trigger themed notification popup
             showAppAlert(
                 "success",
                 "Successfully Downloaded",
@@ -1138,7 +1363,7 @@
                     </table>
                 </div>
 
-                <!-- 2. Failed / Rejected Records Queue with Multi-Select, Download & Delete -->
+                <!-- 2. Failed / Rejected Records Queue with Multi-Select, Pagination & Actions -->
                 <div class="file-list-container" style="border-top: 1px solid var(--line); border-radius: 10px;">
                     <div class="file-list-title-bar" style="background: #fff1f2;">
                         <div>
@@ -1154,6 +1379,9 @@
                             <button type="button" id="bulkDeleteBtn" class="bulk-delete-btn" onclick="deleteSelectedFailedRecords()">
                                 <i class="fa fa-trash"></i> Delete Selected
                             </button>
+                            <button type="button" id="deleteAllFailedBtn" class="delete-all-btn" onclick="deleteAllFailedRecords()">
+                                <i class="fa fa-trash-o"></i> Delete All
+                            </button>
                         </div>
                     </div>
 
@@ -1161,7 +1389,7 @@
                         <thead>
                             <tr>
                                 <th class="checkbox-cell">
-                                    <input type="checkbox" id="selectAllFailed" title="Select All">
+                                    <input type="checkbox" id="selectAllFailed" title="Select All On Page">
                                 </th>
                                 <th style="width: 19%;">Card Number</th>
                                 <th style="width: 13%;">RRN</th>
@@ -1181,6 +1409,24 @@
                             </tr>
                         </tbody>
                     </table>
+
+                    <!-- Pagination Controls -->
+                    <div class="table-pagination-bar" id="failedPaginationBar" style="display: none;">
+                        <div class="pagination-page-size-wrap">
+                            <span>Rows per page:</span>
+                            <select id="pageSizeFailedSelect">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                            </select>
+                            <span id="paginationInfoText" style="margin-left: 10px; color: var(--muted);"></span>
+                        </div>
+
+                        <div class="pagination-nav-wrap" id="paginationNavWrap">
+                            <!-- Injected dynamically via renderPaginationControls -->
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1242,7 +1488,7 @@
         </div>
     </div>
 
-    <!-- 4. UNIFIED SYSTEM ACTION MODAL (Alerts & Confirmations) -->
+    <!-- 4. Unified Action Modal (Alerts & Confirmations) -->
     <div class="failed-modal-overlay" id="customActionModal">
         <div class="failed-modal-card" style="max-width: 440px;">
             <div class="failed-modal-header">
