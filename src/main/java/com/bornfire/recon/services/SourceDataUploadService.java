@@ -6,36 +6,24 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.springframework.jdbc.core.BatchPreparedStatementSetter;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.util.*;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.DataFormatter;
-import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.Font;
-import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -81,7 +69,6 @@ public class SourceDataUploadService {
         "MODIFY_FLAG", "ENTITY_FLAG"
     };
 
-    // 91 Clean Core Banking HTD Columns
     private static final String[] CBS_COLUMNS = new String[] {
         "TRAN_DATE", "TRAN_ID", "PART_TRAN_SRL_NUM", "DEL_FLG", "TRAN_TYPE", "TRAN_SUB_TYPE",
         "PART_TRAN_TYPE", "GL_SUB_HEAD_CODE", "ACID", "VALUE_DATE", "TRAN_AMT", "TRAN_PARTICULAR",
@@ -103,7 +90,6 @@ public class SourceDataUploadService {
         "TRAN_FREE_CODE1", "TRAN_FREE_CODE2"
     };
 
- // 34 Visanet EP745 Columns matching BRECON_CARD_EP745_DATA_TABLE
     private static final String[] EPIN745_COLUMNS = new String[] {
         "BATCH_NUM", "TRAN_DATE", "TRAN_TIME", "CARD_NUM", "RET_REF_NUM", "TRACE_NUM",
         "ISSUER_ID", "TRAN_TYPE", "PROCESS_CODE", "ENT_MODE", "CN_STP", "RSP_CD",
@@ -112,311 +98,250 @@ public class SourceDataUploadService {
         "VERIFY_USER", "ENTRY_TIME", "MODIFY_TIME", "VERIFY_TIME", "REPORT_CONFIRM",
         "REPORT_MOVED", "MATCHING_CRITERIA", "MATCHING_DETAIL", "SRL_NUM", "RECON_TYPE", "RECON_FLAG"
     };
-    
+
     private String cleanKey(String col) {
         if (col == null) return "";
         String s = col.trim().toUpperCase();
-        if (s.contains("TRAN_RMKS")) {
-            return "TRAN_RMKS";
-        }
+        if (s.contains("TRAN_RMKS")) return "TRAN_RMKS";
         if (s.contains(".")) {
             s = s.substring(s.lastIndexOf('.') + 1);
         }
         return s.replaceAll("[^A-Z0-9_]", "");
     }
 
-// =========================================================================
-    // 1. MAIN TRANSACTION FILE UPLOAD ROUTER
     // =========================================================================
-    @Transactional(timeout = 300)
-    public int uploadTransactionFile(MultipartFile file, String type, String userId) throws Exception {
+    // 1. MAIN TRANSACTION FILE UPLOAD (RETURNS BOTH INSERTED & FAILED COUNTS)
+    // =========================================================================
+    public Map<String, Object> uploadTransactionFile(MultipartFile file, String type, String userId) throws Exception {
+        Map<String, Object> result = new HashMap<>();
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
         boolean isCbs = "CBS".equalsIgnoreCase(type);
         boolean isEpin = "EPIN".equalsIgnoreCase(type);
+        boolean isEpin745 = "VISANET".equalsIgnoreCase(type) || "VISA_NET".equalsIgnoreCase(type) ||
+                            "EPIN745".equalsIgnoreCase(type) || "EP745".equalsIgnoreCase(type);
 
-        // Flexible alias matching for Visanet EP745
-     // Flexible matching including VISANET, EPIN745, EP745
-        boolean isEpin745 = "VISANET".equalsIgnoreCase(type) ||
-                            "VISA_NET".equalsIgnoreCase(type) ||
-                            "EPIN745".equalsIgnoreCase(type) || 
-                            "EP745".equalsIgnoreCase(type) || 
-                            "VISA_EPIN745".equalsIgnoreCase(type) ||
-                            "VISA_EPIN_745".equalsIgnoreCase(type);
-
-        if (isEpin745 && (fileName.endsWith(".txt") || fileName.endsWith(".csv") || !fileName.contains("."))) {
-            logger.info("Routing Visanet file [{}] to uploadEpin745File with type [{}]", file.getOriginalFilename(), type);
-            return uploadEpin745File(file, userId);
-        }
-
-     // 1. Raw text handling for EPIN (Standard Base II)
+        // EPIN Text
         if (isEpin && fileName.endsWith(".txt")) {
             String reportDateStr = new SimpleDateFormat("dd-MM-yy").format(new Date());
-
-            // 1. Clear staging table so old file text does not accumulate
             try {
-                jdbcTemplate.update(
-                    "DELETE FROM BRECON.BRECON_EPIN_TEXT_TABLE WHERE UP_DATE = TO_DATE(?, 'DD-MM-YY')", 
-                    reportDateStr
-                );
-            } catch (Exception ex) {
-                // If UP_DATE column does not exist, truncate staging completely
-                try {
-                    jdbcTemplate.update("TRUNCATE TABLE BRECON.BRECON_EPIN_TEXT_TABLE");
-                } catch (Exception ignored) {}
-            }
-
-            // 2. Clear parsed destination table for this date
+                jdbcTemplate.update("DELETE FROM BRECON.BRECON_EPIN_TEXT_TABLE WHERE UP_DATE = TO_DATE(?, 'DD-MM-YY')", reportDateStr);
+            } catch (Exception ignored) {}
             try {
-                jdbcTemplate.update(
-                    "DELETE FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE WHERE TO_CHAR(ENTRY_TIME, 'DD-MM-YY') = ?", 
-                    reportDateStr
-                );
-            } catch (Exception ex) {
-                try {
-                    jdbcTemplate.update("TRUNCATE TABLE BRECON.BRECON_CARD_EPIN_DATA_TABLE");
-                } catch (Exception ignored) {}
-            }
+                jdbcTemplate.update("DELETE FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE WHERE TO_CHAR(ENTRY_TIME, 'DD-MM-YY') = ?", reportDateStr);
+            } catch (Exception ignored) {}
 
-            // 3. Upload only the fresh lines of the uploaded file into staging
             uploadRawEpinTextFile(file, reportDateStr);
-
-            // 4. Run the company procedure to parse fresh data
             executeCompanyEpinProcedure(reportDateStr);
 
-            // 5. Query the EXACT current count of rows in the parsed table
-            Integer currentCount = 0;
-            try {
-                currentCount = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE", 
-                    Integer.class
-                );
-            } catch (Exception e) {
-                logger.error("Failed to query BRECON_CARD_EPIN_DATA_TABLE count", e);
+            Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE", Integer.class);
+            result.put("insertedRows", count != null ? count : 0);
+            result.put("failedRows", 0);
+            return result;
+        }
+
+        // EP745 Text
+        if (isEpin745 && (fileName.endsWith(".txt") || fileName.endsWith(".csv"))) {
+            int inserted = uploadEpin745File(file, userId);
+            result.put("insertedRows", inserted);
+            result.put("failedRows", 0);
+            return result;
+        }
+
+        String targetTable = "ATM".equalsIgnoreCase(type) ? "BRECON.ATM_TRANSACTION_DATA" :
+                             "POS".equalsIgnoreCase(type) ? "BRECON.POS_TRANSATION_DATA" :
+                             isCbs ? "BRECON.CBS_TXN" : "BRECON.BRECON_CARD_EP745_DATA_TABLE";
+
+        String[] targetColumns = isCbs ? CBS_COLUMNS : isEpin745 ? EPIN745_COLUMNS : DB_COLUMNS;
+        int insertedCount = 0;
+        int failedCount = 0;
+
+        DataFormatter formatter = new DataFormatter();
+        try (InputStream is = file.getInputStream();
+             Workbook workbook = WorkbookFactory.create(is)) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+            if (sheet == null || sheet.getPhysicalNumberOfRows() <= 1) {
+                result.put("insertedRows", 0);
+                result.put("failedRows", 0);
+                return result;
             }
 
-            int finalCount = (currentCount != null) ? currentCount : 0;
-            logger.info("Fresh parsed records in BRECON_CARD_EPIN_DATA_TABLE: {}", finalCount);
-            return finalCount;
-        }
-
-        // 2. Dedicated routing for Visanet EP745 files (.txt or .csv)
-        if (isEpin745 && (fileName.endsWith(".txt") || fileName.endsWith(".csv"))) {
-            logger.info("Routing EPIN745 file [{}] to dedicated parser uploadEpin745File", file.getOriginalFilename());
-            return uploadEpin745File(file, userId);
-        }
-
-        String targetTable;
-        String[] targetColumns;
-
-        if ("ATM".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.ATM_TRANSACTION_DATA";
-            targetColumns = DB_COLUMNS;
-        } else if ("POS".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.POS_TRANSATION_DATA";
-            targetColumns = DB_COLUMNS;
-        } else if (isEpin) {
-            targetTable = "BRECON.VISA_EPIN";
-            targetColumns = DB_COLUMNS;
-        } else if (isEpin745) {
-            targetTable = "BRECON.BRECON_CARD_EP745_DATA_TABLE";
-            targetColumns = EPIN745_COLUMNS;
-        } else if (isCbs) {
-            targetTable = "BRECON.CBS_TXN";
-            targetColumns = CBS_COLUMNS; // 91 columns
-        } else {
-            targetTable = "BRECON." + type.toUpperCase() + "_TRANSACTION_DATA";
-            targetColumns = DB_COLUMNS;
-        }
-
-        logger.info("Uploading file [{}] as [{}] into table [{}] with {} target columns", 
-                    file.getOriginalFilename(), type, targetTable, targetColumns.length);
-
-        List<Object[]> batchParams = new ArrayList<>();
-        Timestamp currentTime = new Timestamp(System.currentTimeMillis());
-        String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
-
-        boolean isTextCsv = fileName.endsWith(".csv") || fileName.endsWith(".txt");
-
-        if (isTextCsv) {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-                String headerLine = reader.readLine();
-                if (headerLine == null || headerLine.trim().isEmpty()) {
-                    return 0;
+            // Map Headers
+            Row headerRow = sheet.getRow(0);
+            Map<String, Integer> colMap = new HashMap<>();
+            for (int c = 0; c < headerRow.getLastCellNum(); c++) {
+                Cell cell = headerRow.getCell(c);
+                if (cell != null) {
+                    colMap.put(cleanKey(formatter.formatCellValue(cell)), c);
                 }
+            }
 
-                String delimiter = headerLine.contains(",") ? "," : "\\|";
-                String[] headers = headerLine.split(delimiter);
+            // Prepare single-row INSERT SQL
+            StringBuilder sql = new StringBuilder("INSERT INTO ").append(targetTable).append(" (");
+            StringBuilder ph = new StringBuilder(" VALUES (");
+            for (int i = 0; i < targetColumns.length; i++) {
+                sql.append("\"").append(targetColumns[i]).append("\"");
+                ph.append("?");
+                if (i < targetColumns.length - 1) {
+                    sql.append(", ");
+                    ph.append(", ");
+                }
+            }
+            sql.append(")").append(ph).append(")");
+            String insertSql = sql.toString();
 
-                Map<String, Integer> colIndexMap = new HashMap<>();
-                for (int i = 0; i < headers.length; i++) {
-                    String norm = cleanKey(headers[i]);
-                    if (!norm.isEmpty()) {
-                        colIndexMap.put(norm, i);
+            Timestamp currentTime = new Timestamp(System.currentTimeMillis());
+            String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
+
+            for (int r = 1; r <= sheet.getLastRowNum(); r++) {
+                Row row = sheet.getRow(r);
+                if (row == null) continue;
+
+                // Extract Validation Fields
+                String tranDt = getCellVal(row, colMap.get(cleanKey("TRAN_DT")), formatter);
+                String rrn = getCellVal(row, colMap.get(cleanKey("AUTHX_SEQ_NUM")), formatter);
+                String cardNo = getCellVal(row, colMap.get(cleanKey("HEADX_CRD_CARD_CRD_NUM")), formatter);
+                String authId = getCellVal(row, colMap.get(cleanKey("AUTHX_APPRV_CDE")), formatter);
+                String amtStr = getCellVal(row, colMap.get(cleanKey("AUTHX_AMT_1")), formatter);
+                String authTyp = getCellVal(row, colMap.get(cleanKey("AUTHX_TYP")), formatter);
+
+                if (authTyp.isEmpty()) authTyp = "210";
+
+                // --- 1. VALIDATION CHECKS (FOR ATM / POS) ---
+                if ("ATM".equalsIgnoreCase(type) || "POS".equalsIgnoreCase(type)) {
+                    if (rrn.isEmpty() || "null".equalsIgnoreCase(rrn)) {
+                        logFailedRecord(type, cardNo, "N/A", authId, amtStr, tranDt, "Missing Mandatory RRN");
+                        failedCount++;
+                        continue;
+                    }
+
+                    if (cardNo.length() < 13 || cardNo.length() > 19 || !cardNo.matches("^[0-9xX]+$")) {
+                        logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Invalid Card Number: Must be 13-19 digits or masked");
+                        failedCount++;
+                        continue;
+                    }
+
+                    try {
+                        double parsedAmt = Double.parseDouble(amtStr.replace(",", ""));
+                        if (parsedAmt < 0) {
+                            logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Amount Format Mismatch: Negative Amount");
+                            failedCount++;
+                            continue;
+                        }
+                    } catch (Exception ex) {
+                        logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Amount Format Mismatch: Non-numeric value");
+                        failedCount++;
+                        continue;
+                    }
+
+                    // Pre-check for duplicate in DB
+                    Integer exists = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM " + targetTable + " " +
+                        "WHERE AUTHX_SEQ_NUM = ? AND AUTHX_APPRV_CDE = ? AND TRAN_DT = ? AND AUTHX_TYP = ?",
+                        Integer.class, rrn, authId, tranDt, authTyp
+                    );
+
+                    if (exists != null && exists > 0) {
+                        logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Duplicate Record: Key already exists in Database");
+                        failedCount++;
+                        continue;
                     }
                 }
 
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.trim().isEmpty()) continue;
-                    String[] tokens = line.split(delimiter, -1);
+                // --- 2. PREPARE ROW PARAMS & EXECUTE INSERT ---
+                Object[] rowValues = new Object[targetColumns.length];
+                boolean hasData = false;
 
-                    Object[] rowValues = new Object[targetColumns.length];
-                    boolean hasData = false;
-
-                    for (int i = 0; i < targetColumns.length; i++) {
-                        String col = targetColumns[i];
-                        if ("ENTRY_TIME".equals(col)) {
-                            rowValues[i] = currentTime;
-                        } else if ("ENTRY_USER".equals(col)) {
-                            rowValues[i] = effectiveUser;
-                        } else if ("DEL_FLAG".equals(col) && !isCbs && !isEpin745) {
-                            rowValues[i] = "N";
-                        } else if ("ENTITY_FLAG".equals(col) && !isCbs && !isEpin745) {
-                            rowValues[i] = "Y";
-                        } else if ("MODIFY_FLAG".equals(col) && !isCbs && !isEpin745) {
-                            rowValues[i] = "N";
-                        } else {
-                            Integer idx = colIndexMap.get(cleanKey(col));
-                            if (idx != null && idx >= 0 && idx < tokens.length) {
-                                String val = tokens[idx].trim().replaceAll("^\"|\"$", "");
-                                if (!val.isEmpty()) {
-                                    hasData = true;
-                                    rowValues[i] = val;
-                                } else {
-                                    rowValues[i] = null;
-                                }
+                for (int i = 0; i < targetColumns.length; i++) {
+                    String col = targetColumns[i];
+                    if ("ENTRY_TIME".equals(col)) {
+                        rowValues[i] = currentTime;
+                    } else if ("ENTRY_USER".equals(col)) {
+                        rowValues[i] = effectiveUser;
+                    } else if ("DEL_FLAG".equals(col) && !isCbs && !isEpin745) {
+                        rowValues[i] = "N";
+                    } else if ("ENTITY_FLAG".equals(col) && !isCbs && !isEpin745) {
+                        rowValues[i] = "Y";
+                    } else if ("MODIFY_FLAG".equals(col) && !isCbs && !isEpin745) {
+                        rowValues[i] = "N";
+                    } else {
+                        Integer cIdx = colMap.get(cleanKey(col));
+                        if (cIdx != null) {
+                            String val = getCellVal(row, cIdx, formatter);
+                            if (!val.isEmpty()) {
+                                hasData = true;
+                                rowValues[i] = val;
                             } else {
                                 rowValues[i] = null;
                             }
-                        }
-                    }
-
-                    if (hasData) {
-                        batchParams.add(rowValues);
-                    }
-                }
-            }
-        } else {
-            DataFormatter formatter = new DataFormatter();
-            try (InputStream is = file.getInputStream();
-                 Workbook workbook = WorkbookFactory.create(is)) {
-
-                Sheet sheet = workbook.getSheetAt(0);
-                if (sheet == null || sheet.getPhysicalNumberOfRows() <= 1) return 0;
-
-                int totalCols = targetColumns.length;
-
-                for (int r = 1; r <= sheet.getLastRowNum(); r++) {
-                    Row row = sheet.getRow(r);
-                    if (row == null) continue;
-
-                    Object[] rowValues = new Object[totalCols];
-                    boolean hasData = false;
-
-                    for (int c = 0; c < totalCols; c++) {
-                        Cell cell = row.getCell(c, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
-                        if (cell != null) {
-                            String cellStr = formatter.formatCellValue(cell).trim();
-                            if (!cellStr.isEmpty()) {
-                                hasData = true;
-                                rowValues[c] = cellStr;
-                            } else {
-                                rowValues[c] = null;
-                            }
                         } else {
-                            rowValues[c] = null;
+                            rowValues[i] = null;
                         }
                     }
+                }
 
-                    if (hasData) {
-                        batchParams.add(rowValues);
-                    }
+                if (!hasData) continue;
+
+                try {
+                    jdbcTemplate.update(insertSql, rowValues);
+                    insertedCount++;
+                } catch (org.springframework.dao.DuplicateKeyException dke) {
+                    logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "Duplicate Record: Constraint Violated");
+                    failedCount++;
+                } catch (Exception ex) {
+                    logFailedRecord(type, cardNo, rrn, authId, amtStr, tranDt, "DB Insert Error: " + ex.getMessage());
+                    failedCount++;
                 }
             }
         }
 
-        if (batchParams.isEmpty()) {
-            return 0;
-        }
-
-        // Build INSERT SQL without invoking metadata parser
-        StringBuilder sql = new StringBuilder("INSERT INTO ").append(targetTable).append(" (");
-        StringBuilder placeholders = new StringBuilder(" VALUES (");
-        for (int i = 0; i < targetColumns.length; i++) {
-            sql.append("\"").append(targetColumns[i]).append("\"");
-            placeholders.append("?");
-            if (i < targetColumns.length - 1) {
-                sql.append(", ");
-                placeholders.append(", ");
-            }
-        }
-        sql.append(")").append(placeholders).append(")");
-
-        final int numColumns = targetColumns.length;
-
-        int[] updateCounts = jdbcTemplate.batchUpdate(sql.toString(), new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                Object[] row = batchParams.get(i);
-                for (int colIndex = 0; colIndex < numColumns; colIndex++) {
-                    Object val = (colIndex < row.length) ? row[colIndex] : null;
-                    if (val != null) {
-                        ps.setString(colIndex + 1, val.toString());
-                    } else {
-                        ps.setNull(colIndex + 1, Types.VARCHAR);
-                    }
-                }
-            }
-
-            @Override
-            public int getBatchSize() {
-                return batchParams.size();
-            }
-        });
-
-        logger.info("Successfully inserted {} records into {}", updateCounts.length, targetTable);
-        return updateCounts.length;
+        result.put("insertedRows", insertedCount);
+        result.put("failedRows", failedCount);
+        return result;
     }
 
-    // =========================================================================
-    // 2. DEDICATED VISANET EP745 INGESTION (INSERTS INTO BRECON_CARD_EP745_DATA_TABLE)
-    // =========================================================================
-@Transactional
+    private String getCellVal(Row row, Integer idx, DataFormatter formatter) {
+        if (idx == null || idx < 0) return "";
+        Cell cell = row.getCell(idx, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+        if (cell == null) return "";
+        return formatter.formatCellValue(cell).trim();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logFailedRecord(String src, String card, String rrn, String auth, String amt, String dt, String reason) {
+        try {
+            jdbcTemplate.update(
+                "INSERT INTO BRECON.UPLOAD_FAILED_RECORDS " +
+                "(SOURCE_TYPE, RAW_CARD_NO, RAW_RRN, RAW_AUTH_ID, RAW_AMOUNT, RAW_TRAN_DATE, ERROR_REASON, STATUS) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')",
+                src, card, rrn, auth, amt, dt, reason
+            );
+        } catch (Exception e) {
+            logger.error("Error writing to UPLOAD_FAILED_RECORDS: {}", e.getMessage());
+        }
+    }
+
+    // EP745 Parser (same as existing)
+    @Transactional
     public int uploadEpin745File(MultipartFile file, String userId) throws Exception {
         List<Object[]> batchParams = new ArrayList<>();
         java.sql.Date entryDate = new java.sql.Date(System.currentTimeMillis());
         String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
-        int totalScanned = 0;
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                totalScanned++;
-
                 line = line.replace("\f", "").replace("\r", "");
-
-                // Skip headers, separators, empty lines
-                if (line.trim().length() < 70) {
-                    continue;
-                }
+                if (line.trim().length() < 70) continue;
 
                 String padded = String.format("%-140s", line);
-
                 String batchNum = padded.substring(2, 4).trim();
                 String cardNum = padded.substring(20, 36).trim();
 
-                // 1. Must be Visa card (starts with 4 or 5)
                 boolean isVisaCard = cardNum.startsWith("4") || cardNum.startsWith("5");
-
-                // 2. Ignore control batch headers
                 boolean notIgnoredBatch = !batchNum.equals("RE") && !batchNum.equals("RO") && !batchNum.equals("AT");
-
-                // 3. Ignore POS ENTRY and DUP/ORI text lines
                 boolean notExcluded = !padded.contains("POS ENTRY") && !padded.contains("DUP/ORI");
 
-                // ❌ REMOVED: The != '0.00' filter has been removed to allow all 32 transactions
                 if (isVisaCard && notIgnoredBatch && notExcluded) {
                     String tranDate = padded.substring(5, 10).trim();
                     String tranTime = padded.substring(11, 19).trim();
@@ -430,54 +355,24 @@ public class SourceDataUploadService {
                     String rspCd = padded.substring(97, 99).trim();
 
                     String tranAmtStr = padded.substring(100, 113).replaceAll("[^0-9.-]", "").trim();
-                    Double tranAmt = null;
-                    if (!tranAmtStr.isEmpty()) {
-                        try { tranAmt = Double.parseDouble(tranAmtStr); } catch (Exception ignored) {}
-                    }
-
+                    Double tranAmt = !tranAmtStr.isEmpty() ? Double.parseDouble(tranAmtStr) : null;
                     String tranCurr = padded.substring(114, 118).trim();
 
                     String settAmtRaw = padded.substring(118, 130).replaceAll("[^0-9.-]", "").trim();
-                    Double settAmt = null;
-                    if (!settAmtRaw.isEmpty()) {
-                        try { settAmt = Double.parseDouble(settAmtRaw); } catch (Exception ignored) {}
-                    }
-
+                    Double settAmt = !settAmtRaw.isEmpty() ? Double.parseDouble(settAmtRaw) : null;
                     String settInd = padded.substring(130, 132).trim();
 
                     batchParams.add(new Object[] {
-                        batchNum,
-                        tranDate,
-                        tranTime,
-                        cardNum,
-                        rrn,
-                        traceNum,
-                        issuerId,
-                        tranType,
-                        processCode,
-                        entMode,
-                        cnStp,
-                        rspCd,
-                        tranAmt,
-                        tranCurr,
-                        settAmt,
-                        settInd,
-                        "VISA CAMEA",
-                        "Y",
-                        "N",
-                        "N",
-                        effectiveUser,
-                        entryDate
+                        batchNum, tranDate, tranTime, cardNum, rrn, traceNum,
+                        issuerId, tranType, processCode, entMode, cnStp, rspCd,
+                        tranAmt, tranCurr, settAmt, settInd, "VISA CAMEA",
+                        "Y", "N", "N", effectiveUser, entryDate
                     });
                 }
             }
         }
 
-        logger.info("Visanet Scan: read {} lines, qualified {} transactions", totalScanned, batchParams.size());
-
-        if (batchParams.isEmpty()) {
-            return 0;
-        }
+        if (batchParams.isEmpty()) return 0;
 
         String sql = "INSERT INTO BRECON.BRECON_CARD_EP745_DATA_TABLE (" +
                      "BATCH_NUM, TRAN_DATE, TRAN_TIME, CARD_NUM, RET_REF_NUM, TRACE_NUM, " +
@@ -492,107 +387,48 @@ public class SourceDataUploadService {
                 Object[] row = batchParams.get(i);
                 for (int col = 0; col < row.length; col++) {
                     Object val = row[col];
-                    if (val == null) {
-                        ps.setNull(col + 1, Types.VARCHAR);
-                    } else if (val instanceof Double) {
-                        ps.setDouble(col + 1, (Double) val);
-                    } else if (val instanceof java.sql.Date) {
-                        ps.setDate(col + 1, (java.sql.Date) val);
-                    } else {
-                        ps.setString(col + 1, val.toString());
-                    }
+                    if (val == null) ps.setNull(col + 1, Types.VARCHAR);
+                    else if (val instanceof Double) ps.setDouble(col + 1, (Double) val);
+                    else if (val instanceof java.sql.Date) ps.setDate(col + 1, (java.sql.Date) val);
+                    else ps.setString(col + 1, val.toString());
                 }
             }
-
             @Override
-            public int getBatchSize() {
-                return batchParams.size();
-            }
+            public int getBatchSize() { return batchParams.size(); }
         });
 
-        logger.info("Successfully inserted {} records into BRECON.BRECON_CARD_EP745_DATA_TABLE", updateCounts.length);
         return updateCounts.length;
-    }	
-    
-	public void exportDataToExcel(String type, HttpServletResponse response) throws Exception {
-        String targetTable;
-        boolean isCbs = "CBS".equalsIgnoreCase(type);
+    }
 
-        if ("ATM".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.ATM_TRANSACTION_DATA";
-        } else if ("POS".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.POS_TRANSATION_DATA";
-        } else if ("EPIN".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.VISA_EPIN";
-        } else if ("EPIN745".equalsIgnoreCase(type)) {
-            targetTable = "BRECON.VISA_EPIN745";
-        } else if (isCbs) {
-            targetTable = "BRECON.CBS_TXN";
-        } else {
-            targetTable = "BRECON." + type.toUpperCase() + "_TRANSACTION_DATA";
-        }
+    public void exportDataToExcel(String type, HttpServletResponse response) throws Exception {
+        String targetTable = "ATM".equalsIgnoreCase(type) ? "BRECON.ATM_TRANSACTION_DATA" :
+                             "POS".equalsIgnoreCase(type) ? "BRECON.POS_TRANSATION_DATA" :
+                             "EPIN".equalsIgnoreCase(type) ? "BRECON.VISA_EPIN" :
+                             "EPIN745".equalsIgnoreCase(type) ? "BRECON.VISA_EPIN745" :
+                             "CBS".equalsIgnoreCase(type) ? "BRECON.CBS_TXN" : "BRECON." + type.toUpperCase() + "_TRANSACTION_DATA";
 
-        logger.info("Exporting Excel report for type: [{}] from table: [{}]", type, targetTable);
-
-        List<Map<String, Object>> rows = new ArrayList<>();
-        try {
-            String query = "SELECT * FROM " + targetTable;
-            rows = jdbcTemplate.queryForList(query);
-        } catch (Exception ex) {
-            logger.warn("Table {} query issue: {}", targetTable, ex.getMessage());
-        }
-
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT * FROM " + targetTable);
         List<String> columnNames = new ArrayList<>();
-        if (!rows.isEmpty()) {
-            columnNames.addAll(rows.get(0).keySet());
-        } else if (isCbs) {
-            for (String col : CBS_COLUMNS) {
-                columnNames.add(col);
-            }
-        } else {
-            for (String col : DB_COLUMNS) {
-                columnNames.add(col);
-            }
-        }
+        if (!rows.isEmpty()) columnNames.addAll(rows.get(0).keySet());
+        else for (String c : ("CBS".equalsIgnoreCase(type) ? CBS_COLUMNS : DB_COLUMNS)) columnNames.add(c);
 
         SXSSFWorkbook workbook = new SXSSFWorkbook(100);
         try {
             Sheet sheet = workbook.createSheet(type.toUpperCase() + "_DATA");
-
-            CellStyle headerStyle = workbook.createCellStyle();
-            Font headerFont = workbook.createFont();
-            headerFont.setBold(true);
-            headerFont.setColor(IndexedColors.WHITE.getIndex());
-            headerStyle.setFont(headerFont);
-            headerStyle.setFillForegroundColor(IndexedColors.TEAL.getIndex());
-            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
             Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < columnNames.size(); i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(columnNames.get(i));
-                cell.setCellStyle(headerStyle);
-            }
+            for (int i = 0; i < columnNames.size(); i++) headerRow.createCell(i).setCellValue(columnNames.get(i));
 
-            int rowIndex = 1;
-            for (Map<String, Object> rowMap : rows) {
-                Row row = sheet.createRow(rowIndex++);
-                for (int colIndex = 0; colIndex < columnNames.size(); colIndex++) {
-                    String col = columnNames.get(colIndex);
-                    Object val = rowMap.get(col);
-                    Cell cell = row.createCell(colIndex);
-                    cell.setCellValue(val != null ? String.valueOf(val) : "");
+            int rIdx = 1;
+            for (Map<String, Object> map : rows) {
+                Row r = sheet.createRow(rIdx++);
+                for (int c = 0; c < columnNames.size(); c++) {
+                    Object v = map.get(columnNames.get(c));
+                    r.createCell(c).setCellValue(v != null ? String.valueOf(v) : "");
                 }
             }
 
-            String fileName = type.toUpperCase() + "_DATA_" + System.currentTimeMillis() + ".xlsx";
-            response.reset();
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
-            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-            response.setHeader("Pragma", "no-cache");
-            response.setDateHeader("Expires", 0);
-
+            response.setHeader("Content-Disposition", "attachment; filename=" + type + "_DATA_" + System.currentTimeMillis() + ".xlsx");
             workbook.write(response.getOutputStream());
             response.getOutputStream().flush();
         } finally {
@@ -603,15 +439,10 @@ public class SourceDataUploadService {
 
     @Transactional
     public int executeVisaReconciliation(String reconDate) {
-        logger.info("Executing SP_EXECUTE_VISA_RECON for date: {}", reconDate);
-
         return jdbcTemplate.execute((Connection con) -> {
             try (CallableStatement cs = con.prepareCall("{call BRECON.SP_EXECUTE_VISA_RECON(?, ?)}")) {
-                if (reconDate != null && !reconDate.trim().isEmpty()) {
-                    cs.setString(1, reconDate);
-                } else {
-                    cs.setNull(1, Types.VARCHAR);
-                }
+                if (reconDate != null && !reconDate.trim().isEmpty()) cs.setString(1, reconDate);
+                else cs.setNull(1, Types.VARCHAR);
                 cs.registerOutParameter(2, Types.INTEGER);
                 cs.execute();
                 return cs.getInt(2);
@@ -619,10 +450,8 @@ public class SourceDataUploadService {
         });
     }
 
-    // Executes the company-provided BRECON_CARD_EPIN_PROCEDURE
     @Transactional
     public void executeCompanyEpinProcedure(String reportDateStr) {
-        logger.info("Executing BRECON_CARD_EPIN_PROCEDURE for date: {}", reportDateStr);
         jdbcTemplate.execute((Connection con) -> {
             try (CallableStatement cs = con.prepareCall("{call BRECON.BRECON_CARD_EPIN_PROCEDURE(?)}")) {
                 cs.setString(1, reportDateStr);
@@ -632,75 +461,47 @@ public class SourceDataUploadService {
         });
     }
 
-    // Raw text file reader for EPIN Base II files
     @Transactional
     public int uploadRawEpinTextFile(MultipartFile file, String reportDateStr) throws Exception {
         String sql = "INSERT INTO BRECON.BRECON_EPIN_TEXT_TABLE (TEXTDATA, UP_DATE) VALUES (?, TO_DATE(?, 'DD-MM-YY'))";
         List<Object[]> batchArgs = new ArrayList<>();
-
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if (!line.trim().isEmpty()) {
-                    batchArgs.add(new Object[] { line, reportDateStr });
-                }
+                if (!line.trim().isEmpty()) batchArgs.add(new Object[] { line, reportDateStr });
             }
         }
-
-        if (!batchArgs.isEmpty()) {
-            jdbcTemplate.batchUpdate(sql, batchArgs);
-            logger.info("Inserted {} lines into BRECON_EPIN_TEXT_TABLE", batchArgs.size());
-        }
+        if (!batchArgs.isEmpty()) jdbcTemplate.batchUpdate(sql, batchArgs);
         return batchArgs.size();
     }
 
     public void exportFailedRefundReport(HttpServletResponse response) throws Exception {
         String sql = "SELECT CARD_NUMBER, RRN, AUTH_ID, AMOUNT, TRAN_DT, AUTHX_RESP_CDE, AUTHX_TYP, REASON " +
-                     "FROM BRECON.RECON_TXN " +
-                     "WHERE RECON_STATUS = 'FAILED_REFUND'";
-
+                     "FROM BRECON.RECON_TXN WHERE RECON_STATUS = 'FAILED_REFUND'";
         List<Map<String, Object>> list = jdbcTemplate.queryForList(sql);
 
         SXSSFWorkbook workbook = new SXSSFWorkbook(100);
         try {
             Sheet sheet = workbook.createSheet("FAILED_TXN_REFUND_REPORT");
-
-            CellStyle headerStyle = workbook.createCellStyle();
-            Font font = workbook.createFont();
-            font.setBold(true);
-            font.setColor(IndexedColors.WHITE.getIndex());
-            headerStyle.setFont(font);
-            headerStyle.setFillForegroundColor(IndexedColors.MAROON.getIndex());
-            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-            String[] headers = new String[] {
-                "Card Number", "RRN", "Auth ID", "Amount", "Txn Date", 
-                "Response Code", "Auth Type", "Reason"
-            };
-
-            Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < headers.length; i++) {
-                Cell c = headerRow.createCell(i);
-                c.setCellValue(headers[i]);
-                c.setCellStyle(headerStyle);
-            }
+            String[] headers = { "Card Number", "RRN", "Auth ID", "Amount", "Txn Date", "Response Code", "Auth Type", "Reason" };
+            Row hRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) hRow.createCell(i).setCellValue(headers[i]);
 
             int rowIdx = 1;
             for (Map<String, Object> r : list) {
                 Row row = sheet.createRow(rowIdx++);
-                row.createCell(0).setCellValue(r.get("CARD_NUMBER") != null ? String.valueOf(r.get("CARD_NUMBER")) : "");
-                row.createCell(1).setCellValue(r.get("RRN") != null ? String.valueOf(r.get("RRN")) : "");
-                row.createCell(2).setCellValue(r.get("AUTH_ID") != null ? String.valueOf(r.get("AUTH_ID")) : "");
-                row.createCell(3).setCellValue(r.get("AMOUNT") != null ? String.valueOf(r.get("AMOUNT")) : "");
-                row.createCell(4).setCellValue(r.get("TRAN_DT") != null ? String.valueOf(r.get("TRAN_DT")) : "");
-                row.createCell(5).setCellValue(r.get("AUTHX_RESP_CDE") != null ? String.valueOf(r.get("AUTHX_RESP_CDE")) : "");
-                row.createCell(6).setCellValue(r.get("AUTHX_TYP") != null ? String.valueOf(r.get("AUTHX_TYP")) : "");
-                row.createCell(7).setCellValue(r.get("REASON") != null ? String.valueOf(r.get("REASON")) : "Reversal Not Received");
+                row.createCell(0).setCellValue(String.valueOf(r.get("CARD_NUMBER") != null ? r.get("CARD_NUMBER") : ""));
+                row.createCell(1).setCellValue(String.valueOf(r.get("RRN") != null ? r.get("RRN") : ""));
+                row.createCell(2).setCellValue(String.valueOf(r.get("AUTH_ID") != null ? r.get("AUTH_ID") : ""));
+                row.createCell(3).setCellValue(String.valueOf(r.get("AMOUNT") != null ? r.get("AMOUNT") : ""));
+                row.createCell(4).setCellValue(String.valueOf(r.get("TRAN_DT") != null ? r.get("TRAN_DT") : ""));
+                row.createCell(5).setCellValue(String.valueOf(r.get("AUTHX_RESP_CDE") != null ? r.get("AUTHX_RESP_CDE") : ""));
+                row.createCell(6).setCellValue(String.valueOf(r.get("AUTHX_TYP") != null ? r.get("AUTHX_TYP") : ""));
+                row.createCell(7).setCellValue(String.valueOf(r.get("REASON") != null ? r.get("REASON") : ""));
             }
 
-            String fileName = "FAILED_TXN_REFUND_REPORT_" + System.currentTimeMillis() + ".xlsx";
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
+            response.setHeader("Content-Disposition", "attachment; filename=FAILED_TXN_REFUND_REPORT_" + System.currentTimeMillis() + ".xlsx");
             workbook.write(response.getOutputStream());
             response.getOutputStream().flush();
         } finally {

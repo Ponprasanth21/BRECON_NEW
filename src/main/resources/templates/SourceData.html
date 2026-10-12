@@ -5,7 +5,7 @@
     <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>BRECON</title>
+    <title>BRECON | Source Data</title>
 
     <script th:src="@{/js/jquery.min.js}"></script>
     <script th:src="@{/js/jquery-ui.min.js}"></script>
@@ -35,8 +35,9 @@
         }
 
         .source-data-wrapper {
-            width: 86%;
-            margin: 40px auto;
+            width: 88%;
+            max-width: 1650px;
+            margin: 30px auto;
         }
 
         .source-data-card {
@@ -189,13 +190,13 @@
         .action-dropdown-menu a:hover { background: var(--head-bg); color: var(--brand-dark); }
         .action-dropdown-menu a i { width: 18px; margin-right: 6px; color: var(--brand); }
 
-        /* File List Area */
+        /* Container Sections */
         .file-list-container {
             border: 1px solid var(--line);
             border-top: none;
-            border-radius: 0 0 10px 10px;
             background: #ffffff;
             overflow: hidden;
+            margin-bottom: 16px;
         }
 
         .file-list-title-bar {
@@ -215,19 +216,18 @@
             background: #f1f5f9;
             color: var(--ink);
             text-align: left;
-            padding: 10px 14px;
+            padding: 9px 12px;
             border-bottom: 1px solid var(--line);
             font-weight: 600;
         }
         .dedicated-file-table td {
-            padding: 10px 14px;
+            padding: 9px 12px;
             border-bottom: 1px solid #edf2f7;
             color: var(--text);
             vertical-align: middle;
         }
         .dedicated-file-table tr:nth-child(even) td { background: var(--row-alt); }
         .dedicated-file-table tr:hover td { background: var(--row-hover); }
-        .dedicated-file-table tr:last-child td { border-bottom: none; }
 
         .file-name-cell { font-weight: bold; color: var(--brand-dark); display: flex; align-items: center; gap: 8px; }
         .file-name-cell i { color: #1d6f42; font-size: 16px; }
@@ -262,13 +262,105 @@
             display: inline-block;
         }
 
+        .badge-error-pill {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #f87171;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        /* Buttons & Toolbar */
+        .failed-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .edit-fail-btn {
+            background: var(--brand);
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 11.5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background .15s ease;
+            white-space: nowrap;
+        }
+        .edit-fail-btn:hover { background: var(--brand-dark); }
+
+        .delete-fail-btn {
+            background: #dc2626;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 11.5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background .15s ease;
+            white-space: nowrap;
+        }
+        .delete-fail-btn:hover { background: #b91c1c; }
+
+        .download-fail-btn {
+            background: #15803d;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background .15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .download-fail-btn:hover { background: #166534; }
+
+        .bulk-delete-btn {
+            display: none;
+            background: #dc2626;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background .15s ease;
+        }
+        .bulk-delete-btn:hover { background: #b91c1c; }
+
+        .checkbox-cell {
+            text-align: center !important;
+            width: 38px;
+        }
+        .row-select-checkbox, #selectAllFailed {
+            cursor: pointer;
+            width: 15px;
+            height: 15px;
+        }
+
         .no-data {
             text-align: center !important;
             color: var(--muted) !important;
-            padding: 46px 10px !important;
-            font-size: 14px;
+            padding: 24px 10px !important;
+            font-size: 13px;
         }
-        .no-data i { display: block; font-size: 30px; margin-bottom: 10px; color: #b4c2cc; }
+        .no-data i { display: block; font-size: 24px; margin-bottom: 6px; color: #b4c2cc; }
 
         .source-data-footer {
             border-top: 1px solid #e3e8ec;
@@ -290,257 +382,640 @@
             cursor: pointer;
         }
         .source-btn:hover { background: var(--head-bg); border-color: var(--brand); color: #000; }
+
+        /* MODAL POPUPS (COMMON STYLING) */
+        .failed-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(20, 35, 45, 0.6);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        .failed-modal-overlay.open { display: flex; }
+
+        .failed-modal-card {
+            width: 520px;
+            max-width: 92vw;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: modalFadeIn 0.18s ease-out;
+        }
+        @keyframes modalFadeIn {
+            from { transform: scale(0.94); opacity: 0; }
+            to   { transform: scale(1); opacity: 1; }
+        }
+
+        .failed-modal-header {
+            padding: 12px 18px;
+            background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .failed-modal-close-x {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .failed-modal-body {
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .failed-field { display: flex; flex-direction: column; gap: 4px; }
+        .failed-field.full { grid-column: 1 / -1; }
+        .failed-field label { font-size: 11.5px; font-weight: bold; color: var(--ink); }
+        .failed-field input {
+            height: 33px;
+            padding: 4px 9px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            font-size: 12.5px;
+            outline: none;
+        }
+        .failed-field input:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 2px rgba(56, 107, 126, 0.15);
+        }
+
+        .failed-modal-footer {
+            padding: 12px 20px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .modal-submit-btn {
+            background: #16a34a;
+            color: #ffffff;
+            border: none;
+            padding: 7px 15px;
+            border-radius: 5px;
+            font-size: 12.5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-submit-btn:hover { background: #15803d; }
+        .modal-cancel-btn {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            padding: 7px 14px;
+            border-radius: 5px;
+            font-size: 12.5px;
+            cursor: pointer;
+        }
+
+        /* CUSTOM NOTIFICATION / CONFIRMATION MODAL */
+        .action-alert-body {
+            padding: 24px 20px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .action-alert-icon {
+            font-size: 42px;
+            margin-bottom: 14px;
+        }
+        .action-alert-icon.success { color: #16a34a; }
+        .action-alert-icon.error   { color: #dc2626; }
+        .action-alert-icon.warning { color: #d97706; }
+        .action-alert-icon.info    { color: #0284c7; }
+
+        .action-alert-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--ink);
+            margin-bottom: 8px;
+        }
+        .action-alert-text {
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.5;
+            white-space: pre-line;
+        }
     </style>
 
-	<script>
-	    var currentUploadType = "";
-	    var activeCategory = "ATM";
+    <script>
+        var currentUploadType = "";
+        var activeCategory = "ATM";
 
-	    // Store live database row counts synced directly with Oracle
-	    var dbRowCounts = {
-	        CBS: 0,
-	        ATM: 0,
-	        POS: 0,
-	        EPIN: 0,
-	        VISANET: 0
-	    };
+        var dbRowCounts = { CBS: 0, ATM: 0, POS: 0, EPIN: 0, VISANET: 0 };
+        var uploadedFilesStore = { CBS: [], ATM: [], POS: [], EPIN: [], VISANET: [] };
 
-	    // Stores files uploaded during the current browser session
-	    var uploadedFilesStore = {
-	        CBS: [],
-	        ATM: [],
-	        POS: [],
-	        EPIN: [],
-	        VISANET: []
-	    };
+        var currentConfirmCallback = null;
 
-	    $(function () {
-	        var $upDd   = $('#uploadDropdown');
-	        var $upBtn  = $('#uploadButton');
-	        var $xlDd   = $('#excelDropdown');
-	        var $xlBtn  = $('#excelButton');
+        $(function () {
+            var $upDd  = $('#uploadDropdown');
+            var $upBtn = $('#uploadButton');
+            var $xlDd  = $('#excelDropdown');
+            var $xlBtn = $('#excelButton');
 
-	        // Fetch live table row counts immediately on page load
-	        refreshLiveDbCounts();
+            refreshLiveDbCounts();
 
-	        // Upload Dropdown toggle
-	        $upBtn.on('click', function (e) {
-	            e.preventDefault();
-	            e.stopPropagation();
-	            $xlDd.removeClass('open');
-	            $upDd.toggleClass('open');
-	        });
+            $upBtn.on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $xlDd.removeClass('open');
+                $upDd.toggleClass('open');
+            });
 
-	        // Excel Dropdown toggle
-	        $xlBtn.on('click', function (e) {
-	            e.preventDefault();
-	            e.stopPropagation();
-	            $upDd.removeClass('open');
-	            $xlDd.toggleClass('open');
-	        });
+            $xlBtn.on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $upDd.removeClass('open');
+                $xlDd.toggleClass('open');
+            });
 
-	        // Click outside closes dropdowns
-	        $(document).on('click', function (e) {
-	            if (!$(e.target).closest('#uploadDropdown').length) { $upDd.removeClass('open'); }
-	            if (!$(e.target).closest('#excelDropdown').length) { $xlDd.removeClass('open'); }
-	        });
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('#uploadDropdown').length) { $upDd.removeClass('open'); }
+                if (!$(e.target).closest('#excelDropdown').length) { $xlDd.removeClass('open'); }
+            });
 
-	        // Escape closes dropdowns
-	        $(document).on('keydown', function (e) {
-	            if (e.key === 'Escape') {
-	                $upDd.removeClass('open');
-	                $xlDd.removeClass('open');
-	            }
-	        });
+            $(document).on('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    $upDd.removeClass('open');
+                    $xlDd.removeClass('open');
+                    closeEditModal();
+                    closeAppModal();
+                }
+            });
 
-	        // Trigger file input for Upload
-	        $('#uploadMenu a').on('click', function (e) {
-	            e.preventDefault();
-	            currentUploadType = $(this).data('type');
-	            $upDd.removeClass('open');
-	            $('#excelFileInput').val('');
-	            $('#excelFileInput').click();
-	        });
+            $('#uploadMenu a').on('click', function (e) {
+                e.preventDefault();
+                currentUploadType = $(this).data('type');
+                $upDd.removeClass('open');
+                $('#excelFileInput').val('');
+                $('#excelFileInput').click();
+            });
 
-	        // Trigger Excel Download
-	        $('#excelMenu a').on('click', function (e) {
-	            e.preventDefault();
-	            var downloadType = $(this).data('type');
-	            $xlDd.removeClass('open');
-	            downloadCategoryExcel(downloadType);
-	        });
+            $('#excelMenu a').on('click', function (e) {
+                e.preventDefault();
+                var downloadType = $(this).data('type');
+                $xlDd.removeClass('open');
+                downloadCategoryExcel(downloadType);
+            });
 
-	        // Upload execution
-	        $('#excelFileInput').on('change', function (e) {
-	            var file = e.target.files[0];
-	            if (!file) return;
+            // Master "Select All" Checkbox
+            $('#selectAllFailed').on('change', function () {
+                var checked = $(this).is(':checked');
+                $('.row-select-checkbox').prop('checked', checked);
+                updateBulkDeleteButton();
+            });
 
-	            var formData = new FormData();
-	            formData.append("file", file);
-	            formData.append("type", currentUploadType);
+            // Row Checkbox
+            $(document).on('change', '.row-select-checkbox', function () {
+                var total = $('.row-select-checkbox').length;
+                var checkedCount = $('.row-select-checkbox:checked').length;
+                $('#selectAllFailed').prop('checked', total > 0 && total === checkedCount);
+                updateBulkDeleteButton();
+            });
 
-	            $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Uploading & parsing ' + file.name + ' (' + currentUploadType + ')...');
+            // File upload event
+            $('#excelFileInput').on('change', function (e) {
+                var file = e.target.files[0];
+                if (!file) return;
 
-	            $.ajax({
-	                url: 'SourceDataUpload',
-	                type: 'POST',
-	                data: formData,
-	                processData: false,
-	                contentType: false,
-	                success: function (res) {
-	                    $('#uploadStatusMsg').hide();
-	                    var now = new Date();
-	                    var formattedDate = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                var formData = new FormData();
+                formData.append("file", file);
+                formData.append("type", currentUploadType);
 
-	                    var rowsInserted = (res && typeof res.insertedRows !== 'undefined') ? res.insertedRows : 0;
-	                    var totalInDb = (res && typeof res.totalRowsInDb !== 'undefined') ? res.totalRowsInDb : rowsInserted;
+                $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Processing & validating ' + file.name + ' (' + currentUploadType + ')...');
 
-	                    // Update current category live count directly
-	                    dbRowCounts[currentUploadType] = totalInDb;
+                $.ajax({
+                    url: 'SourceDataUpload',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        $('#uploadStatusMsg').hide();
+                        var now = new Date();
+                        var formattedDate = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-	                    var record = {
-	                        id: Date.now(),
-	                        fileName: file.name,
-	                        uploadDate: formattedDate,
-	                        fileSize: (file.size / 1024).toFixed(2) + " KB",
-	                        recordsInserted: rowsInserted
-	                    };
+                        var rowsInserted = res.insertedRows || 0;
+                        var rowsFailed   = res.failedRows || 0;
+                        var totalInDb    = res.totalRowsInDb || rowsInserted;
 
-	                    // Replace current category record so counts do not accumulate in-memory
-	                    uploadedFilesStore[currentUploadType] = [record];
+                        dbRowCounts[currentUploadType] = totalInDb;
 
-	                    switchCategory(currentUploadType);
-	                    updateBadges();
+                        var record = {
+                            id: Date.now(),
+                            fileName: file.name,
+                            uploadDate: formattedDate,
+                            fileSize: (file.size / 1024).toFixed(2) + " KB",
+                            recordsInserted: rowsInserted
+                        };
 
-	                    alert("Upload Complete!\n" + rowsInserted + " rows uploaded from file.\nCurrent live records in DB: " + totalInDb);
-	                },
-	                error: function (xhr) {
-	                    $('#uploadStatusMsg').hide();
-	                    var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
-	                    alert("Database upload failed: " + err);
-	                }
-	            });
-	        });
+                        uploadedFilesStore[currentUploadType] = [record];
 
-	        switchCategory('ATM');
-	    });
+                        switchCategory(currentUploadType);
+                        updateBadges();
+                        loadFailedRecords(currentUploadType);
 
-	    // Pulls actual SELECT COUNT(*) from Oracle for all tables
-	    function refreshLiveDbCounts() {
-	        $.ajax({
-	            url: 'getSourceDataCounts',
-	            type: 'GET',
-	            success: function (counts) {
-	                if (counts) {
-	                    dbRowCounts = counts;
-	                    updateBadges();
-	                    renderDedicatedList();
-	                }
-	            },
-	            error: function (err) {
-	                console.warn("Could not fetch initial database counts", err);
-	            }
-	        });
-	    }
+                        var msg = "• Successfully Inserted: " + rowsInserted + " rows\n• Current Live Records in DB: " + totalInDb;
+                        if (rowsFailed > 0) {
+                            msg += "\n• Rejected / Duplicates: " + rowsFailed + " rows routed below for review.";
+                            showAppAlert("warning", "Upload Completed with Warnings", msg);
+                        } else {
+                            showAppAlert("success", "Upload Successful", msg);
+                        }
+                    },
+                    error: function (xhr) {
+                        $('#uploadStatusMsg').hide();
+                        refreshLiveDbCounts();
+                        loadFailedRecords(currentUploadType);
+                        var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+                        showAppAlert("error", "Upload Processing Failed", err);
+                    }
+                });
+            });
 
-	    function switchCategory(cat) {
-	        activeCategory = cat;
-	        $('.source-header-clickable').removeClass('active');
-	        $('[data-header-for="' + cat + '"]').addClass('active');
-	        $('#activeCategoryName').text(cat);
-	        renderDedicatedList();
-	    }
+            // Form submission inside edit modal
+            $('#editRecordForm').on('submit', function (e) {
+                e.preventDefault();
 
-	    function updateBadges() {
-	        ['CBS', 'ATM', 'POS', 'EPIN', 'VISANET'].forEach(function (cat) {
-	            var btn = $('[data-header-for="' + cat + '"]');
-	            var liveCount = dbRowCounts[cat] || 0;
-	            var badge = btn.find('.source-badge');
+                var failId    = $('#editFailId').val();
+                var cardNo    = $('#editCardNo').val().trim();
+                var rrn       = $('#editRrn').val().trim();
+                var authId    = $('#editAuthId').val().trim();
+                var amount    = $('#editAmount').val().trim();
+                var tranDate  = $('#editTranDate').val().trim();
 
-	            badge.text(liveCount.toLocaleString() + " rows");
+                $.ajax({
+                    url: 'submitCorrectedRecord',
+                    type: 'POST',
+                    data: {
+                        failId: failId,
+                        sourceType: activeCategory,
+                        cardNo: cardNo,
+                        rrn: rrn,
+                        authId: authId,
+                        amount: amount,
+                        tranDate: tranDate
+                    },
+                    success: function (res) {
+                        closeEditModal();
+                        refreshLiveDbCounts();
+                        loadFailedRecords(activeCategory);
+                        showAppAlert("success", "Successfully Submitted", res.message || "Record successfully updated and added to database without duplicates.");
+                    },
+                    error: function (xhr) {
+                        var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+                        showAppAlert("error", "Validation Error", err);
+                    }
+                });
+            });
 
-	            if (liveCount > 0) {
-	                btn.addClass('has-data');
-	            } else {
-	                btn.removeClass('has-data');
-	            }
-	        });
-	    }
+            // Action modal confirm click
+            $('#appModalConfirmBtn').on('click', function () {
+                if (typeof currentConfirmCallback === 'function') {
+                    currentConfirmCallback();
+                }
+                closeAppModal();
+            });
 
-	    function renderDedicatedList() {
-	        var files = uploadedFilesStore[activeCategory] || [];
-	        var $tbody = $('#dedicatedFileTableBody');
-	        $tbody.empty();
+            switchCategory('ATM');
+        });
 
-	        var liveCount = dbRowCounts[activeCategory] || 0;
-	        $('#categoryFileCount').text(files.length + " file(s) | " + liveCount.toLocaleString() + " total records in DB");
+        // =========================================================================
+        // CUSTOM POPUP MODAL NOTIFICATION ENGINE
+        // =========================================================================
+        function showAppAlert(type, title, message) {
+            var iconClass = "fa-info-circle";
+            if (type === "success") iconClass = "fa-check-circle";
+            if (type === "error")   iconClass = "fa-times-circle";
+            if (type === "warning") iconClass = "fa-exclamation-triangle";
 
-	        if (files.length === 0) {
-	            $tbody.append(
-	                '<tr>' +
-	                    '<td colspan="4" class="no-data">' +
-	                        '<i class="fa fa-folder-open-o"></i>' +
-	                        'No file uploaded this session for <b>' + activeCategory + '</b>.<br>' +
-	                        '<span style="font-size:12px; color:#555;">Live records currently in DB: <b>' + liveCount.toLocaleString() + '</b></span>' +
-	                    '</td>' +
-	                '</tr>'
-	            );
-	            return;
-	        }
+            $('#appModalIcon').attr('class', 'fa action-alert-icon ' + type + ' ' + iconClass);
+            $('#appModalTitle').text(title);
+            $('#appModalText').text(message);
 
-	        files.forEach(function (file) {
-	            var badgeClass = file.recordsInserted > 0 ? 'badge-success-count' : 'badge-zero-count';
-	            var rowHtml =
-	                '<tr>' +
-	                    '<td style="width: 35%;">' +
-	                        '<div class="file-name-cell">' +
-	                            '<i class="fa fa-file-text-o"></i>' +
-	                            '<span>' + file.fileName + '</span>' +
-	                        '</div>' +
-	                    '</td>' +
-	                    '<td style="width: 25%; color: #475569;"><i class="fa fa-clock-o" style="margin-right:6px; color:#94a3b8;"></i>' + file.uploadDate + '</td>' +
-	                    '<td style="width: 20%;">' + file.fileSize + '</td>' +
-	                    '<td style="width: 20%;">' +
-	                        '<span class="' + badgeClass + '">' +
-	                            '<i class="fa fa-check-circle"></i> ' + file.recordsInserted.toLocaleString() + ' rows added' +
-	                        '</span>' +
-	                    '</td>' +
-	                '</tr>';
-	            $tbody.append(rowHtml);
-	        });
-	    }
+            $('#appModalCancelBtn').hide();
+            $('#appModalConfirmBtn').hide();
+            $('#appModalOkBtn').show();
 
-	    function downloadCategoryExcel(type) {
-	        window.location.href = "SourceDataExportExcel?type=" + encodeURIComponent(type);
-	    }
+            $('#customActionModal').addClass('open');
+        }
 
-	    function extractData() {
-	        if (!confirm("Start 3-way VISA reconciliation (VISA + CBS + Switch)?")) {
-	            return;
-	        }
+        function showAppConfirm(title, message, onConfirm) {
+            $('#appModalIcon').attr('class', 'fa action-alert-icon warning fa-question-circle');
+            $('#appModalTitle').text(title);
+            $('#appModalText').text(message);
 
-	        $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Executing VISA Reconciliation process...');
+            currentConfirmCallback = onConfirm;
 
-	        $.ajax({
-	            url: 'runVisaReconciliation',
-	            type: 'POST',
-	            data: { reconDate: '' },
-	            success: function(res) {
-	                $('#uploadStatusMsg').hide();
-	                alert(res.message);
-	                refreshLiveDbCounts();
-	                if (confirm("Reconciliation complete. Download Failed Transaction Refund Report now?")) {
-	                    window.location.href = 'downloadFailedRefundReport';
-	                }
-	            },
-	            error: function(xhr) {
-	                $('#uploadStatusMsg').hide();
-	                var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
-	                alert("Reconciliation failed: " + err);
-	            }
-	        });
-	    }
-	</script>
+            $('#appModalOkBtn').hide();
+            $('#appModalCancelBtn').show();
+            $('#appModalConfirmBtn').show();
+
+            $('#customActionModal').addClass('open');
+        }
+
+        function closeAppModal() {
+            $('#customActionModal').removeClass('open');
+            currentConfirmCallback = null;
+        }
+
+        function updateBulkDeleteButton() {
+            var selectedCount = $('.row-select-checkbox:checked').length;
+            if (selectedCount > 0) {
+                $('#bulkDeleteBtn').show().html('<i class="fa fa-trash"></i> Delete Selected (' + selectedCount + ')');
+                $('#downloadFailedBtn').html('<i class="fa fa-file-excel-o"></i> Download Selected (' + selectedCount + ')');
+            } else {
+                $('#bulkDeleteBtn').hide();
+                $('#downloadFailedBtn').html('<i class="fa fa-file-excel-o"></i> Download Failed');
+            }
+        }
+
+        function refreshLiveDbCounts() {
+            $.ajax({
+                url: 'getSourceDataCounts',
+                type: 'GET',
+                success: function (counts) {
+                    if (counts) {
+                        dbRowCounts = counts;
+                        updateBadges();
+                        renderDedicatedList();
+                    }
+                }
+            });
+        }
+
+        function switchCategory(cat) {
+            activeCategory = cat;
+            $('.source-header-clickable').removeClass('active');
+            $('[data-header-for="' + cat + '"]').addClass('active');
+            $('#activeCategoryName').text(cat);
+            $('#failedCategoryName').text(cat);
+            renderDedicatedList();
+            loadFailedRecords(cat);
+        }
+
+        function updateBadges() {
+            ['CBS', 'ATM', 'POS', 'EPIN', 'VISANET'].forEach(function (cat) {
+                var btn = $('[data-header-for="' + cat + '"]');
+                var liveCount = dbRowCounts[cat] || 0;
+                btn.find('.source-badge').text(liveCount.toLocaleString() + " rows");
+                if (liveCount > 0) { btn.addClass('has-data'); } else { btn.removeClass('has-data'); }
+            });
+        }
+
+        function renderDedicatedList() {
+            var files = uploadedFilesStore[activeCategory] || [];
+            var $tbody = $('#dedicatedFileTableBody');
+            $tbody.empty();
+
+            var liveCount = dbRowCounts[activeCategory] || 0;
+            $('#categoryFileCount').text(files.length + " file(s) | " + liveCount.toLocaleString() + " total records in DB");
+
+            if (files.length === 0) {
+                $tbody.append(
+                    '<tr>' +
+                        '<td colspan="4" class="no-data">' +
+                            '<i class="fa fa-folder-open-o"></i>' +
+                            'No file uploaded this session for <b>' + activeCategory + '</b>.<br>' +
+                            '<span style="font-size:12px; color:#555;">Live records currently in DB: <b>' + liveCount.toLocaleString() + '</b></span>' +
+                        '</td>' +
+                    '</tr>'
+                );
+                return;
+            }
+
+            files.forEach(function (file) {
+                var badgeClass = file.recordsInserted > 0 ? 'badge-success-count' : 'badge-zero-count';
+                var rowHtml =
+                    '<tr>' +
+                        '<td style="width: 35%;">' +
+                            '<div class="file-name-cell">' +
+                                '<i class="fa fa-file-text-o"></i>' +
+                                '<span>' + file.fileName + '</span>' +
+                            '</div>' +
+                        '</td>' +
+                        '<td style="width: 25%; color: #475569;"><i class="fa fa-clock-o" style="margin-right:6px; color:#94a3b8;"></i>' + file.uploadDate + '</td>' +
+                        '<td style="width: 20%;">' + file.fileSize + '</td>' +
+                        '<td style="width: 20%;">' +
+                            '<span class="' + badgeClass + '">' +
+                                '<i class="fa fa-check-circle"></i> ' + file.recordsInserted.toLocaleString() + ' rows added' +
+                            '</span>' +
+                        '</td>' +
+                    '</tr>';
+                $tbody.append(rowHtml);
+            });
+        }
+
+        function loadFailedRecords(cat) {
+            $('#selectAllFailed').prop('checked', false);
+            updateBulkDeleteButton();
+
+            $.ajax({
+                url: 'getUploadFailedRecords',
+                type: 'GET',
+                data: { sourceType: cat },
+                success: function (data) {
+                    var $tbody = $('#failedRecordsTableBody');
+                    $tbody.empty();
+                    var count = (data && data.length) ? data.length : 0;
+                    $('#failedCountBadge').text(count + " record(s)");
+
+                    if (!data || data.length === 0) {
+                        $('#downloadFailedBtn').hide();
+                        $tbody.append('<tr><td colspan="8" class="no-data"><i class="fa fa-check-circle-o" style="color:#22c55e;"></i>All records are valid! No upload failures for ' + cat + '.</td></tr>');
+                        return;
+                    }
+
+                    $('#downloadFailedBtn').show();
+
+                    data.forEach(function (r) {
+                        var cardNo   = r.RAW_CARD_NO || '';
+                        var rrn      = r.RAW_RRN || '';
+                        var authId   = r.RAW_AUTH_ID || '';
+                        var amt      = r.RAW_AMOUNT || '';
+                        var dt       = r.RAW_TRAN_DATE || '';
+                        var reason   = r.ERROR_REASON || 'Validation Mismatch';
+
+                        var rowHtml =
+                            '<tr>' +
+                                '<td class="checkbox-cell">' +
+                                    '<input type="checkbox" class="row-select-checkbox" value="' + r.FAIL_ID + '">' +
+                                '</td>' +
+                                '<td><b>' + cardNo + '</b></td>' +
+                                '<td>' + (rrn || 'N/A') + '</td>' +
+                                '<td>' + (authId || 'N/A') + '</td>' +
+                                '<td>' + amt + '</td>' +
+                                '<td>' + dt + '</td>' +
+                                '<td><span class="badge-error-pill">' + reason + '</span></td>' +
+                                '<td style="text-align: center;">' +
+                                    '<div class="action-btn-group">' +
+                                        '<button type="button" class="edit-fail-btn" ' +
+                                                'onclick="openEditModal(' + r.FAIL_ID + ', \'' + cardNo + '\', \'' + rrn + '\', \'' + authId + '\', \'' + amt + '\', \'' + dt + '\', \'' + reason + '\')">' +
+                                            '<i class="fa fa-pencil"></i> Edit &amp; Submit' +
+                                        '</button>' +
+                                        '<button type="button" class="delete-fail-btn" ' +
+                                                'onclick="deleteFailedRecord(' + r.FAIL_ID + ')">' +
+                                            '<i class="fa fa-trash"></i> Delete' +
+                                        '</button>' +
+                                    '</div>' +
+                                '</td>' +
+                            '</tr>';
+                        $tbody.append(rowHtml);
+                    });
+                }
+            });
+        }
+
+        // Single Record Delete
+        function deleteFailedRecord(failId) {
+            showAppConfirm(
+                "Delete Confirmation",
+                "Are you sure you want to permanently delete this rejected record?",
+                function () {
+                    $.ajax({
+                        url: 'deleteFailedRecord',
+                        type: 'POST',
+                        data: { failId: failId },
+                        success: function (res) {
+                            loadFailedRecords(activeCategory);
+                            showAppAlert("success", "Successfully Deleted", res.message || "Record permanently removed from the failure queue.");
+                        },
+                        error: function (xhr) {
+                            var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+                            showAppAlert("error", "Deletion Failed", err);
+                        }
+                    });
+                }
+            );
+        }
+
+        // Multiple Records Bulk Delete
+        function deleteSelectedFailedRecords() {
+            var selectedIds = [];
+            $('.row-select-checkbox:checked').each(function () {
+                selectedIds.push($(this).val());
+            });
+
+            if (selectedIds.length === 0) {
+                showAppAlert("info", "No Selection", "Please select at least one record to delete.");
+                return;
+            }
+
+            showAppConfirm(
+                "Bulk Deletion Confirmation",
+                "Are you sure you want to delete " + selectedIds.length + " selected record(s) from the failure queue?",
+                function () {
+                    $.ajax({
+                        url: 'deleteMultipleFailedRecords',
+                        type: 'POST',
+                        data: { failIds: selectedIds },
+                        traditional: true,
+                        success: function (res) {
+                            loadFailedRecords(activeCategory);
+                            showAppAlert("success", "Successfully Deleted", (res.deletedCount || selectedIds.length) + " rejected record(s) removed successfully.");
+                        },
+                        error: function (xhr) {
+                            var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+                            showAppAlert("error", "Bulk Deletion Failed", err);
+                        }
+                    });
+                }
+            );
+        }
+
+        // Download Failed Records with Custom Notification Popup
+        function downloadFailedRecords() {
+            var selectedIds = [];
+            $('.row-select-checkbox:checked').each(function () {
+                selectedIds.push($(this).val());
+            });
+
+            var countMsg = selectedIds.length > 0 
+                ? selectedIds.length + " selected record(s)" 
+                : "all rejected records for " + activeCategory;
+
+            var url = "downloadFailedRecordsExcel?sourceType=" + encodeURIComponent(activeCategory);
+            if (selectedIds.length > 0) {
+                url += "&failIds=" + selectedIds.join(",");
+            }
+
+            // Trigger file download
+            window.location.href = url;
+
+            // Trigger themed notification popup
+            showAppAlert(
+                "success",
+                "Successfully Downloaded",
+                "Your Excel report containing " + countMsg + " has been generated and downloaded."
+            );
+        }
+
+        function openEditModal(failId, cardNo, rrn, authId, amount, tranDate, reason) {
+            $('#editFailId').val(failId);
+            $('#editCardNo').val(cardNo);
+            $('#editRrn').val(rrn);
+            $('#editAuthId').val(authId);
+            $('#editAmount').val(amount);
+            $('#editTranDate').val(tranDate);
+            $('#editErrorReason').text(reason);
+
+            $('#editRecordModal').addClass('open');
+        }
+
+        function closeEditModal() {
+            $('#editRecordModal').removeClass('open');
+        }
+
+        function downloadCategoryExcel(type) {
+            window.location.href = "SourceDataExportExcel?type=" + encodeURIComponent(type);
+            showAppAlert("success", "Successfully Downloaded", "Exporting live database records for " + type + " to Excel.");
+        }
+
+        function extractData() {
+            showAppConfirm(
+                "Start 3-Way Reconciliation?",
+                "Are you sure you want to execute 3-way VISA reconciliation (VISA + CBS + Switch)?",
+                function () {
+                    $('#uploadStatusMsg').show().html('<i class="fa fa-spinner fa-spin"></i> Executing VISA Reconciliation process...');
+
+                    $.ajax({
+                        url: 'runVisaReconciliation',
+                        type: 'POST',
+                        data: { reconDate: '' },
+                        success: function(res) {
+                            $('#uploadStatusMsg').hide();
+                            refreshLiveDbCounts();
+
+                            showAppConfirm(
+                                "Reconciliation Completed",
+                                (res.message || "Reconciliation executed successfully.") + "\n\nWould you like to download the Failed Transaction Refund Report now?",
+                                function () {
+                                    window.location.href = 'downloadFailedRefundReport';
+                                    showAppAlert("success", "Successfully Downloaded", "Failed Transaction Refund Report downloaded.");
+                                }
+                            );
+                        },
+                        error: function(xhr) {
+                            $('#uploadStatusMsg').hide();
+                            var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+                            showAppAlert("error", "Reconciliation Failed", err);
+                        }
+                    });
+                }
+            );
+        }
+    </script>
 </head>
 
 <body>
@@ -551,7 +1026,7 @@
     <div class="source-data-wrapper">
         <div class="source-data-card">
             <div class="source-data-header">
-                <span><i class="fa fa-bar-chart"></i> Source Data</span>
+                <span><i class="fa fa-bar-chart"></i> Source Data Ingestion &amp; Validation</span>
             </div>
 
             <div class="source-data-table-wrapper">
@@ -636,6 +1111,7 @@
 
                 <div id="uploadStatusMsg"></div>
 
+                <!-- 1. Successfully Uploaded Files -->
                 <div class="file-list-container">
                     <div class="file-list-title-bar">
                         <span>Uploaded File(s) for: <strong id="activeCategoryName">ATM</strong></span>
@@ -646,7 +1122,7 @@
                         <thead>
                             <tr>
                                 <th>File Name</th>
-                                <th>Upload Date & Time</th>
+                                <th>Upload Date &amp; Time</th>
                                 <th>File Size</th>
                                 <th>Status / Rows Inserted</th>
                             </tr>
@@ -655,8 +1131,52 @@
                             <tr>
                                 <td colspan="4" class="no-data">
                                     <i class="fa fa-folder-open-o"></i>
-                                    No files uploaded for <b>ATM</b> yet.<br>
-                                    <span style="font-size:12px; color:#888;">Select <b>Upload &gt; ATM</b> to add a file.</span>
+                                    No files uploaded for <b>ATM</b> yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 2. Failed / Rejected Records Queue with Multi-Select, Download & Delete -->
+                <div class="file-list-container" style="border-top: 1px solid var(--line); border-radius: 10px;">
+                    <div class="file-list-title-bar" style="background: #fff1f2;">
+                        <div>
+                            <span><i class="fa fa-exclamation-triangle" style="color: #e11d48; margin-right: 6px;"></i> Upload Validation Errors &amp; Rejected Records for: <strong id="failedCategoryName" style="color: #be123c;">ATM</strong></span>
+                            <span id="failedCountBadge" class="badge-error-pill" style="margin-left: 8px;">0 record(s)</span>
+                        </div>
+
+                        <!-- Action Toolbar -->
+                        <div class="failed-toolbar">
+                            <button type="button" id="downloadFailedBtn" class="download-fail-btn" onclick="downloadFailedRecords()">
+                                <i class="fa fa-file-excel-o"></i> Download Failed
+                            </button>
+                            <button type="button" id="bulkDeleteBtn" class="bulk-delete-btn" onclick="deleteSelectedFailedRecords()">
+                                <i class="fa fa-trash"></i> Delete Selected
+                            </button>
+                        </div>
+                    </div>
+
+                    <table class="dedicated-file-table">
+                        <thead>
+                            <tr>
+                                <th class="checkbox-cell">
+                                    <input type="checkbox" id="selectAllFailed" title="Select All">
+                                </th>
+                                <th style="width: 19%;">Card Number</th>
+                                <th style="width: 13%;">RRN</th>
+                                <th style="width: 11%;">Auth ID</th>
+                                <th style="width: 11%;">Amount</th>
+                                <th style="width: 11%;">Txn Date</th>
+                                <th style="width: 15%;">Error Reason</th>
+                                <th style="width: 17%; text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="failedRecordsTableBody">
+                            <tr>
+                                <td colspan="8" class="no-data">
+                                    <i class="fa fa-check-circle-o" style="color: #22c55e;"></i>
+                                    No rejected records found for <b>ATM</b>.
                                 </td>
                             </tr>
                         </tbody>
@@ -667,6 +1187,79 @@
             <div class="source-data-footer">
                 <a th:href="@{/Dashboard}" class="source-btn"><i class="fa fa-home"></i> Home</a>
                 <a href="javascript:history.back();" class="source-btn"><i class="fa fa-chevron-left"></i> Back</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Edit Failed Record Modal Dialog -->
+    <div class="failed-modal-overlay" id="editRecordModal">
+        <div class="failed-modal-card">
+            <div class="failed-modal-header">
+                <span><i class="fa fa-pencil-square-o"></i> Edit &amp; Submit Corrected Record</span>
+                <button type="button" class="failed-modal-close-x" onclick="closeEditModal()">&times;</button>
+            </div>
+
+            <form id="editRecordForm">
+                <input type="hidden" id="editFailId" />
+
+                <div class="failed-modal-body">
+                    <div class="failed-field full">
+                        <label>Reported Rejection Issue:</label>
+                        <span id="editErrorReason" style="font-size: 12px; color: #be123c; font-weight: bold;"></span>
+                    </div>
+
+                    <div class="failed-field full">
+                        <label for="editCardNo">Card Number (13-19 Digits) *</label>
+                        <input type="text" id="editCardNo" maxlength="19" required />
+                    </div>
+
+                    <div class="failed-field">
+                        <label for="editRrn">RRN *</label>
+                        <input type="text" id="editRrn" required />
+                    </div>
+
+                    <div class="failed-field">
+                        <label for="editAuthId">Auth ID *</label>
+                        <input type="text" id="editAuthId" required />
+                    </div>
+
+                    <div class="failed-field">
+                        <label for="editAmount">Amount *</label>
+                        <input type="text" id="editAmount" required />
+                    </div>
+
+                    <div class="failed-field">
+                        <label for="editTranDate">Transaction Date *</label>
+                        <input type="text" id="editTranDate" placeholder="YYYY-MM-DD" required />
+                    </div>
+                </div>
+
+                <div class="failed-modal-footer">
+                    <button type="button" class="modal-cancel-btn" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="modal-submit-btn"><i class="fa fa-check"></i> Submit to Database</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. UNIFIED SYSTEM ACTION MODAL (Alerts & Confirmations) -->
+    <div class="failed-modal-overlay" id="customActionModal">
+        <div class="failed-modal-card" style="max-width: 440px;">
+            <div class="failed-modal-header">
+                <span><i class="fa fa-bell-o"></i> System Notification</span>
+                <button type="button" class="failed-modal-close-x" onclick="closeAppModal()">&times;</button>
+            </div>
+
+            <div class="action-alert-body">
+                <i id="appModalIcon" class="fa fa-info-circle action-alert-icon info"></i>
+                <div id="appModalTitle" class="action-alert-title">Notification</div>
+                <div id="appModalText" class="action-alert-text">Details will appear here.</div>
+            </div>
+
+            <div class="failed-modal-footer">
+                <button type="button" id="appModalCancelBtn" class="modal-cancel-btn" onclick="closeAppModal()" style="display: none;">Cancel</button>
+                <button type="button" id="appModalConfirmBtn" class="modal-submit-btn" style="background: #dc2626; display: none;">Confirm</button>
+                <button type="button" id="appModalOkBtn" class="modal-submit-btn" onclick="closeAppModal()" style="background: var(--brand);">OK</button>
             </div>
         </div>
     </div>
