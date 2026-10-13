@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
-    <title>BRECON | MRI</title>
+    <title>BRECON | MRA</title>
 
     <link rel="icon" type="image/png"
           th:href="@{/images/favicon_bob.png}">
@@ -30,6 +30,7 @@
             border-radius: 12px;
             box-shadow: 0 8px 28px rgba(25,50,65,.12);
             overflow: hidden;
+             margin-top: 37px; 
         }
 
         .mri-title {
@@ -343,7 +344,7 @@
     <section class="mri-card">
 
         <div class="mri-title">
-            MRI — Management Reporting Interface
+            MRA — Management Reporting Interface
         </div>
 
         <div class="mri-content">
@@ -416,7 +417,7 @@
             <div class="mri-notice" id="mriNotice" role="status"></div>
 
             <div class="mri-list-heading">
-                <span><strong>MRI Records List</strong></span>
+                <span><strong>MRA Records List</strong></span>
                 <span>Total: <strong id="mriVisibleCount">0</strong> records</span>
             </div>
 
@@ -437,7 +438,7 @@
                     <tbody id="mriTableBody">
                         <tr>
                             <td colspan="8" class="mri-empty">
-                                No MRI files available.<br>
+                                No MRA files available.<br>
                                 Select Upload to choose a file.
                             </td>
                         </tr>
@@ -448,7 +449,7 @@
         </div>
 
         <div class="mri-footer">
-            <span>MRI Reporting Management</span>
+            <span>MRA Reporting Management</span>
             <button type="button" class="mri-btn" id="mriRefresh">
                 Refresh List
             </button>
@@ -460,7 +461,7 @@
 <div class="mri-modal" id="mriModal">
     <div class="mri-modal-box">
         <div class="mri-modal-header">
-            <span>Edit MRI Record</span>
+            <span>Edit MRA Record</span>
             <button type="button" class="mri-close" id="mriClose">&times;</button>
         </div>
 
@@ -558,7 +559,7 @@
             const cell = document.createElement("td");
             cell.colSpan = 8;
             cell.className = "mri-empty";
-            cell.textContent = "No MRI records found.";
+            cell.textContent = "No MRA records found.";
             row.appendChild(cell);
             body.appendChild(row);
             return;
@@ -566,10 +567,10 @@
 
         list.forEach((r, i) => {
             const statusClass = {
-                Pending: "mri-pending",
-                Completed: "mri-completed",
-                Error: "mri-error"
-            }[r.status] || "mri-pending";
+                Pending: "mra-pending",
+                Completed: "mra-completed",
+                Error: "mra-error"
+            }[r.status] || "mra-pending";
 
             const row = document.createElement("tr");
             row.innerHTML = `
@@ -689,7 +690,7 @@
     document.getElementById("mriDownloadAll").addEventListener("click", () => {
         const list = filteredRecords();
         if (!list.length) {
-            showNotice("No MRI records to download.");
+            showNotice("No MRA records to download.");
             return;
         }
         list.forEach(downloadXml);

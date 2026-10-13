@@ -1959,7 +1959,7 @@ public class BRECONNavigationController {
         return "CRS";
     }
 	
-	@GetMapping("/MRI") 
+	@GetMapping("/MRA") 
 	public String showMRIPage() { 
 		return "MRI"; }
 	
