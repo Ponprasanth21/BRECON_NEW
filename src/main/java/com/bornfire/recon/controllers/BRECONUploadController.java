@@ -3,6 +3,7 @@ package com.bornfire.recon.controllers;
 import java.io.FileNotFoundException; 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -698,6 +699,228 @@ public class BRECONUploadController {
             logger.error("Error downloading single record XML for " + refNo, e);
         }
     }
+    
+    
+    
+    @Autowired
+    private com.bornfire.recon.services.CrsManagementService crsService;
+
+    // =========================================================================
+    // CRS REPORTING ENDPOINTS (MIRRORS FATCA WORKFLOW)
+    // =========================================================================
+
+    @GetMapping("/getCrsDashboardData")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getCrsDashboardData() {
+        Map<String, Object> data = new HashMap<>();
+        try {
+            // Live table query from BRECON.CRS_REPORT_DATA
+            List<Map<String, Object>> records = jdbcTemplate.queryForList(
+                "SELECT REPORT_ID, ACCOUNT_NUMBER, HOLDER_TYPE, RESIDENCE_COUNTRY, TIN, " +
+                "       FIRST_NAME, LAST_NAME, ORGANISATION_NAME, ACCOUNT_BALANCE, CURRENCY_CODE, " +
+                "       ACCOUNT_TYPE, DD_PROCEDURE, SELF_CERT_FLAG, STATUS " +
+                "FROM BRECON.CRS_REPORT_DATA ORDER BY REPORT_ID DESC"
+            );
+            
+            data.put("records", records);
+            data.put("totalCount", records.size());
+            data.put("pendingCount", records.stream()
+                    .filter(r -> "PENDING".equalsIgnoreCase(String.valueOf(r.get("STATUS"))))
+                    .count());
+            data.put("completedCount", records.stream()
+                    .filter(r -> "COMPLETED".equalsIgnoreCase(String.valueOf(r.get("STATUS"))))
+                    .count());
+            data.put("errorCount", records.stream()
+                    .filter(r -> "ERROR".equalsIgnoreCase(String.valueOf(r.get("STATUS"))) 
+                              || "EXCLUDED".equalsIgnoreCase(String.valueOf(r.get("STATUS"))))
+                    .count());
+            
+            return ResponseEntity.ok(data);
+        } catch (Exception e) {
+            logger.error("Error fetching CRS Dashboard Data", e);
+            data.put("records", Collections.emptyList());
+            data.put("totalCount", 0);
+            data.put("pendingCount", 0);
+            data.put("completedCount", 0);
+            data.put("errorCount", 0);
+            return ResponseEntity.ok(data);
+        }
+    }
+
+    @PostMapping("/uploadCrsFile")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> uploadCrsFile(
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest request) {
+
+        Map<String, Object> res = new HashMap<>();
+        String userId = "SYSTEM";
+        if (request != null && request.getSession(false) != null) {
+            Object userObj = request.getSession(false).getAttribute("USERID");
+            if (userObj != null && !userObj.toString().trim().isEmpty()) {
+                userId = userObj.toString().trim();
+            }
+        }
+
+        if (file == null || file.isEmpty()) {
+            res.put("status", "ERROR");
+            res.put("message", "Please select a valid non-empty file to upload.");
+            return ResponseEntity.badRequest().body(res);
+        }
+
+        try {
+            int inserted = crsService.uploadCrsFile(file, userId);
+            res.put("status", "SUCCESS");
+            res.put("insertedRows", inserted);
+            res.put("message", "Uploaded and processed " + inserted + " record(s) into BRECON.CRS_REPORT_DATA.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            logger.error("CRS file upload failed", e);
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage() != null ? e.getMessage() : "Error processing CRS upload.");
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @PostMapping("/updateCrsRecord")
+    @ResponseBody
+    @Transactional(propagation = Propagation.REQUIRED)
+    public ResponseEntity<Map<String, Object>> updateCrsRecord(
+            @RequestParam("reportId") Long reportId,
+            @RequestParam("status") String status,
+            HttpServletRequest request) {
+
+        Map<String, Object> res = new HashMap<>();
+
+        if (reportId == null || status == null || status.trim().isEmpty()) {
+            res.put("status", "ERROR");
+            res.put("message", "Invalid Report ID or Status provided.");
+            return ResponseEntity.badRequest().body(res);
+        }
+
+        try {
+            int updated = jdbcTemplate.update(
+                "UPDATE BRECON.CRS_REPORT_DATA SET STATUS = ? WHERE REPORT_ID = ?", 
+                status.trim().toUpperCase(), reportId
+            );
+
+            res.put("status", updated > 0 ? "SUCCESS" : "ERROR");
+            res.put("message", updated > 0 ? "Record updated successfully." : "Record with ID " + reportId + " not found.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            logger.error("Error updating CRS record ID: {}", reportId, e);
+            res.put("status", "ERROR");
+            res.put("message", "Database Error: " + e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @GetMapping("/downloadCrsXml")
+    public void downloadCrsXml(
+            @RequestParam(value = "year", required = false, defaultValue = "2025") String year,
+            HttpServletResponse response) {
+        try {
+            String xmlContent = crsService.generateCrsXml(year);
+            
+            response.setContentType("application/xml");
+            response.setCharacterEncoding("UTF-8");
+            response.setHeader("Content-Disposition", 
+                    "attachment; filename=\"CRS_REPORT_" + year + "_" + System.currentTimeMillis() + ".xml\"");
+            
+            response.getOutputStream().write(xmlContent.getBytes(StandardCharsets.UTF_8));
+            response.getOutputStream().flush();
+        } catch (Exception e) {
+            logger.error("Error generating master CRS XML for year {}", year, e);
+            try {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate CRS XML: " + e.getMessage());
+            } catch (Exception ignored) {}
+        }
+    }
+
+    @GetMapping("/downloadSingleCrsXml")
+    public void downloadSingleCrsXml(
+            @RequestParam("reportId") Long reportId, 
+            HttpServletResponse response) {
+        try {
+            String xmlContent = crsService.generateSingleCrsXml(reportId);
+            
+            response.setContentType("application/xml");
+            response.setCharacterEncoding("UTF-8");
+            response.setHeader("Content-Disposition", 
+                    "attachment; filename=\"CRS_REC_" + reportId + ".xml\"");
+            
+            response.getOutputStream().write(xmlContent.getBytes(StandardCharsets.UTF_8));
+            response.getOutputStream().flush();
+        } catch (Exception e) {
+            logger.error("Error downloading individual CRS XML for ID {}", reportId, e);
+            try {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate single CRS XML: " + e.getMessage());
+            } catch (Exception ignored) {}
+        }
+    }
+    
+    @PostMapping("/saveCrsRecord")
+    @ResponseBody
+    @Transactional(propagation = Propagation.REQUIRED)
+    public ResponseEntity<Map<String, Object>> saveCrsRecord(
+            @RequestParam("reportId") Long reportId,
+            @RequestParam("accountNumber") String accountNumber,
+            @RequestParam("holderType") String holderType,
+            @RequestParam("residenceCountry") String residenceCountry,
+            @RequestParam(value = "tin", required = false) String tin,
+            @RequestParam(value = "firstName", required = false) String firstName,
+            @RequestParam(value = "lastName", required = false) String lastName,
+            @RequestParam(value = "organisationName", required = false) String organisationName,
+            @RequestParam(value = "addressCity", required = false) String addressCity,
+            @RequestParam(value = "accountBalance", defaultValue = "0.0") Double accountBalance,
+            @RequestParam(value = "currencyCode", defaultValue = "MUR") String currencyCode,
+            @RequestParam(value = "accountType", defaultValue = "CRS1101") String accountType,
+            @RequestParam(value = "ddProcedure", defaultValue = "CRS1202") String ddProcedure,
+            @RequestParam(value = "selfCertFlag", defaultValue = "CRS901") String selfCertFlag,
+            @RequestParam(value = "status", defaultValue = "COMPLETED") String status) {
+
+        Map<String, Object> res = new HashMap<>();
+
+        if (reportId == null) {
+            res.put("status", "ERROR");
+            res.put("message", "Invalid Record ID.");
+            return ResponseEntity.badRequest().body(res);
+        }
+
+        try {
+            int updated = jdbcTemplate.update(
+                "UPDATE BRECON.CRS_REPORT_DATA SET " +
+                "  ACCOUNT_NUMBER = ?, HOLDER_TYPE = ?, RESIDENCE_COUNTRY = ?, TIN = ?, " +
+                "  FIRST_NAME = ?, LAST_NAME = ?, ORGANISATION_NAME = ?, ADDRESS_CITY = ?, " +
+                "  ACCOUNT_BALANCE = ?, CURRENCY_CODE = ?, ACCOUNT_TYPE = ?, DD_PROCEDURE = ?, " +
+                "  SELF_CERT_FLAG = ?, STATUS = ? " +
+                "WHERE REPORT_ID = ?",
+                accountNumber, holderType.toUpperCase(), residenceCountry.toUpperCase(), tin,
+                firstName, lastName, organisationName, addressCity,
+                accountBalance, currencyCode.toUpperCase(), accountType, ddProcedure,
+                selfCertFlag, status.toUpperCase(), reportId
+            );
+
+            if (updated > 0) {
+                res.put("status", "SUCCESS");
+                res.put("message", "CRS record updated successfully.");
+                return ResponseEntity.ok(res);
+            } else {
+                res.put("status", "ERROR");
+                res.put("message", "Record with ID " + reportId + " not found.");
+                return ResponseEntity.badRequest().body(res);
+            }
+        } catch (Exception e) {
+            logger.error("Error saving CRS record ID: {}", reportId, e);
+            res.put("status", "ERROR");
+            res.put("message", "Database Error: " + e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+    
+    
+    //
+    
 
     @PostMapping(value = "CrFileUpload")
     @ResponseBody
