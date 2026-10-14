@@ -100,41 +100,29 @@ body {
 
 
 .logo {
-    background-color: #ffffff;
-    border-radius: 30px;
-    padding: 6px 12px;      
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+	border-radius: 40px;
+	padding: 8px 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .logo:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+	transform: scale(1.05);
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
-
 
 .logo img {
-    height: 55px;
-    width: auto;
-    max-width: 65px;
-    object-fit: contain;
-    display: block;
-    flex-shrink: 0;
-    filter: none;
-    image-rendering: auto;
-    transform: none;
-    transition: transform 0.3s ease;
+	height: 42px;
+	vertical-align: middle;
+	filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+	transition: transform 0.3s ease;
 }
 
-.logo span {
-    color: #386b7e;
-    font-size: 22px;
-    font-weight: bold;
-    line-height: 1;
+.logo img:hover {
+	transform: rotate(-2deg) scale(1.08);
 }
 
 /* Dropdown Menu */
@@ -582,10 +570,10 @@ function openusermanual() {
 	        <div class="left-group">
 	            <!-- Logo -->
 	            
-				<div class="logo">
-				    <img th:src="@{/images/bfilogo.svg}" alt="BRECON Logo">
-				    <span>RECON</span>
-				</div>
+				 <div class="logo">
+	                <img th:src="@{/images/Bornfire.png}"    alt="BRECON Logo">
+	                 <span style="color:white; font-weight:bold; font-size:22px;">RECON</span>
+	            </div>
 
 	            <!-- Menu -->
 	  <ul class="nav-links">
