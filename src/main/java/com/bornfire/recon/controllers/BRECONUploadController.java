@@ -711,15 +711,19 @@ public class BRECONUploadController {
 
     @GetMapping("/getCrsDashboardData")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> getCrsDashboardData() {
+   public Map<String, Object> getCrsDashboardData(String reportingYear) {
+        if (reportingYear == null || reportingYear.trim().isEmpty()) {
+            reportingYear = "2025";
+        }
         Map<String, Object> data = new HashMap<>();
         try {
-            // Live table query from BRECON.CRS_REPORT_DATA
+            // Live table query from BRECON.CRS_REPORT_DATA including ACCT_HOLDER_CATEGORY
             List<Map<String, Object>> records = jdbcTemplate.queryForList(
-                "SELECT REPORT_ID, ACCOUNT_NUMBER, HOLDER_TYPE, RESIDENCE_COUNTRY, TIN, " +
+                "SELECT REPORT_ID, ACCOUNT_NUMBER, HOLDER_TYPE, ACCT_HOLDER_CATEGORY, RESIDENCE_COUNTRY, TIN, " +
                 "       FIRST_NAME, LAST_NAME, ORGANISATION_NAME, ACCOUNT_BALANCE, CURRENCY_CODE, " +
                 "       ACCOUNT_TYPE, DD_PROCEDURE, SELF_CERT_FLAG, STATUS " +
-                "FROM BRECON.CRS_REPORT_DATA ORDER BY REPORT_ID DESC"
+                "FROM BRECON.CRS_REPORT_DATA WHERE REPORTING_YEAR = ? ORDER BY REPORT_ID DESC",
+                reportingYear
             );
             
             data.put("records", records);
@@ -732,10 +736,10 @@ public class BRECONUploadController {
                     .count());
             data.put("errorCount", records.stream()
                     .filter(r -> "ERROR".equalsIgnoreCase(String.valueOf(r.get("STATUS"))) 
-                              || "EXCLUDED".equalsIgnoreCase(String.valueOf(r.get("STATUS"))))
+                            || "EXCLUDED".equalsIgnoreCase(String.valueOf(r.get("STATUS"))))
                     .count());
             
-            return ResponseEntity.ok(data);
+            return data;
         } catch (Exception e) {
             logger.error("Error fetching CRS Dashboard Data", e);
             data.put("records", Collections.emptyList());
@@ -743,10 +747,9 @@ public class BRECONUploadController {
             data.put("pendingCount", 0);
             data.put("completedCount", 0);
             data.put("errorCount", 0);
-            return ResponseEntity.ok(data);
+            return data;
         }
     }
-
     @PostMapping("/uploadCrsFile")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> uploadCrsFile(
@@ -782,6 +785,8 @@ public class BRECONUploadController {
         }
     }
 
+    
+    
     @PostMapping("/updateCrsRecord")
     @ResponseBody
     @Transactional(propagation = Propagation.REQUIRED)
@@ -917,6 +922,51 @@ public class BRECONUploadController {
             return ResponseEntity.badRequest().body(res);
         }
     }
+    
+   
+    @PostMapping("/rectifyCrsDuplicate")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> rectifyCrsDuplicate(
+            @RequestParam("dupId") Long dupId,
+            @RequestParam("updatedBalance") Double updatedBalance,
+            @RequestParam("updatedStatus") String updatedStatus) {
+        
+        Map<String, Object> res = new HashMap<>();
+        try {
+            boolean success = crsService.rectifyDuplicateRecord(dupId, updatedBalance, updatedStatus);
+            if (success) {
+                res.put("status", "SUCCESS");
+                res.put("message", "Duplicate resolved successfully.");
+            } else {
+                res.put("status", "ERROR");
+                res.put("message", "Record not found or update failed.");
+            }
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+    
+    @GetMapping("/getCrsDuplicateRecords")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getCrsDuplicateRecords() {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            List<Map<String, Object>> records = jdbcTemplate.queryForList(
+                "SELECT * FROM BRECON.CRS_DUPLICATE_RECORDS WHERE STATUS = 'PENDING' ORDER BY DUP_ID DESC"
+            );
+            res.put("status", "SUCCESS");
+            res.put("records", records);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+    
     
     
     //
