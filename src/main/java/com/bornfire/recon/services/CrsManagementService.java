@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -33,11 +32,10 @@ public class CrsManagementService {
     private static final String BANK_COUNTRY = "MU";
     private static final String BANK_ADDRESS = "Sir William Newton Street, Port Louis";
 
-    // POI Formatter instance
     private final DataFormatter dataFormatter = new DataFormatter();
 
     // =========================================================================
-    // 1. INGESTION WITH DEDUPLICATION (PREVENTS DUPLICATES & ROUTES TO QUEUE)
+    // 1. INGESTION WITH EXACT TABLE SCHEMA MATCHING
     // =========================================================================
     @Transactional
     public int uploadCrsFile(MultipartFile file, String userId) throws Exception {
@@ -55,59 +53,34 @@ public class CrsManagementService {
             return result;
         }
 
-        String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "UNKNOWN";
         String effectiveUser = (userId != null && !userId.trim().isEmpty()) ? userId : "SYSTEM";
-
         List<Object[]> parsedRows = parseFileToRows(file, effectiveUser);
         int insertedCount = 0;
         int duplicateCount = 0;
 
-        String checkSql = "SELECT COUNT(1) FROM BRECON.CRS_REPORT_DATA WHERE ACCOUNT_NUMBER = ? AND REPORTING_YEAR = ?";
+        String checkSql = "SELECT COUNT(1) FROM BRECON.CRS_REPORT_DATA WHERE ACCOUNT_NUMBER = ?";
 
+        // Exactly matches your 32 table columns
         String insertSql = "INSERT INTO BRECON.CRS_REPORT_DATA (" +
-                           "  ACCOUNT_NUMBER, ACCT_NUMBER_TYPE, IS_CLOSED, IS_DORMANT, IS_UNDOCUMENTED, " +
-                           "  HOLDER_TYPE, ACCT_HOLDER_CATEGORY, ACCOUNT_TYPE, DD_PROCEDURE, SELF_CERT_FLAG, " +
-                           "  RESIDENCE_COUNTRY, TIN, TIN_ISSUER, FIRST_NAME, LAST_NAME, ORGANISATION_NAME, " +
-                           "  BIRTH_DATE, BIRTH_CITY, BIRTH_COUNTRY, ADDRESS_STREET, ADDRESS_CITY, ADDRESS_POSTCODE, ADDRESS_COUNTRY, " +
-                           "  CP_FIRST_NAME, CP_LAST_NAME, CP_RESIDENCE_COUNTRY, CP_TIN, CP_ROLE, CP_SELF_CERT, " +
-                           "  CP_BIRTH_DATE, CP_BIRTH_CITY, CP_BIRTH_COUNTRY, CP_ADDRESS_STREET, CP_ADDRESS_CITY, CP_ADDRESS_POSTCODE, CP_ADDRESS_COUNTRY, " +
-                           "  ACCOUNT_BALANCE, CURRENCY_CODE, PAYMENT_TYPE, PAYMENT_AMOUNT, " +
-                           "  REPORTING_YEAR, STATUS, ENTRY_USER " +
-                           ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-        String logDupSql = "INSERT INTO BRECON.CRS_DUPLICATE_RECORDS (" +
-                           "  FILE_NAME, ACCOUNT_NUMBER, HOLDER_TYPE, HOLDER_NAME, " +
-                           "  RESIDENCE_COUNTRY, TIN, ACCOUNT_BALANCE, CURRENCY_CODE, " +
-                           "  REPORTING_YEAR, REASON, STATUS " +
-                           ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, '2025', 'Duplicate Account Number already present in database', 'PENDING')";
+                "  REPORT_TYPE, REF_ID, CRS_CODE, ACCOUNT_NUMBER, IBAN, CURRENCY_CODE, " +
+                "  ACCOUNT_BALANCE, INTEREST_PAID, IS_DORMANT, IS_CLOSED, IS_UNDOCUMENTED, " +
+                "  CUSTOMER_ID, ENTITY_NAME, FIRST_NAME, LAST_NAME, DATE_OF_BIRTH, " +
+                "  NATIONALITY, TAX_COUNTRY, TIN, ADDRESS, CITY, COUNTRY, " +
+                "  UBO_CUSTOMER_ID, UBO_FIRST_NAME, UBO_LAST_NAME, UBO_DOB, UBO_TAX_ID, " +
+                "  UBO_ADDRESS, UBO_CITY, UBO_COUNTRY, CREATED_DATE, ENTRY_USER " +
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         for (Object[] r : parsedRows) {
-            String accNum = (String) r[0];
-            String year = (String) r[40]; // REPORTING_YEAR
+            String accNum = (String) r[3]; // ACCOUNT_NUMBER
 
             Integer exists = 0;
             try {
-                exists = jdbcTemplate.queryForObject(checkSql, Integer.class, accNum, year);
+                exists = jdbcTemplate.queryForObject(checkSql, Integer.class, accNum);
             } catch (Exception ignored) {}
 
             if (exists != null && exists > 0) {
-                // Route to duplicate exception queue
-                String holderType = (String) r[5];
-                String name = "ORGANISATION".equalsIgnoreCase(holderType) ? 
-                              (String) r[15] : ((String) r[13] + " " + (String) r[14]);
-                String ctry = (String) r[10];
-                String tin = (String) r[11];
-                Double bal = (Double) r[36];
-                String curr = (String) r[37];
-
-                try {
-                    jdbcTemplate.update(logDupSql, fileName, accNum, holderType, name, ctry, tin, bal, curr);
-                } catch (Exception ex) {
-                    logger.warn("Could not insert to CRS_DUPLICATE_RECORDS: {}", ex.getMessage());
-                }
                 duplicateCount++;
             } else {
-                // Insert new unique record
                 executeSingleInsert(insertSql, r);
                 insertedCount++;
             }
@@ -120,11 +93,12 @@ public class CrsManagementService {
     }
 
     // =========================================================================
-    // 2. PARSE EXCEL / CSV FILES INTO GENERIC OBJECT ROWS
+    // 2. PARSE EXCEL / CSV INTO YOUR EXACT 32 COLUMNS
     // =========================================================================
     public List<Object[]> parseFileToRows(MultipartFile file, String effectiveUser) throws Exception {
         List<Object[]> rows = new ArrayList<>();
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+        Date now = new Date();
 
         if (fileName.endsWith(".csv")) {
             try (BufferedReader reader = new BufferedReader(
@@ -141,6 +115,7 @@ public class CrsManagementService {
                 }
 
                 String line;
+                int seq = 1;
                 while ((line = reader.readLine()) != null) {
                     if (line.trim().isEmpty()) continue;
                     String[] tokens = line.split(delimiter, -1);
@@ -148,17 +123,17 @@ public class CrsManagementService {
                     String accNum = getCsvVal(tokens, colMap, "ACCOUNT_NUMBER", "ACCOUNT_NO", "ACCOUNTNUMBER", "IBAN", "ACNO", "FORACID");
                     if (accNum.isEmpty()) continue;
 
-                    String holderType = getCsvVal(tokens, colMap, "HOLDER_TYPE", "TYPE");
+                    String holderType = getCsvVal(tokens, colMap, "HOLDER_TYPE", "REPORT_TYPE", "TYPE");
                     if (holderType.isEmpty()) holderType = "INDIVIDUAL";
 
-                    String resCountry = getCsvVal(tokens, colMap, "RESIDENCE_COUNTRY", "COUNTRY", "TINCTRY", "TAXCTRY");
-                    if (resCountry.isEmpty()) resCountry = "IN";
+                    String country = getCsvVal(tokens, colMap, "TAX_COUNTRY", "RESIDENCE_COUNTRY", "COUNTRY", "TINCTRY", "TAXCTRY");
+                    if (country.isEmpty()) country = "IN";
 
                     String tin       = getCsvVal(tokens, colMap, "TIN", "FATCATIN", "TAX_ID", "ENTITYTIN");
                     String firstName = getCsvVal(tokens, colMap, "FIRSTNAME", "FIRST_NAME");
                     String lastName  = getCsvVal(tokens, colMap, "LASTNAME", "LAST_NAME");
-                    String orgName   = getCsvVal(tokens, colMap, "NAME", "ORGANISATION_NAME", "COMPANY_NAME", "ENTITYLEGALNAME");
-                    String city      = getCsvVal(tokens, colMap, "CITY", "ADDRESS_CITY", "CITYLOCATION");
+                    String entityName = getCsvVal(tokens, colMap, "NAME", "ENTITY_NAME", "ORGANISATION_NAME", "COMPANY_NAME");
+                    String city      = getCsvVal(tokens, colMap, "CITY", "ADDRESS_CITY");
                     String addr      = getCsvVal(tokens, colMap, "ADDRESS", "ADDR1", "ADD");
                     String curr      = getCsvVal(tokens, colMap, "CURRENCY_CODE", "CRN", "CURRENCY", "CURR");
                     if (curr.isEmpty()) curr = "MUR";
@@ -171,25 +146,26 @@ public class CrsManagementService {
 
                     double intPaid = 0.0;
                     try {
-                        String intStr = getCsvVal(tokens, colMap, "INTPAID", "INT").replace(",", "");
+                        String intStr = getCsvVal(tokens, colMap, "INTEREST_PAID", "INTPAID", "INT").replace(",", "");
                         if (!intStr.isEmpty()) intPaid = Double.parseDouble(intStr);
                     } catch (Exception ignored) {}
 
+                    String refId = "MU2025" + accNum;
+                    String reportType = "INDIVIDUAL".equalsIgnoreCase(holderType) ? "INDIVIDUAL" : "ORGANISATION";
+                    String crsCode = "INDIVIDUAL".equals(reportType) ? null : "CRS102";
+
                     rows.add(new Object[] {
-                        accNum, "OECD602", "false", "false", "false",
-                        holderType.toUpperCase(), null, "CRS1101", "CRS1202", "CRS901",
-                        resCountry.toUpperCase(), tin, resCountry.toUpperCase(),
-                        firstName, lastName, orgName,
-                        null, city, resCountry.toUpperCase(),
-                        addr, city, null, resCountry.toUpperCase(),
-                        null, null, null, null, null, null, null, null, null, null, null, null, null,
-                        balance, curr.toUpperCase(), "CRS502", intPaid,
-                        "2025", "COMPLETED", effectiveUser
+                        reportType, refId, crsCode, accNum, accNum, curr.toUpperCase(),
+                        balance, intPaid, "N", "N", "N",
+                        null, entityName, firstName, lastName, null,
+                        country.toUpperCase(), country.toUpperCase(), tin, addr, city, country.toUpperCase(),
+                        null, null, null, null, null,
+                        null, null, null, now, effectiveUser
                     });
                 }
             }
         } else {
-            // Excel (.xlsx / .xls) parsing
+            // Excel (.xlsx / .xls)
             try (InputStream is = file.getInputStream();
                  Workbook workbook = WorkbookFactory.create(is)) {
 
@@ -225,112 +201,88 @@ public class CrsManagementService {
                         Row row = sheet.getRow(r);
                         if (row == null) continue;
 
-                        if (isIndiv) {
-                            String accNum = getVal(row, colMap, "IBAN", "ACNO", "ACCOUNTNUMBER", "ACCOUNT", "FORACID");
-                            if (accNum.isEmpty()) continue;
+                        String accNum = getVal(row, colMap, "IBAN", "ACNO", "ACCOUNTNUMBER", "ACCOUNT_NUMBER", "ACCOUNT", "FORACID");
+                        if (accNum.isEmpty()) continue;
 
+                        double balance = getNumeric(row, colMap, "BALANCE", "BAL", "ACCOUNT_BALANCE", "ACCOUNTBALANCE");
+                        double intPaid = getNumeric(row, colMap, "INTEREST_PAID", "INTPAID", "INT");
+                        String curr    = getVal(row, colMap, "CRN", "CURRENCY_CODE", "CURRENCYCODE", "CURRENCY", "CRNCY");
+                        if (curr.isEmpty()) curr = "MUR";
+
+                        String isDormant = getCharBoolean(row, colMap, "DORMANT", "IS_DORMANT");
+                        String isClosed  = getCharBoolean(row, colMap, "CLOSE", "CLOSED", "IS_CLOSED");
+                        String isUndoc   = getCharBoolean(row, colMap, "UNDOC", "IS_UNDOCUMENTED");
+                        String refId     = "MU2025" + accNum;
+
+                        if (isIndiv) {
                             String firstName = getVal(row, colMap, "FIRSTNAME", "FIRST_NAME");
                             String lastName  = getVal(row, colMap, "LASTNAME", "LAST_NAME");
-                            String country   = getVal(row, colMap, "TINCTRY", "COUNTRY", "NATION");
+                            String country   = getVal(row, colMap, "TAX_COUNTRY", "TINCTRY", "COUNTRY", "NATION");
                             if (country.isEmpty()) country = "IN";
 
-                            String tin       = getVal(row, colMap, "FATCATIN", "TIN");
+                            String tin       = getVal(row, colMap, "TIN", "FATCATIN");
                             String city      = getVal(row, colMap, "CITY");
                             String address   = getVal(row, colMap, "ADDRESS");
-                            Date dob         = getCellDate(row, colMap, "DOB");
-
-                            double balance = getNumeric(row, colMap, "BALANCE", "BAL", "ACCOUNTBALANCE");
-                            double intPaid = getNumeric(row, colMap, "INTPAID", "INT");
-                            String curr    = getVal(row, colMap, "CRN", "CURRENCYCODE", "CURRENCY", "CRNCY");
-                            if (curr.isEmpty()) curr = "MUR";
-
-                            String isDormant = getBooleanStr(row, colMap, "DORMANT");
-                            String isClosed  = getBooleanStr(row, colMap, "CLOSE", "CLOSED");
-                            String isUndoc   = getBooleanStr(row, colMap, "UNDOC");
+                            Date dob         = getCellDate(row, colMap, "DOB", "DATE_OF_BIRTH");
 
                             rows.add(new Object[] {
-                                accNum, "OECD602", isClosed, isDormant, isUndoc,
-                                "INDIVIDUAL", null, "CRS1101", "CRS1202", "CRS901",
-                                country.toUpperCase(), tin, country.toUpperCase(),
-                                firstName, lastName, null,
-                                dob, city, country.toUpperCase(),
-                                address, city, null, country.toUpperCase(),
-                                null, null, null, null, null, null, null, null, null, null, null, null, null,
-                                balance, curr.toUpperCase(), "CRS502", intPaid,
-                                "2025", "COMPLETED", effectiveUser
+                                "INDIVIDUAL", refId, null, accNum, accNum, curr.toUpperCase(),
+                                balance, intPaid, isDormant, isClosed, isUndoc,
+                                null, null, firstName, lastName, dob,
+                                country.toUpperCase(), country.toUpperCase(), tin, address, city, country.toUpperCase(),
+                                null, null, null, null, null,
+                                null, null, null, now, effectiveUser
                             });
                         } else {
-                            String cpFirstCheck = getVal(row, colMap, "CONTROLLINGPERSON", "FIRSTNAME", "CP_FIRST_NAME");
-                            String cpTaxCheck   = getVal(row, colMap, "UBOTAX", "CP_TIN", "UBOTIN");
+                            String cpFirstCheck = getVal(row, colMap, "CONTROLLINGPERSON", "UBO_FIRST_NAME", "FIRSTNAME");
+                            String cpTaxCheck   = getVal(row, colMap, "UBOTAX", "UBO_TAX_ID", "CP_TIN", "UBOTIN");
                             boolean rowIsCrs101 = isCrs101 || !cpFirstCheck.isEmpty() || !cpTaxCheck.isEmpty();
 
-                            String accNum = getVal(row, colMap, "IBAN", "FORACID", "ACCOUNTNUMBER", "ACCOUNT");
-                            if (accNum.isEmpty()) continue;
-
-                            String orgName = getVal(row, colMap, "NAME", "ORGANISATIONNAME", "ENTITYNAME", "ENTITYLEGALNAME");
-                            String txCtry  = getVal(row, colMap, "TXCTRY", "CTRY", "ENTITYCOUNTRY", "TAXCTRY");
+                            String entityName = getVal(row, colMap, "NAME", "ENTITY_NAME", "ORGANISATIONNAME", "ENTITYNAME");
+                            String txCtry     = getVal(row, colMap, "TAX_COUNTRY", "TXCTRY", "CTRY", "COUNTRY");
                             if (txCtry.isEmpty()) txCtry = "MU";
 
                             String tin     = getVal(row, colMap, "TIN", "ENTITYTIN");
                             String addr    = getVal(row, colMap, "ADD", "ADDR1", "ADDRESS");
-                            String city    = getVal(row, colMap, "CITY", "CITYLOCATION", "UNNAMED15");
-
-                            double balance = getNumeric(row, colMap, "BAL", "BALANCE", "ACCOUNTBALANCE");
-                            double intPaid = getNumeric(row, colMap, "INT");
-                            String curr    = getVal(row, colMap, "CRNCY", "CRN", "CURRENCYCODE", "CURRENCY", "CUR");
-                            if (curr.isEmpty()) curr = "USD";
-
-                            String isDormant = getBooleanStr(row, colMap, "DORMANT");
-                            String isClosed  = getBooleanStr(row, colMap, "CLOSED", "CLOSE");
-                            String isUndoc   = getBooleanStr(row, colMap, "UNDOC");
+                            String city    = getVal(row, colMap, "CITY", "CITYLOCATION");
 
                             if (rowIsCrs101) {
-                                String cpFull = getVal(row, colMap, "CONTROLLINGPERSON", "CP_FIRST_NAME");
+                                String cpFull = getVal(row, colMap, "CONTROLLINGPERSON", "UBO_FIRST_NAME", "CP_FIRST_NAME");
                                 String cpFirst = cpFull;
-                                String cpLast = getVal(row, colMap, "LASTNAME", "CPLASTNAME");
-                                
-                                // If last name is blank, split the combined controlling person name
+                                String cpLast = getVal(row, colMap, "UBO_LAST_NAME", "LASTNAME", "CPLASTNAME");
                                 if (cpLast.isEmpty() && cpFull.contains(" ")) {
                                     int lastSpace = cpFull.lastIndexOf(" ");
                                     cpFirst = cpFull.substring(0, lastSpace).trim();
                                     cpLast = cpFull.substring(lastSpace + 1).trim();
                                 }
 
-                                String cpTax   = getVal(row, colMap, "UBOTAX", "CP_TIN", "UBOTIN");
-                                String cpCtry  = getVal(row, colMap, "UBOCTRY", "CPRESIDENCECOUNTRY", "UBOCOUNTRY");
+                                String cpTax   = getVal(row, colMap, "UBOTAX", "UBO_TAX_ID", "CP_TIN");
+                                String cpCtry  = getVal(row, colMap, "UBOCTRY", "UBO_COUNTRY", "CPRESIDENCECOUNTRY");
                                 if (cpCtry.isEmpty()) cpCtry = "GB";
 
-                                String cpCity  = getVal(row, colMap, "UBOCITY", "CPADDRESSCITY");
-                                String cpAddr  = getVal(row, colMap, "UBOADD", "CPADDRESSSTREET");
-                                Date cpDob     = getCellDate(row, colMap, "DOB");
+                                String cpCity  = getVal(row, colMap, "UBOCITY", "UBO_CITY", "CPADDRESSCITY");
+                                String cpAddr  = getVal(row, colMap, "UBOADD", "UBO_ADDRESS", "CPADDRESSSTREET");
+                                Date cpDob     = getCellDate(row, colMap, "UBO_DOB", "DOB");
 
                                 rows.add(new Object[] {
-                                    accNum, "OECD602", isClosed, isDormant, isUndoc,
-                                    "ORGANISATION", "CRS101", "CRS1101", "CRS1202", "CRS901",
-                                    txCtry.toUpperCase(), tin, txCtry.toUpperCase(),
-                                    null, null, orgName,
-                                    null, null, null,
-                                    addr, city, null, txCtry.toUpperCase(),
-                                    cpFirst, cpLast, cpCtry.toUpperCase(), cpTax, "CRS801", "CRS1001",
-                                    cpDob, cpCity, cpCtry.toUpperCase(), cpAddr, cpCity, null, cpCtry.toUpperCase(),
-                                    balance, curr.toUpperCase(), "CRS502", intPaid,
-                                    "2025", "COMPLETED", effectiveUser
+                                    "CRS101", refId, "CRS101", accNum, accNum, curr.toUpperCase(),
+                                    balance, intPaid, isDormant, isClosed, isUndoc,
+                                    null, entityName, null, null, null,
+                                    null, txCtry.toUpperCase(), tin, addr, city, txCtry.toUpperCase(),
+                                    null, cpFirst, cpLast, cpDob, cpTax,
+                                    cpAddr, cpCity, cpCtry.toUpperCase(), now, effectiveUser
                                 });
                             } else {
-                                // CRS102 / CRS103
-                                String crsCode = getVal(row, colMap, "CRSCODE", "CRS_CODE");
+                                String crsCode = getVal(row, colMap, "CRS_CODE", "CRSCODE");
                                 if (crsCode.isEmpty()) crsCode = "CRS102";
 
                                 rows.add(new Object[] {
-                                    accNum, "OECD602", isClosed, isDormant, isUndoc,
-                                    "ORGANISATION", crsCode, "CRS1101", "CRS1202", "CRS901",
-                                    txCtry.toUpperCase(), tin, txCtry.toUpperCase(),
-                                    null, null, orgName,
-                                    null, null, null,
-                                    addr, city, null, txCtry.toUpperCase(),
-                                    null, null, null, null, null, null, null, null, null, null, null, null, null,
-                                    balance, curr.toUpperCase(), "CRS502", intPaid,
-                                    "2025", "COMPLETED", effectiveUser
+                                    crsCode, refId, crsCode, accNum, accNum, curr.toUpperCase(),
+                                    balance, intPaid, isDormant, isClosed, isUndoc,
+                                    null, entityName, null, null, null,
+                                    null, txCtry.toUpperCase(), tin, addr, city, txCtry.toUpperCase(),
+                                    null, null, null, null, null,
+                                    null, null, null, now, effectiveUser
                                 });
                             }
                         }
@@ -362,42 +314,59 @@ public class CrsManagementService {
     }
 
     // =========================================================================
-    // 3. RECTIFY DUPLICATE: OVERWRITE MAIN DB RECORD & MARK RESOLVED
+    // 3. 3 DEDICATED XML GENERATORS BASED ON TEMPLATES
     // =========================================================================
-    @Transactional
-    public boolean rectifyDuplicateRecord(Long dupId, Double updatedBalance, String updatedStatus) {
-        Map<String, Object> dup;
-        try {
-            dup = jdbcTemplate.queryForMap("SELECT * FROM BRECON.CRS_DUPLICATE_RECORDS WHERE DUP_ID = ?", dupId);
-        } catch (Exception e) {
-            return false;
+
+    public String generateCrsXmlByType(String reportingYear, String reportType) {
+        if ("INDIVIDUAL".equalsIgnoreCase(reportType) || "IND".equalsIgnoreCase(reportType)) {
+            return generateIndividualCrsXml(reportingYear);
+        } else if ("CRS101".equalsIgnoreCase(reportType)) {
+            return generateCrs101Xml(reportingYear);
+        } else if ("CRS102".equalsIgnoreCase(reportType)) {
+            return generateCrs102Xml(reportingYear);
         }
-
-        String accNum = (String) dup.get("ACCOUNT_NUMBER");
-        String year = (String) dup.get("REPORTING_YEAR");
-
-        int updated = jdbcTemplate.update(
-            "UPDATE BRECON.CRS_REPORT_DATA SET ACCOUNT_BALANCE = ?, STATUS = ? WHERE ACCOUNT_NUMBER = ? AND REPORTING_YEAR = ?",
-            updatedBalance, updatedStatus, accNum, year
-        );
-
-        jdbcTemplate.update("UPDATE BRECON.CRS_DUPLICATE_RECORDS SET STATUS = 'RESOLVED' WHERE DUP_ID = ?", dupId);
-        return updated > 0;
+        return generateCrsXml(reportingYear);
     }
 
-    // =========================================================================
-    // 4. MASTER XML GENERATOR: ASSEMBLES FULL OECD CRS v3.0 XML FILE
-    // =========================================================================
+    public String generateIndividualCrsXml(String reportingYear) {
+        String year = (reportingYear != null && !reportingYear.trim().isEmpty()) ? reportingYear : "2025";
+        String sql = "SELECT * FROM BRECON.CRS_REPORT_DATA WHERE (UPPER(REPORT_TYPE) = 'INDIVIDUAL' OR CRS_CODE IS NULL) ORDER BY ACCOUNT_NUMBER ASC";
+        List<Map<String, Object>> records = jdbcTemplate.queryForList(sql);
+        return buildEnvelope(year, records, "IND");
+    }
+
+    public String generateCrs101Xml(String reportingYear) {
+        String year = (reportingYear != null && !reportingYear.trim().isEmpty()) ? reportingYear : "2025";
+        String sql = "SELECT * FROM BRECON.CRS_REPORT_DATA WHERE UPPER(REPORT_TYPE) = 'CRS101' OR UPPER(CRS_CODE) = 'CRS101' ORDER BY ACCOUNT_NUMBER ASC";
+        List<Map<String, Object>> records = jdbcTemplate.queryForList(sql);
+        return buildEnvelope(year, records, "CRS101");
+    }
+
+    public String generateCrs102Xml(String reportingYear) {
+        String year = (reportingYear != null && !reportingYear.trim().isEmpty()) ? reportingYear : "2025";
+        String sql = "SELECT * FROM BRECON.CRS_REPORT_DATA WHERE UPPER(REPORT_TYPE) IN ('CRS102', 'CRS103', 'ORGANISATION') OR UPPER(CRS_CODE) IN ('CRS102', 'CRS103') ORDER BY ACCOUNT_NUMBER ASC";
+        List<Map<String, Object>> records = jdbcTemplate.queryForList(sql);
+        return buildEnvelope(year, records, "CRS102");
+    }
+
     public String generateCrsXml(String reportingYear) {
-        if (reportingYear == null || reportingYear.trim().isEmpty()) {
-            reportingYear = "2025";
-        }
+        String year = (reportingYear != null && !reportingYear.trim().isEmpty()) ? reportingYear : "2025";
+        String sql = "SELECT * FROM BRECON.CRS_REPORT_DATA ORDER BY ACCOUNT_NUMBER ASC";
+        List<Map<String, Object>> records = jdbcTemplate.queryForList(sql);
+        return buildEnvelope(year, records, "ALL");
+    }
 
+    public String generateSingleCrsXml(String accountNumber) {
+        Map<String, Object> row = jdbcTemplate.queryForMap(
+            "SELECT * FROM BRECON.CRS_REPORT_DATA WHERE ACCOUNT_NUMBER = ?", accountNumber
+        );
+        String year = "2025";
+        return buildEnvelope(year, Collections.singletonList(row), "REC");
+    }
+
+    private String buildEnvelope(String reportingYear, List<Map<String, Object>> records, String typeTag) {
         String timestamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
-        String msgRefId = BANK_COUNTRY + reportingYear + BANK_COUNTRY + BANK_TIN + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-
-        String sql = "SELECT * FROM BRECON.CRS_REPORT_DATA WHERE REPORTING_YEAR = ? AND STATUS != 'EXCLUDED' ORDER BY REPORT_ID ASC";
-        List<Map<String, Object>> records = jdbcTemplate.queryForList(sql, reportingYear);
+        String msgRefId = BANK_COUNTRY + reportingYear + BANK_COUNTRY + BANK_TIN + "_" + typeTag + "_" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
 
         boolean isNil = records.isEmpty();
         String messageTypeIndic = isNil ? "CRS703" : "CRS701";
@@ -451,75 +420,25 @@ public class CrsManagementService {
         return xml.toString();
     }
 
-    // =========================================================================
-    // 5. SINGLE RECORD GENERATOR (FOR INDIVIDUAL XML DOWNLOAD)
-    // =========================================================================
-    public String generateSingleCrsXml(Long reportId) {
-        Map<String, Object> row = jdbcTemplate.queryForMap(
-            "SELECT * FROM BRECON.CRS_REPORT_DATA WHERE REPORT_ID = ?", reportId
-        );
-
-        String reportingYear = String.valueOf(row.getOrDefault("REPORTING_YEAR", "2025"));
-        String timestamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
-        String msgRefId = BANK_COUNTRY + reportingYear + BANK_COUNTRY + BANK_TIN + "_REC_" + reportId;
-
-        StringBuilder xml = new StringBuilder();
-        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-        xml.append("<crs:CRS_OECD xmlns:crs=\"urn:oecd:ties:crs:v3\"\n");
-        xml.append("              xmlns:cfc=\"urn:oecd:ties:commontypesfatcacrs:v2\"\n");
-        xml.append("              xmlns:stf=\"urn:oecd:ties:crsstf:v5\"\n");
-        xml.append("              xmlns:iso=\"urn:oecd:ties:isocrstypes:v1\"\n");
-        xml.append("              xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n");
-        xml.append("              version=\"3.0\">\n");
-
-        xml.append("    <crs:MessageSpec>\n");
-        xml.append("        <crs:SendingCompanyIN>").append(BANK_TIN).append("</crs:SendingCompanyIN>\n");
-        xml.append("        <crs:TransmittingCountry>").append(BANK_COUNTRY).append("</crs:TransmittingCountry>\n");
-        xml.append("        <crs:ReceivingCountry>").append(BANK_COUNTRY).append("</crs:ReceivingCountry>\n");
-        xml.append("        <crs:MessageType>CRS</crs:MessageType>\n");
-        xml.append("        <crs:MessageRefId>").append(msgRefId).append("</crs:MessageRefId>\n");
-        xml.append("        <crs:MessageTypeIndic>CRS701</crs:MessageTypeIndic>\n");
-        xml.append("        <crs:ReportingPeriod>").append(reportingYear).append("-12-31</crs:ReportingPeriod>\n");
-        xml.append("        <crs:Timestamp>").append(timestamp).append("</crs:Timestamp>\n");
-        xml.append("    </crs:MessageSpec>\n");
-
-        xml.append("    <crs:CrsBody>\n");
-        xml.append("        <crs:ReportingFI>\n");
-        xml.append("            <crs:ResCountryCode>").append(BANK_COUNTRY).append("</crs:ResCountryCode>\n");
-        xml.append("            <crs:IN issuedBy=\"").append(BANK_COUNTRY).append("\" INType=\"TIN\">").append(BANK_TIN).append("</crs:IN>\n");
-        xml.append("            <crs:Name>").append(escapeXml(BANK_NAME)).append("</crs:Name>\n");
-        xml.append("            <crs:Address>\n");
-        xml.append("                <cfc:CountryCode>").append(BANK_COUNTRY).append("</cfc:CountryCode>\n");
-        xml.append("                <cfc:AddressFree>").append(escapeXml(BANK_ADDRESS)).append("</cfc:AddressFree>\n");
-        xml.append("            </crs:Address>\n");
-        xml.append("            <crs:DocSpec>\n");
-        xml.append("                <stf:DocTypeIndic>OECD1</stf:DocTypeIndic>\n");
-        xml.append("                <stf:DocRefId>").append(BANK_COUNTRY).append(reportingYear).append(BANK_COUNTRY).append(BANK_TIN).append("100000</stf:DocRefId>\n");
-        xml.append("            </crs:DocSpec>\n");
-        xml.append("        </crs:ReportingFI>\n");
-
-        xml.append("        <crs:ReportingGroup>\n");
-        appendAccountReport(xml, row, reportingYear, 1);
-        xml.append("        </crs:ReportingGroup>\n");
-        xml.append("    </crs:CrsBody>\n");
-        xml.append("</crs:CRS_OECD>");
-
-        return xml.toString();
-    }
-
-    // =========================================================================
-    // 6. BUILD ACCOUNT REPORT XML ELEMENT
-    // =========================================================================
     private void appendAccountReport(StringBuilder xml, Map<String, Object> r, String reportingYear, int seq) {
-        String holderType = String.valueOf(r.getOrDefault("HOLDER_TYPE", "INDIVIDUAL"));
-        String category   = r.get("ACCT_HOLDER_CATEGORY") != null ? String.valueOf(r.get("ACCT_HOLDER_CATEGORY")) : "";
-        String accNum     = String.valueOf(r.get("ACCOUNT_NUMBER"));
-        String accNumType = String.valueOf(r.getOrDefault("ACCT_NUMBER_TYPE", "OECD602"));
-        String isClosed   = String.valueOf(r.getOrDefault("IS_CLOSED", "false"));
-        String isDormant  = String.valueOf(r.getOrDefault("IS_DORMANT", "false"));
-        String isUndoc    = String.valueOf(r.getOrDefault("IS_UNDOCUMENTED", "false"));
+        String reportType = safeVal(r.get("REPORT_TYPE"));
+        String crsCode    = safeVal(r.get("CRS_CODE"));
+        String accNum     = safeVal(r.get("ACCOUNT_NUMBER"));
+        String iban       = safeVal(r.get("IBAN"));
+        String targetAcc  = !iban.isEmpty() ? iban : accNum;
 
-        String docRefId = BANK_COUNTRY + reportingYear + "-" + (category.isEmpty() ? "IND" : category) + "-" + String.format("%06d", seq);
+        String isClosed   = toXmlBoolean(r.get("IS_CLOSED"));
+        String isDormant  = toXmlBoolean(r.get("IS_DORMANT"));
+        String isUndoc    = toXmlBoolean(r.get("IS_UNDOCUMENTED"));
+
+        String typeCode = "IND";
+        if ("CRS101".equalsIgnoreCase(reportType) || "CRS101".equalsIgnoreCase(crsCode)) {
+            typeCode = "CRS101";
+        } else if ("CRS102".equalsIgnoreCase(reportType) || "CRS102".equalsIgnoreCase(crsCode)) {
+            typeCode = "CRS102";
+        }
+
+        String docRefId = BANK_COUNTRY + reportingYear + "-" + typeCode + "-" + String.format("%06d", seq);
 
         xml.append("            <crs:AccountReport>\n");
         xml.append("                <crs:DocSpec>\n");
@@ -527,22 +446,24 @@ public class CrsManagementService {
         xml.append("                    <stf:DocRefId>").append(docRefId).append("</stf:DocRefId>\n");
         xml.append("                </crs:DocSpec>\n");
 
-        xml.append("                <crs:AccountNumber AcctNumberType=\"").append(accNumType)
-           .append("\" ClosedAccount=\"").append(isClosed)
+        xml.append("                <crs:AccountNumber AcctNumberType=\"OECD602\" ClosedAccount=\"").append(isClosed)
            .append("\" DormantAccount=\"").append(isDormant)
            .append("\" UndocumentedAccount=\"").append(isUndoc).append("\">")
-           .append(escapeXml(accNum)).append("</crs:AccountNumber>\n");
+           .append(escapeXml(targetAcc)).append("</crs:AccountNumber>\n");
 
         xml.append("                <crs:AccountHolder>\n");
-        xml.append("                    <crs:SelfCert>").append(r.getOrDefault("SELF_CERT_FLAG", "CRS901")).append("</crs:SelfCert>\n");
 
-        if ("INDIVIDUAL".equalsIgnoreCase(holderType)) {
-            String ctry = String.valueOf(r.getOrDefault("RESIDENCE_COUNTRY", "IN"));
-            String first = safeVal(r.get("FIRST_NAME"));
-            String last  = safeVal(r.get("LAST_NAME"));
-            String tin   = safeVal(r.get("TIN"));
-            String street= safeVal(r.get("ADDRESS_STREET"));
-            String city  = safeVal(r.get("ADDRESS_CITY"));
+        // INDIVIDUAL
+        if ("INDIVIDUAL".equalsIgnoreCase(reportType) || (crsCode.isEmpty() && !safeVal(r.get("FIRST_NAME")).isEmpty())) {
+            String ctry   = safeVal(r.get("TAX_COUNTRY"));
+            if (ctry.isEmpty()) ctry = safeVal(r.get("COUNTRY"));
+            if (ctry.isEmpty()) ctry = "IN";
+
+            String first  = safeVal(r.get("FIRST_NAME"));
+            String last   = safeVal(r.get("LAST_NAME"));
+            String tin    = safeVal(r.get("TIN"));
+            String street = safeVal(r.get("ADDRESS"));
+            String city   = safeVal(r.get("CITY"));
 
             xml.append("                    <crs:Individual>\n");
             xml.append("                        <crs:ResCountryCode>").append(ctry).append("</crs:ResCountryCode>\n");
@@ -561,21 +482,28 @@ public class CrsManagementService {
             xml.append("                            </cfc:AddressFix>\n");
             xml.append("                        </crs:Address>\n");
 
-            if (r.get("BIRTH_DATE") != null) {
-                String dobStr = new SimpleDateFormat("yyyy-MM-dd").format((Date) r.get("BIRTH_DATE"));
+            if (r.get("DATE_OF_BIRTH") != null) {
+                String dobStr = new SimpleDateFormat("yyyy-MM-dd").format((Date) r.get("DATE_OF_BIRTH"));
                 xml.append("                        <crs:BirthInfo>\n");
                 xml.append("                            <crs:BirthDate>").append(dobStr).append("</crs:BirthDate>\n");
                 if (!city.isEmpty()) xml.append("                            <crs:City>").append(escapeXml(city)).append("</crs:City>\n");
+                xml.append("                            <crs:CountryInfo>\n");
+                xml.append("                                <crs:CountryCode>").append(ctry).append("</crs:CountryCode>\n");
+                xml.append("                            </crs:CountryInfo>\n");
                 xml.append("                        </crs:BirthInfo>\n");
             }
             xml.append("                    </crs:Individual>\n");
-        } else {
-            String orgName = safeVal(r.get("ORGANISATION_NAME"));
-            String ctry    = safeVal(r.get("RESIDENCE_COUNTRY"));
-            String tin     = safeVal(r.get("TIN"));
-            String street  = safeVal(r.get("ADDRESS_STREET"));
-            String city    = safeVal(r.get("ADDRESS_CITY"));
-            String post    = safeVal(r.get("ADDRESS_POSTCODE"));
+        } 
+        // ORGANISATION (CRS101 / CRS102)
+        else {
+            String orgName = safeVal(r.get("ENTITY_NAME"));
+            String ctry    = safeVal(r.get("TAX_COUNTRY"));
+            if (ctry.isEmpty()) ctry = safeVal(r.get("COUNTRY"));
+            if (ctry.isEmpty()) ctry = "MU";
+
+            String tin    = safeVal(r.get("TIN"));
+            String street = safeVal(r.get("ADDRESS"));
+            String city   = safeVal(r.get("CITY"));
 
             xml.append("                    <crs:Organisation>\n");
             xml.append("                        <crs:ResCountryCode>").append(ctry).append("</crs:ResCountryCode>\n");
@@ -587,27 +515,26 @@ public class CrsManagementService {
             xml.append("                            <cfc:CountryCode>").append(ctry).append("</cfc:CountryCode>\n");
             xml.append("                            <cfc:AddressFix>\n");
             if (!street.isEmpty()) xml.append("                                <cfc:Street>").append(escapeXml(street)).append("</cfc:Street>\n");
-            if (!post.isEmpty())   xml.append("                                <cfc:PostCode>").append(escapeXml(post)).append("</cfc:PostCode>\n");
             if (!city.isEmpty())   xml.append("                                <cfc:City>").append(escapeXml(city)).append("</cfc:City>\n");
             xml.append("                            </cfc:AddressFix>\n");
             xml.append("                        </crs:Address>\n");
             xml.append("                    </crs:Organisation>\n");
 
-            if (!category.isEmpty()) {
-                xml.append("                    <crs:AcctHolderType>").append(category).append("</crs:AcctHolderType>\n");
-            }
+            String crsHolderCode = !crsCode.isEmpty() ? crsCode : ("CRS101".equalsIgnoreCase(reportType) ? "CRS101" : "CRS102");
+            xml.append("                    <crs:AcctHolderType>").append(crsHolderCode).append("</crs:AcctHolderType>\n");
         }
         xml.append("                </crs:AccountHolder>\n");
 
-        if ("CRS101".equalsIgnoreCase(category) && r.get("CP_LAST_NAME") != null) {
-            String cpFirst  = safeVal(r.get("CP_FIRST_NAME"));
-            String cpLast   = safeVal(r.get("CP_LAST_NAME"));
-            String cpCtry   = safeVal(r.get("CP_RESIDENCE_COUNTRY"));
-            String cpTin    = safeVal(r.get("CP_TIN"));
-            String cpStreet = safeVal(r.get("CP_ADDRESS_STREET"));
-            String cpCity   = safeVal(r.get("CP_ADDRESS_CITY"));
-            String cpPost   = safeVal(r.get("CP_ADDRESS_POSTCODE"));
-            String cpRole   = String.valueOf(r.getOrDefault("CP_ROLE", "CRS801"));
+        // CONTROLLING PERSON (CRS101)
+        if ("CRS101".equalsIgnoreCase(reportType) || "CRS101".equalsIgnoreCase(crsCode)) {
+            String cpFirst  = safeVal(r.get("UBO_FIRST_NAME"));
+            String cpLast   = safeVal(r.get("UBO_LAST_NAME"));
+            String cpCtry   = safeVal(r.get("UBO_COUNTRY"));
+            if (cpCtry.isEmpty()) cpCtry = "GB";
+
+            String cpTin    = safeVal(r.get("UBO_TAX_ID"));
+            String cpStreet = safeVal(r.get("UBO_ADDRESS"));
+            String cpCity   = safeVal(r.get("UBO_CITY"));
 
             xml.append("                <crs:ControllingPerson>\n");
             xml.append("                    <crs:Individual>\n");
@@ -623,44 +550,45 @@ public class CrsManagementService {
             xml.append("                            <cfc:CountryCode>").append(cpCtry).append("</cfc:CountryCode>\n");
             xml.append("                            <cfc:AddressFix>\n");
             if (!cpStreet.isEmpty()) xml.append("                                <cfc:Street>").append(escapeXml(cpStreet)).append("</cfc:Street>\n");
-            if (!cpPost.isEmpty())   xml.append("                                <cfc:PostCode>").append(escapeXml(cpPost)).append("</cfc:PostCode>\n");
             if (!cpCity.isEmpty())   xml.append("                                <cfc:City>").append(escapeXml(cpCity)).append("</cfc:City>\n");
             xml.append("                            </cfc:AddressFix>\n");
             xml.append("                        </crs:Address>\n");
 
-            if (r.get("CP_BIRTH_DATE") != null) {
-                String cpDobStr = new SimpleDateFormat("yyyy-MM-dd").format((Date) r.get("CP_BIRTH_DATE"));
+            if (r.get("UBO_DOB") != null) {
+                String cpDobStr = new SimpleDateFormat("yyyy-MM-dd").format((Date) r.get("UBO_DOB"));
                 xml.append("                        <crs:BirthInfo>\n");
                 xml.append("                            <crs:BirthDate>").append(cpDobStr).append("</crs:BirthDate>\n");
                 if (!cpCity.isEmpty()) xml.append("                            <crs:City>").append(escapeXml(cpCity)).append("</crs:City>\n");
-                xml.append("                            <crs:CountryInfo><crs:CountryCode>").append(cpCtry).append("</crs:CountryCode></crs:CountryInfo>\n");
+                xml.append("                            <crs:CountryInfo>\n");
+                xml.append("                                <crs:CountryCode>").append(cpCtry).append("</crs:CountryCode>\n");
+                xml.append("                            </crs:CountryInfo>\n");
                 xml.append("                        </crs:BirthInfo>\n");
             }
             xml.append("                    </crs:Individual>\n");
-            xml.append("                    <crs:CtrlgPersonType>").append(cpRole).append("</crs:CtrlgPersonType>\n");
-            xml.append("                    <crs:SelfCert>").append(r.getOrDefault("CP_SELF_CERT", "CRS1001")).append("</crs:SelfCert>\n");
+            xml.append("                    <crs:CtrlgPersonType>CRS801</crs:CtrlgPersonType>\n");
             xml.append("                </crs:ControllingPerson>\n");
         }
 
+        // Balance & Interest Paid
         double bal = r.get("ACCOUNT_BALANCE") instanceof Number ? ((Number) r.get("ACCOUNT_BALANCE")).doubleValue() : 0.0;
-        String curr = String.valueOf(r.getOrDefault("CURRENCY_CODE", "MUR"));
+        String curr = safeVal(r.get("CURRENCY_CODE"));
+        if (curr.isEmpty()) curr = "MUR";
+
         xml.append("                <crs:AccountBalance currCode=\"").append(curr).append("\">")
            .append(String.format(Locale.US, "%.2f", bal)).append("</crs:AccountBalance>\n");
 
-        double pmt = r.get("PAYMENT_AMOUNT") instanceof Number ? ((Number) r.get("PAYMENT_AMOUNT")).doubleValue() : 0.0;
+        double pmt = r.get("INTEREST_PAID") instanceof Number ? ((Number) r.get("INTEREST_PAID")).doubleValue() : 0.0;
         xml.append("                <crs:Payment>\n");
         xml.append("                    <crs:Type>CRS502</crs:Type>\n");
         xml.append("                    <crs:PaymentAmnt currCode=\"").append(curr).append("\">")
            .append(String.format(Locale.US, "%.2f", pmt)).append("</crs:PaymentAmnt>\n");
         xml.append("                </crs:Payment>\n");
 
-        xml.append("                <crs:DDProcedure>").append(r.getOrDefault("DD_PROCEDURE", "CRS1202")).append("</crs:DDProcedure>\n");
-        xml.append("                <crs:AccountType>").append(r.getOrDefault("ACCOUNT_TYPE", "CRS1101")).append("</crs:AccountType>\n");
         xml.append("            </crs:AccountReport>\n");
     }
 
     // =========================================================================
-    // 7. SAFE POI PARSING UTILITIES WITH VERSION-SAFE SCIENTIFIC NOTATION FIX
+    // 4. UTILITIES
     // =========================================================================
     private String cleanCol(String name) {
         return name.trim().toUpperCase().replaceAll("[^A-Z0-9]", "");
@@ -693,7 +621,7 @@ public class CrsManagementService {
                     Cell cell = row.getCell(entry.getValue(), Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
                     if (cell != null) {
                         try {
-                            if (cell.getCellType() == 0) { // Cell.CELL_TYPE_NUMERIC constant across all POI versions
+                            if (cell.getCellType() == 0) {
                                 double val = cell.getNumericCellValue();
                                 return String.format(Locale.US, "%.0f", val).trim();
                             }
@@ -720,9 +648,7 @@ public class CrsManagementService {
                         } catch (Exception e) {
                             try {
                                 String s = dataFormatter.formatCellValue(cell).replaceAll("[,\\s]", "");
-                                if (!s.isEmpty()) {
-                                    return Double.parseDouble(s);
-                                }
+                                if (!s.isEmpty()) return Double.parseDouble(s);
                             } catch (Exception ignored) {}
                         }
                     }
@@ -758,7 +684,7 @@ public class CrsManagementService {
         return null;
     }
 
-    private String getBooleanStr(Row row, Map<String, Integer> colMap, String... keys) {
+    private String getCharBoolean(Row row, Map<String, Integer> colMap, String... keys) {
         for (String k : keys) {
             String cleanKey = cleanCol(k);
             for (Map.Entry<String, Integer> entry : colMap.entrySet()) {
@@ -766,18 +692,24 @@ public class CrsManagementService {
                     Cell cell = row.getCell(entry.getValue(), Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
                     if (cell != null) {
                         try {
-                            return String.valueOf(cell.getBooleanCellValue());
+                            return cell.getBooleanCellValue() ? "Y" : "N";
                         } catch (Exception e) {
-                            String s = dataFormatter.formatCellValue(cell).trim().toLowerCase();
-                            if ("true".equals(s) || "y".equals(s) || "yes".equals(s) || "1".equals(s)) {
-                                return "true";
+                            String s = dataFormatter.formatCellValue(cell).trim().toUpperCase();
+                            if ("TRUE".equals(s) || "Y".equals(s) || "YES".equals(s) || "1".equals(s)) {
+                                return "Y";
                             }
                         }
                     }
                 }
             }
         }
-        return "false";
+        return "N";
+    }
+
+    private String toXmlBoolean(Object val) {
+        if (val == null) return "false";
+        String s = String.valueOf(val).trim().toUpperCase();
+        return ("Y".equals(s) || "YES".equals(s) || "TRUE".equals(s) || "1".equals(s)) ? "true" : "false";
     }
 
     private String getCellString(Cell cell) {
@@ -805,38 +737,33 @@ public class CrsManagementService {
     }
 
  // =========================================================================
-    // 8. DASHBOARD DATA API METHOD FOR CONTROLLER
+    // RECTIFY DUPLICATE: OVERWRITE MAIN DB RECORD & MARK RESOLVED
     // =========================================================================
-    public Map<String, Object> getCrsDashboardData(String reportingYear) {
-        if (reportingYear == null || reportingYear.trim().isEmpty()) {
-            reportingYear = "2025";
-        }
-        Map<String, Object> data = new HashMap<>();
+    @Transactional
+    public boolean rectifyDuplicateRecord(Long dupId, Double updatedBalance, String updatedStatus) {
+        Map<String, Object> dup;
         try {
-            List<Map<String, Object>> records = jdbcTemplate.queryForList(
-                "SELECT * FROM BRECON.CRS_REPORT_DATA WHERE REPORTING_YEAR = ? ORDER BY REPORT_ID DESC", reportingYear
+            dup = jdbcTemplate.queryForMap(
+                "SELECT * FROM BRECON.CRS_DUPLICATE_RECORDS WHERE DUP_ID = ?", dupId
             );
-            
-            long total = records.size();
-            long pending = records.stream().filter(r -> "PENDING".equalsIgnoreCase(String.valueOf(r.get("STATUS")))).count();
-            long completed = records.stream().filter(r -> "COMPLETED".equalsIgnoreCase(String.valueOf(r.get("STATUS")))).count();
-            long error = total - pending - completed;
-
-            data.put("totalCount", total);
-            data.put("pendingCount", pending);
-            data.put("completedCount", completed);
-            data.put("errorCount", error);
-            data.put("records", records);
         } catch (Exception e) {
-            logger.error("Error fetching CRS dashboard data", e);
-            data.put("totalCount", 0);
-            data.put("pendingCount", 0);
-            data.put("completedCount", 0);
-            data.put("errorCount", 0);
-            data.put("records", new ArrayList<>());
+            logger.error("Duplicate record ID {} not found", dupId, e);
+            return false;
         }
-        return data;
+
+        String accNum = (String) dup.get("ACCOUNT_NUMBER");
+
+        // Aligned to real schema: Updates balance on ACCOUNT_NUMBER
+        int updated = jdbcTemplate.update(
+            "UPDATE BRECON.CRS_REPORT_DATA SET ACCOUNT_BALANCE = ? WHERE ACCOUNT_NUMBER = ?",
+            updatedBalance, accNum
+        );
+
+        jdbcTemplate.update(
+            "UPDATE BRECON.CRS_DUPLICATE_RECORDS SET STATUS = 'RESOLVED' WHERE DUP_ID = ?", dupId
+        );
+
+        return updated > 0;
     }
 
-    
 }
