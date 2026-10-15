@@ -25,35 +25,42 @@
             --row-hover: #eaf2f5;
         }
 
-        /* Lock screen viewport cleanly */
-        html, body {
+        /* Allow the page to scroll instead of clipping content */
+        html,
+        body {
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
             background: #f3f6f8;
             font-family: Arial, sans-serif;
             color: var(--text);
         }
 
+        /* CRS content starts below the common navigation header */
         .source-data-wrapper {
             width: 98%;
             max-width: 1840px;
-            margin: 8px auto 4px auto;
-            height: calc(100vh - 44px);
+            min-height: calc(100vh - 105px);
+            margin: 34px auto 20px;
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
+            padding-bottom: 35px;
         }
 
+        /* Card grows with its content */
         .source-data-card {
             background: #ffffff;
             border-radius: 8px;
             box-shadow: 0 6px 20px rgba(20, 40, 55, 0.10);
             display: flex;
             flex-direction: column;
-            height: 100%;
-            overflow: hidden;
+            flex: 0 0 auto;
+            overflow: visible;
+            margin-top: 0;
         }
 
         .source-data-header {
@@ -74,12 +81,10 @@
         .source-data-table-wrapper {
             padding: 6px 10px;
             box-sizing: border-box;
-            flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 0;
-            gap: 6px;
-            overflow: hidden;
+            gap: 8px;
+            overflow: visible;
         }
 
         /* Summary Cards */
@@ -182,7 +187,7 @@
         .crs-toolbar-btn.green:hover { background: #166534; }
         .crs-file-input { display: none; }
 
-        /* Equal 50/50 Split for Two Lists */
+        /* Table sections: size to content, no squeezing */
         .file-list-container {
             border: 1px solid var(--line);
             border-radius: 6px;
@@ -190,8 +195,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            min-height: 0;
-            flex: 1; /* Equal space distribution */
+            flex: 0 0 auto;
         }
         .file-list-container.dup-section { border-color: #fca5a5; }
 
@@ -208,10 +212,11 @@
         }
         .file-list-title-bar strong { color: var(--brand-dark); font-size: 12.5px; }
 
+        /* Scrolls only when more rows than fit (e.g. 10/25 rows selected) */
         .table-scroll-box {
-            flex: 1;
+            flex: 0 0 auto;
+            max-height: 260px;
             overflow-y: auto;
-            min-height: 0;
         }
 
         .dedicated-file-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
@@ -281,9 +286,9 @@
         .no-data { text-align: center !important; color: var(--muted) !important; padding: 14px 10px !important; font-size: 12px; }
         .no-data i { display: block; font-size: 18px; margin-bottom: 2px; color: #b4c2cc; }
 
-        /* Ultra-Minimized Footer */
+        /* Footer */
         .source-data-footer {
-            border-top: 1px solid #e3e8ec; padding: 2px 0; text-align: center; background: #ffffff; border-radius: 0 0 8px 8px; flex-shrink: 0;
+            border-top: 1px solid #e3e8ec; padding: 4px 0; text-align: center; background: #ffffff; border-radius: 0 0 8px 8px; flex-shrink: 0;
         }
         .source-btn {
             display: inline-block; padding: 2px 10px; margin: 0 2px; background: #ffffff; border: 1px solid #8a98a3;
@@ -356,7 +361,7 @@
         let popupCount = 0;
 
         let currentPageMain = 1;
-        let pageSizeMain = 5;
+        let pageSizeMain = 5;   // matches the dropdown default (5)
         let currentPageDup = 1;
         let pageSizeDup = 5;
 
@@ -534,7 +539,7 @@
                 var tin = String(record.TIN || "").toLowerCase();
 
                 var matchesSearch = acc.includes(search) || name.includes(search) || country.includes(search) || tin.includes(search);
-                
+
                 var isIndiv = (String(record.HOLDER_TYPE || '').toUpperCase() === 'INDIVIDUAL');
                 var recCategory = isIndiv ? 'INDIVIDUAL' : String(record.ACCT_HOLDER_CATEGORY || '').toUpperCase();
                 if (!recCategory || recCategory === 'NULL') {
@@ -555,7 +560,7 @@
             var pageItems = filtered.slice(startIndex, endIndex);
 
             $('#crsVisibleCount').text(totalItems.toLocaleString());
-            $('#mainPageInfoText').text(totalItems === 0 ? "Showing 0 entries" : 
+            $('#mainPageInfoText').text(totalItems === 0 ? "Showing 0 entries" :
                 `Showing ${(startIndex + 1).toLocaleString()} to ${endIndex.toLocaleString()} of ${totalItems.toLocaleString()} entries`);
 
             var $tbody = $('#crsTableBody');
@@ -631,10 +636,10 @@
             var pageItems = crsDuplicateRecords.slice(startIndex, endIndex);
 
             $('#dupVisibleCount').text(totalItems.toLocaleString() + " record(s)");
-            $('#dupPageInfoText').text(totalItems === 0 ? "Showing 0 entries" : 
+            $('#dupPageInfoText').text(totalItems === 0 ? "Showing 0 entries" :
                 `Showing ${(startIndex + 1).toLocaleString()} to ${endIndex.toLocaleString()} of ${totalItems.toLocaleString()} entries`);
 
-            var $tbody =$('#dupTableBody');
+            var $tbody = $('#dupTableBody');
             $tbody.empty();
 
             if (pageItems.length === 0) {
@@ -645,7 +650,7 @@
 
             pageItems.forEach(function (r) {
                 var bal = Number(r.ACCOUNT_BALANCE || 0).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' ' + (r.CURRENCY_CODE || 'MUR');
-                
+
                 var rowHtml = '<tr>' +
                     '<td>' + r.DUP_ID + '</td>' +
                     '<td>' + escapeHtml(r.FILE_NAME || '-') + '</td>' +
@@ -668,7 +673,7 @@
         }
 
         function renderDupPagination(totalItems, totalPages) {
-            var $nav =$('#dupPaginationNav');
+            var $nav = $('#dupPaginationNav');
             $nav.empty();
             if (totalItems <= pageSizeDup) return;
 
@@ -701,7 +706,7 @@
             var columns = ["ID", "File Name", "Account Number", "Holder Name", "Country", "TIN", "Balance", "Currency", "Status"];
             var csvEscape = val => '"' + String(val ?? "").replace(/"/g, '""') + '"';
             var rows = crsDuplicateRecords.map(r => [r.DUP_ID, r.FILE_NAME, r.ACCOUNT_NUMBER, r.HOLDER_NAME, r.RESIDENCE_COUNTRY, r.TIN, r.ACCOUNT_BALANCE, r.CURRENCY_CODE, r.STATUS]);
-            
+
             var csv = [columns, ...rows].map(row => row.map(csvEscape).join(",")).join("\r\n");
             var blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
             var url = URL.createObjectURL(blob);
@@ -785,9 +790,9 @@
         function toggleEditModalHolderFields() {
             var type = $('#editHolderType').val();
             if (type === 'ORGANISATION') {
-                $('.holder-indiv').hide();$('.holder-org').show();
+                $('.holder-indiv').hide(); $('.holder-org').show();
             } else {
-                $('.holder-indiv').show();$('.holder-org').hide();
+                $('.holder-indiv').show(); $('.holder-org').hide();
             }
         }
 
@@ -923,7 +928,7 @@
                     </div>
                 </div>
 
-                <!-- 1. CRS Reportable Accounts List (50% Space) -->
+                <!-- 1. CRS Reportable Accounts List -->
                 <div class="file-list-container main-section">
                     <div class="file-list-title-bar">
                         <span><i class="fa fa-list" style="margin-right:5px; color:var(--brand);"></i> CRS Reportable Accounts List (OECD CRS v3.0)</span>
@@ -961,8 +966,8 @@
                         <div style="display: flex; align-items: center; gap: 5px;">
                             <span>Rows:</span>
                             <select id="pageSizeMainSelect" style="padding: 1px 3px; border:1px solid #cbd5e1; border-radius:3px; font-size:11px;">
-                                <option value="5">5</option>
-                                <option value="10" selected>10</option>
+                                <option value="5" selected>5</option>
+                                <option value="10">10</option>
                                 <option value="25">25</option>
                             </select>
                             <span id="mainPageInfoText" style="color: var(--muted); margin-left: 4px;">Showing entries</span>
@@ -971,7 +976,7 @@
                     </div>
                 </div>
 
-                <!-- 2. CRS Duplicate Records Rectification Queue (50% Space) -->
+                <!-- 2. CRS Duplicate Records Rectification Queue -->
                 <div class="file-list-container dup-section">
                     <div class="file-list-title-bar" style="background: #fff1f2;">
                         <div>
@@ -1159,7 +1164,7 @@
                     <div class="failed-field">
                         <label>Resolution Action *</label>
                         <select id="rectifyStatus" name="updatedStatus">
-                            <option value="COMPLETED">Resolve & Insert/Update into DB</option>
+                            <option value="COMPLETED">Resolve &amp; Insert/Update into DB</option>
                             <option value="ERROR">Exclude / Discard Duplicate</option>
                         </select>
                     </div>
