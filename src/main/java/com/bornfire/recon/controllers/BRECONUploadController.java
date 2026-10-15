@@ -2,6 +2,7 @@ package com.bornfire.recon.controllers;
 
 import java.io.FileNotFoundException; 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -608,6 +609,55 @@ public class BRECONUploadController {
             return count != null ? count : 0;
         } catch (Exception ex) {
             return 0;
+        }
+    }
+    
+    
+ // =========================================================================
+    // EPIN & VISANET (EP745) DOWNLOAD / EXPORT ENDPOINTS
+    // =========================================================================
+
+    @GetMapping("/downloadEpinReport")
+    public void downloadEpinReport(HttpServletResponse response) throws Exception {
+        response.setContentType("text/plain");
+        response.setHeader("Content-Disposition", "attachment; filename=EPIN_Report_" + System.currentTimeMillis() + ".TXT");
+        
+        List<Map<String, Object>> records = jdbcTemplate.queryForList("SELECT * FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE");
+        
+        try (PrintWriter writer = response.getWriter()) {
+            writer.println("CARD_NO|RRN|AUTH_ID|AMOUNT|TRAN_DATE");
+            for (Map<String, Object> r : records) {
+                writer.println(
+                    r.getOrDefault("CARD_NO", "") + "|" +
+                    r.getOrDefault("RRN", "") + "|" +
+                    r.getOrDefault("AUTH_ID", "") + "|" +
+                    r.getOrDefault("AMOUNT", "") + "|" +
+                    r.getOrDefault("TRAN_DATE", "")
+                );
+            }
+            writer.flush();
+        }
+    }
+
+    @GetMapping("/downloadVisanetReport")
+    public void downloadVisanetReport(HttpServletResponse response) throws Exception {
+        response.setContentType("text/plain");
+        response.setHeader("Content-Disposition", "attachment; filename=VisaNet_EP745_Report_" + System.currentTimeMillis() + ".TXT");
+        
+        List<Map<String, Object>> records = jdbcTemplate.queryForList("SELECT * FROM BRECON.BRECON_CARD_EP745_DATA_TABLE");
+        
+        try (PrintWriter writer = response.getWriter()) {
+            writer.println("CARD_NO|RRN|AUTH_ID|AMOUNT|SETT_DATE");
+            for (Map<String, Object> r : records) {
+                writer.println(
+                    r.getOrDefault("CARD_NO", "") + "|" +
+                    r.getOrDefault("RRN", "") + "|" +
+                    r.getOrDefault("AUTH_ID", "") + "|" +
+                    r.getOrDefault("AMOUNT", "") + "|" +
+                    r.getOrDefault("SETT_DATE", "")
+                );
+            }
+            writer.flush();
         }
     }
 

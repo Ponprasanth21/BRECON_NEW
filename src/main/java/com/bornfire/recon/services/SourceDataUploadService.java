@@ -14,10 +14,12 @@ import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -575,39 +577,76 @@ public class SourceDataUploadService {
     }
 
     public void exportDataToExcel(String type, HttpServletResponse response) throws Exception {
-        String targetTable = "ATM".equalsIgnoreCase(type) ? "BRECON.ATM_TRANSACTION_DATA" :
-                             "POS".equalsIgnoreCase(type) ? "BRECON.POS_TRANSATION_DATA" :
-                             "EPIN".equalsIgnoreCase(type) ? "BRECON.VISA_EPIN" :
-                             "EPIN745".equalsIgnoreCase(type) ? "BRECON.VISA_EPIN745" :
-                             "CBS".equalsIgnoreCase(type) ? "BRECON.CBS_TXN" : "BRECON." + type.toUpperCase() + "_TRANSACTION_DATA";
+        String tableName = "";
+        String fileNamePrefix = "";
 
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT * FROM " + targetTable);
-        List<String> columnNames = new ArrayList<>();
-        if (!rows.isEmpty()) columnNames.addAll(rows.get(0).keySet());
-        else for (String c : ("CBS".equalsIgnoreCase(type) ? CBS_COLUMNS : DB_COLUMNS)) columnNames.add(c);
+        if (type == null) {
+            throw new IllegalArgumentException("Type cannot be null");
+        }
 
-        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
-        try {
-            Sheet sheet = workbook.createSheet(type.toUpperCase() + "_DATA");
-            Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < columnNames.size(); i++) headerRow.createCell(i).setCellValue(columnNames.get(i));
+        switch (type.toUpperCase().trim()) {
+            case "ATM":
+                tableName = "BRECON.ATM_TRANSACTION_DATA";
+                fileNamePrefix = "ATM_Source_Data";
+                break;
+            case "POS":
+                tableName = "BRECON.POS_TRANSATION_DATA";
+                fileNamePrefix = "POS_Source_Data";
+                break;
+            case "CBS":
+                tableName = "BRECON.CBS_TXN";
+                fileNamePrefix = "CBS_Source_Data";
+                break;
+            case "EPIN":
+                tableName = "BRECON.BRECON_CARD_EPIN_DATA_TABLE";
+                fileNamePrefix = "EPIN_Source_Data";
+                break;
+            case "VISANET":
+            case "EP745":
+                tableName = "BRECON.BRECON_CARD_EP745_DATA_TABLE";
+                fileNamePrefix = "VisaNet_EP745_Source_Data";
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid source data type: " + type);
+        }
 
-            int rIdx = 1;
-            for (Map<String, Object> map : rows) {
-                Row r = sheet.createRow(rIdx++);
-                for (int c = 0; c < columnNames.size(); c++) {
-                    Object v = map.get(columnNames.get(c));
-                    r.createCell(c).setCellValue(v != null ? String.valueOf(v) : "");
+        // Set response headers for Excel download
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        String headerKey = "Content-Disposition";
+        String headerValue = "attachment; filename=" + fileNamePrefix + "_" + System.currentTimeMillis() + ".xlsx";
+        response.setHeader(headerKey, headerValue);
+
+        // Fetch records and stream into Apache POI Workbook
+        List<Map<String, Object>> records = jdbcTemplate.queryForList("SELECT * FROM " + tableName);
+
+        try (Workbook workbook = new XSSFWorkbook(); ServletOutputStream outputStream = response.getOutputStream()) {
+            Sheet sheet = workbook.createSheet(type.toUpperCase() + "_Data");
+
+            if (!records.isEmpty()) {
+                // Create Header Row
+                Row headerRow = sheet.createRow(0);
+                Set<String> columns = records.get(0).keySet();
+                int colIdx = 0;
+                for (String col : columns) {
+                    Cell cell = headerRow.createCell(colIdx++);
+                    cell.setCellValue(col);
+                }
+
+                // Create Data Rows
+                int rowIdx = 1;
+                for (Map<String, Object> record : records) {
+                    Row row = sheet.createRow(rowIdx++);
+                    int cIdx = 0;
+                    for (String col : columns) {
+                        Cell cell = row.createCell(cIdx++);
+                        Object val = record.get(col);
+                        cell.setCellValue(val != null ? val.toString() : "");
+                    }
                 }
             }
 
-            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            response.setHeader("Content-Disposition", "attachment; filename=" + type + "_DATA_" + System.currentTimeMillis() + ".xlsx");
-            workbook.write(response.getOutputStream());
-            response.getOutputStream().flush();
-        } finally {
-            workbook.dispose();
-            workbook.close();
+            workbook.write(outputStream);
+            outputStream.flush();
         }
     }
 
