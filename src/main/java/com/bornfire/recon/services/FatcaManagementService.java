@@ -1,7 +1,10 @@
 package com.bornfire.recon.services;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -17,7 +20,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
@@ -41,29 +43,18 @@ public class FatcaManagementService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // Full 56 columns of BRECON.FACTA_TRANSCATION_DATA
     private static final String[] DB_COLUMNS = new String[] {
-        "GRP_ID", "ENTITY_CODE", "ENTITY_TYPE", "RESIDENT_FLAG", "ENTITY_NAME", 
-        "ENTITY_OTHER_NAME", "DOB", "SEX", "COUNTRY_CODE", "PASSPORT_NO", 
-        "ADDRESS1", "ADDRESS2", "ADDRESS3", "ADDRESS4", "ADDRESS5", 
-        "REF_NO", "CREDIT_TYPE", "DATE_APPROVED", "PARENT_CO_NO", "PARENT_CO_NAME", 
-        "SECTOR_LOAN_CLASS", "CURR", "AMOUNT_ORG", "AMOUNT_OUT", "AMOUNT_DIS", 
-        "DATE_UPDATE", "AMOUNT_INST", "DATE_FIRST_INST", "PERIODICITY", "DATE_LAST_INST", 
-        "DATE_EXP", "NO_INST", "DATE_DEFAULT", "BAL_DEFAULT", "AMOUNT_ARRS", 
-        "TYPE_CLASS", "FIRST_COLL", "SECOND_COLL", "THIRD_COLL", "FOURTH_COLL", 
-        "FIFTH_COLL", "REMARKS", "RECORD_STATUS", "UNIQUE_REF_ID", "DATE_REGULARISED", 
-        "ACTION_TAKEN", "ACTION_DATE", "ENTRY_TIME", "ENTRY_USER", "MODIFY_TIME", 
-        "MODIFY_USER", "VERIFY_TIME", "VERIFY_USER", "DEL_FLAG", "MODIFY_FLAG", "ENTITY_FLAG"
+        "BRN", "RES_COUNTRY_CODE", "PASSPORT_NO", "SURNAME", 
+        "OTHER_NAME", "FOREIGN_AMOUNT", "FOREIGN_CURR", "TXN_TYPE", "AMOUNT_MUR", 
+        "RECORD_STATUS", "DEL_FLAG", "RECORD_SOURCE", "ENTRY_TIME", "ENTRY_USER"
     };
 
     private static final Set<String> DATE_COLUMNS = new HashSet<>(Arrays.asList(
-        "DOB", "DATE_APPROVED", "DATE_UPDATE", "DATE_FIRST_INST", "DATE_LAST_INST", 
-        "DATE_EXP", "DATE_DEFAULT", "DATE_REGULARISED", "ACTION_DATE"
+        "LOAD_DATE", "MESSAGE_TIMESTAMP"
     ));
 
     private static final Set<String> NUMERIC_COLUMNS = new HashSet<>(Arrays.asList(
-        "AMOUNT_ORG", "AMOUNT_OUT", "AMOUNT_DIS", "AMOUNT_INST", "PERIODICITY", 
-        "NO_INST", "BAL_DEFAULT", "AMOUNT_ARRS"
+        "FOREIGN_AMOUNT", "AMOUNT_MUR", "EXCHANGE_RATE", "ACCOUNT_BALANCE", "PAYMENT_AMOUNT"
     ));
 
     private String cleanKey(String col) {
@@ -98,85 +89,169 @@ public class FatcaManagementService {
         }
     }
 
+    private String mapCsvColumnToDb(String csvHeader) {
+        String clean = cleanKey(csvHeader);
+        switch (clean) {
+            case "ID": return "TRN_ID";
+            case "BRN": return "BRN";
+            case "NATIONALITY": return "RES_COUNTRY_CODE";
+            case "PASSPORT": return "PASSPORT_NO";
+            case "SURNAME": return "SURNAME";
+            case "OTHERNAME": return "OTHER_NAME";
+            case "AMOUNT": return "FOREIGN_AMOUNT";
+            case "FOREIGN_CURRENCY":
+            case "FOREIGNCURRENCY": return "FOREIGN_CURR";
+            case "TYPE_OF_TRANSACTION":
+            case "TYPEOFTRANSACTION": return "TXN_TYPE";
+            case "EQUIVALENT_IN_MUR":
+            case "EQUIVALENTINMUR": return "AMOUNT_MUR";
+            default: return clean;
+        }
+    }
+
     @Transactional
     public int uploadFatcaFile(MultipartFile file, String userId) throws Exception {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Uploaded file is empty or null.");
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        boolean isCsv = originalFilename != null && originalFilename.toLowerCase().endsWith(".csv");
+
         List<Object[]> batchParams = new ArrayList<>();
-        DataFormatter formatter = new DataFormatter();
         Timestamp currentTime = new Timestamp(System.currentTimeMillis());
         String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
 
-        try (InputStream is = file.getInputStream();
-             Workbook workbook = WorkbookFactory.create(is)) {
+        if (isCsv) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+                String headerLine = reader.readLine();
+                if (headerLine == null) return 0;
 
-            Sheet sheet = workbook.getSheetAt(0);
-            if (sheet == null || sheet.getPhysicalNumberOfRows() <= 1) return 0;
-
-            Row headerRow = sheet.getRow(0);
-            Map<String, Integer> colIndexMap = new HashMap<>();
-            for (Cell cell : headerRow) {
-                if (cell != null) {
-                    colIndexMap.put(cleanKey(formatter.formatCellValue(cell)), cell.getColumnIndex());
+                String[] headers = headerLine.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)", -1);
+                Map<String, Integer> colIndexMap = new HashMap<>();
+                for (int i = 0; i < headers.length; i++) {
+                    String dbColName = mapCsvColumnToDb(headers[i].replace("\"", ""));
+                    colIndexMap.put(dbColName, i);
                 }
-            }
 
-            for (int r = 1; r <= sheet.getLastRowNum(); r++) {
-                Row row = sheet.getRow(r);
-                if (row == null) continue;
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().isEmpty()) continue;
+                    String[] cols = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)", -1);
 
-                Object[] rowValues = new Object[DB_COLUMNS.length];
-                boolean hasData = false;
+                    Object[] rowValues = new Object[DB_COLUMNS.length];
+                    boolean hasData = false;
 
-                for (int i = 0; i < DB_COLUMNS.length; i++) {
-                    String col = DB_COLUMNS[i];
+                    for (int i = 0; i < DB_COLUMNS.length; i++) {
+                        String col = DB_COLUMNS[i];
 
-                    if ("ENTRY_TIME".equals(col)) {
-                        rowValues[i] = currentTime;
-                    } else if ("ENTRY_USER".equals(col)) {
-                        rowValues[i] = effectiveUser;
-                    } else if ("DEL_FLAG".equals(col)) {
-                        rowValues[i] = "N";
-                    } else if ("ENTITY_FLAG".equals(col)) {
-                        rowValues[i] = "Y";
-                    } else if ("MODIFY_FLAG".equals(col)) {
-                        rowValues[i] = "N";
-                    } else if ("MODIFY_TIME".equals(col) || "MODIFY_USER".equals(col) ||
-                               "VERIFY_TIME".equals(col) || "VERIFY_USER".equals(col)) {
-                        rowValues[i] = null;
-                    } else {
-                        Integer idx = colIndexMap.get(cleanKey(col));
-                        if (idx != null && idx >= 0) {
-                            Cell cell = row.getCell(idx, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
-                            if (cell != null) {
-                                hasData = true;
-                                // ✅ Safe, version-independent date parser:
-								if (DATE_COLUMNS.contains(col)) {
-								    try {
-								        if (DateUtil.isCellDateFormatted(cell)) {
-								            java.util.Date d = cell.getDateCellValue();
-								            rowValues[i] = (d != null) ? new Date(d.getTime()) : null;
-								        } else {
-								            rowValues[i] = parseDate(formatter.formatCellValue(cell));
-								        }
-								    } catch (Exception e) {
-								        rowValues[i] = parseDate(formatter.formatCellValue(cell));
-								    }
-								} else if (NUMERIC_COLUMNS.contains(col)) {
-                                    rowValues[i] = parseBigDecimal(formatter.formatCellValue(cell));
+                        if ("ENTRY_TIME".equals(col)) {
+                            rowValues[i] = currentTime;
+                        } else if ("ENTRY_USER".equals(col)) {
+                            rowValues[i] = effectiveUser;
+                        } else if ("DEL_FLAG".equals(col)) {
+                            rowValues[i] = "N";
+                        } else if ("RECORD_STATUS".equals(col)) {
+                            rowValues[i] = "PENDING";
+                        } else if ("RECORD_SOURCE".equals(col)) {
+                            rowValues[i] = "FX_CSV";
+                        } else {
+                            Integer idx = colIndexMap.get(col);
+                            if (idx != null && idx >= 0 && idx < cols.length) {
+                                String val = cols[idx].replace("\"", "").trim();
+                                if (!val.isEmpty() && !"null".equalsIgnoreCase(val)) {
+                                    hasData = true;
+                                    if (DATE_COLUMNS.contains(col)) {
+                                        rowValues[i] = parseDate(val);
+                                    } else if (NUMERIC_COLUMNS.contains(col)) {
+                                        rowValues[i] = parseBigDecimal(val);
+                                    } else {
+                                        rowValues[i] = val;
+                                    }
                                 } else {
-                                    String str = formatter.formatCellValue(cell).trim();
-                                    rowValues[i] = str.isEmpty() ? null : str;
+                                    rowValues[i] = null;
                                 }
                             } else {
                                 rowValues[i] = null;
                             }
-                        } else {
-                            rowValues[i] = null;
                         }
+                    }
+                    if (hasData) {
+                        batchParams.add(rowValues);
+                    }
+                }
+            }
+        } else {
+            DataFormatter formatter = new DataFormatter();
+            try (InputStream is = file.getInputStream();
+                 Workbook workbook = WorkbookFactory.create(is)) {
+
+                Sheet sheet = workbook.getSheetAt(0);
+                if (sheet == null || sheet.getPhysicalNumberOfRows() <= 1) return 0;
+
+                Row headerRow = sheet.getRow(0);
+                Map<String, Integer> colIndexMap = new HashMap<>();
+                for (Cell cell : headerRow) {
+                    if (cell != null) {
+                        colIndexMap.put(mapCsvColumnToDb(formatter.formatCellValue(cell)), cell.getColumnIndex());
                     }
                 }
 
-                if (hasData) {
-                    batchParams.add(rowValues);
+                for (int r = 1; r <= sheet.getLastRowNum(); r++) {
+                    Row row = sheet.getRow(r);
+                    if (row == null) continue;
+
+                    Object[] rowValues = new Object[DB_COLUMNS.length];
+                    boolean hasData = false;
+
+                    for (int i = 0; i < DB_COLUMNS.length; i++) {
+                        String col = DB_COLUMNS[i];
+
+                        if ("ENTRY_TIME".equals(col)) {
+                            rowValues[i] = currentTime;
+                        } else if ("ENTRY_USER".equals(col)) {
+                            rowValues[i] = effectiveUser;
+                        } else if ("DEL_FLAG".equals(col)) {
+                            rowValues[i] = "N";
+                        } else if ("RECORD_STATUS".equals(col)) {
+                            rowValues[i] = "PENDING";
+                        } else if ("RECORD_SOURCE".equals(col)) {
+                            rowValues[i] = "FX_CSV";
+                        } else {
+                            Integer idx = colIndexMap.get(col);
+                            if (idx != null && idx >= 0) {
+                                Cell cell = row.getCell(idx, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                                if (cell != null) {
+                                    hasData = true;
+                                    if (DATE_COLUMNS.contains(col)) {
+                                        try {
+                                            if (DateUtil.isCellDateFormatted(cell)) {
+                                                java.util.Date d = cell.getDateCellValue();
+                                                rowValues[i] = (d != null) ? new Date(d.getTime()) : null;
+                                            } else {
+                                                rowValues[i] = parseDate(formatter.formatCellValue(cell));
+                                            }
+                                        } catch (Exception e) {
+                                            rowValues[i] = parseDate(formatter.formatCellValue(cell));
+                                        }
+                                    } else if (NUMERIC_COLUMNS.contains(col)) {
+                                        rowValues[i] = parseBigDecimal(formatter.formatCellValue(cell));
+                                    } else {
+                                        String str = formatter.formatCellValue(cell).trim();
+                                        rowValues[i] = str.isEmpty() ? null : str;
+                                    }
+                                } else {
+                                    rowValues[i] = null;
+                                }
+                            } else {
+                                rowValues[i] = null;
+                            }
+                        }
+                    }
+
+                    if (hasData) {
+                        batchParams.add(rowValues);
+                    }
                 }
             }
         }
@@ -259,9 +334,9 @@ public class FatcaManagementService {
         List<Map<String, Object>> records = new ArrayList<>();
         try {
             records = jdbcTemplate.queryForList(
-                "SELECT REF_NO, UNIQUE_REF_ID, ENTITY_NAME, " +
+                "SELECT TO_CHAR(TRN_ID) AS REF_NO, TO_CHAR(TRN_ID) AS UNIQUE_REF_ID, SURNAME AS ENTITY_NAME, " +
                 "TO_CHAR(ENTRY_TIME, 'YYYY-MM-DD HH24:MI:SS') AS UPLOAD_DATE, " +
-                "NVL(RECORD_STATUS, 'Pending') AS STATUS, AMOUNT_ORG " +
+                "NVL(RECORD_STATUS, 'Pending') AS STATUS, FOREIGN_AMOUNT AS AMOUNT_ORG " +
                 "FROM BRECON.FACTA_TRANSCATION_DATA " +
                 "WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND ROWNUM <= 100 ORDER BY ENTRY_TIME DESC"
             );
@@ -273,71 +348,209 @@ public class FatcaManagementService {
         return data;
     }
 
-    // 1. Update record status from Modal edit form
     @Transactional
     public boolean updateFatcaRecord(String refNo, String status, String userId) {
         try {
             String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA " +
-                         "SET RECORD_STATUS = ?, " +
-                         "    MODIFY_TIME = SYSTIMESTAMP, " +
-                         "    MODIFY_USER = ?, " +
-                         "    MODIFY_FLAG = 'Y' " +
-                         "WHERE REF_NO = ? AND NVL(DEL_FLAG, 'N') <> 'Y'";
+                         "SET RECORD_STATUS = ? " +
+                         "WHERE TRN_ID = ? AND NVL(DEL_FLAG, 'N') <> 'Y'";
 
-            int rowsUpdated = jdbcTemplate.update(sql, 
-                status, 
-                (userId != null && !userId.isEmpty()) ? userId : "SYSTEM", 
-                refNo
-            );
-
-            logger.info("Updated status to [{}] for REF_NO [{}] - rows affected: {}", status, refNo, rowsUpdated);
+            int rowsUpdated = jdbcTemplate.update(sql, status, refNo);
             return rowsUpdated > 0;
         } catch (Exception e) {
-            logger.error("Error updating FATCA record for REF_NO: " + refNo, e);
+            logger.error("Error updating FATCA record", e);
             return false;
         }
     }
 
-    // 2. Generate XML output matching MCIB / FATCA standards from Oracle DB
+    public Map<String, Object> getFatcaRecordDetails(String refNo) {
+        String sql = "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE TRN_ID = ? AND ROWNUM = 1";
+        try {
+            return jdbcTemplate.queryForMap(sql, refNo);
+        } catch (Exception ex) {
+            return jdbcTemplate.queryForMap("SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE ROWNUM = 1");
+        }
+    }
+
+    // Client-Matched OECD FATCA XML Generator for all records
     public String generateFatcaXml() {
         List<Map<String, Object>> list = new ArrayList<>();
         try {
-            String sql = "SELECT GRP_ID, ENTITY_CODE, ENTITY_TYPE, COUNTRY_CODE, " +
-                         "       NVL(RECORD_STATUS, 'A') AS RECORD_STATUS, REF_NO, UNIQUE_REF_ID, " +
-                         "       CREDIT_TYPE, CURR, AMOUNT_ARRS, TYPE_CLASS, " +
-                         "       TO_CHAR(DATE_DEFAULT, 'DDMMYYYY') AS DATE_DEF_STR, " +
-                         "       TO_CHAR(DATE_UPDATE, 'DDMMYYYY') AS DATE_UPD_STR " +
-                         "FROM BRECON.FACTA_TRANSCATION_DATA " +
-                         "WHERE NVL(DEL_FLAG, 'N') <> 'Y'";
+            String sql = "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y'";
             list = jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
             logger.error("Error reading FATCA records for XML generation", e);
         }
 
+        String currentTimeStamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new java.util.Date());
+
         StringBuilder xml = new StringBuilder();
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        xml.append("<MCIB>\n");
-        xml.append("  <BANK grp_id=\"BARB\">\n");
+        xml.append("<ftc:FATCA_OECD xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" ")
+           .append("xmlns:ftc=\"urn:oecd:ties:fatca:v2\" xmlns:sfa=\"urn:oecd:ties:stffatcatypes:v2\" ")
+           .append("version=\"2.0\" xsi:schemaLocation=\"urn:oecd:ties:fatca:v2 FatcaXML_v2.0.xsd\">\n");
+        
+        xml.append("  <ftc:MessageSpec>\n");
+        xml.append("    <sfa:SendingCompanyIN>8H4YD6.99999.BR.480</sfa:SendingCompanyIN>\n");
+        xml.append("    <sfa:TransmittingCountry>MU</sfa:TransmittingCountry>\n");
+        xml.append("    <sfa:ReceivingCountry>US</sfa:ReceivingCountry>\n");
+        xml.append("    <sfa:MessageType>FATCA</sfa:MessageType>\n");
+        xml.append("    <sfa:MessageRefId>8H4YD6.99999.BR.480.2026_0001</sfa:MessageRefId>\n");
+        xml.append("    <sfa:ReportingPeriod>2025-12-31</sfa:ReportingPeriod>\n");
+        xml.append("    <sfa:Timestamp>").append(currentTimeStamp).append("</sfa:Timestamp>\n");
+        xml.append("  </ftc:MessageSpec>\n");
 
-        for (Map<String, Object> r : list) {
-            xml.append("    <CREDIT>\n");
-            xml.append("      <ENTITY_CODE>").append(escapeXml(r.get("ENTITY_CODE"))).append("</ENTITY_CODE>\n");
-            xml.append("      <ENTITY_TYPE>").append(escapeXml(r.get("ENTITY_TYPE"))).append("</ENTITY_TYPE>\n");
-            xml.append("      <COUNTRY_CODE>").append(escapeXml(r.get("COUNTRY_CODE"))).append("</COUNTRY_CODE>\n");
-            xml.append("      <RECORD_STATUS>").append(escapeXml(r.get("RECORD_STATUS"))).append("</RECORD_STATUS>\n");
-            xml.append("      <REF_NO>").append(escapeXml(r.get("REF_NO"))).append("</REF_NO>\n");
-            xml.append("      <UNIQUE_REF_ID>").append(escapeXml(r.get("UNIQUE_REF_ID"))).append("</UNIQUE_REF_ID>\n");
-            xml.append("      <CREDIT_TYPE>").append(escapeXml(r.get("CREDIT_TYPE"))).append("</CREDIT_TYPE>\n");
-            xml.append("      <CURR>").append(escapeXml(r.get("CURR"))).append("</CURR>\n");
-            xml.append("      <DATE_UPDATE>").append(escapeXml(r.get("DATE_UPD_STR"))).append("</DATE_UPDATE>\n");
-            xml.append("      <AMOUNT_ARRS>").append(escapeXml(r.get("AMOUNT_ARRS"))).append("</AMOUNT_ARRS>\n");
-            xml.append("      <DATE_DEFAULT>").append(escapeXml(r.get("DATE_DEF_STR"))).append("</DATE_DEFAULT>\n");
-            xml.append("      <TYPE_CLASS>").append(escapeXml(r.get("TYPE_CLASS"))).append("</TYPE_CLASS>\n");
-            xml.append("    </CREDIT>\n");
+        xml.append("  <ftc:FATCA>\n");
+        xml.append("    <ftc:ReportingFI>\n");
+        xml.append("      <sfa:ResCountryCode>MU</sfa:ResCountryCode>\n");
+        xml.append("      <sfa:TIN>8H4YD6.99999.BR.480</sfa:TIN>\n");
+        xml.append("      <sfa:Name>BANK OF BARODA</sfa:Name>\n");
+        xml.append("      <sfa:Address>\n");
+        xml.append("        <sfa:CountryCode>MU</sfa:CountryCode>\n");
+        xml.append("        <sfa:AddressFree>Sir William Newton Street, Port Louis, Mauritius.</sfa:AddressFree>\n");
+        xml.append("      </sfa:Address>\n");
+        xml.append("      <ftc:DocSpec>\n");
+        xml.append("        <ftc:DocTypeIndic>FATCA1</ftc:DocTypeIndic>\n");
+        xml.append("        <ftc:DocRefId>8H4YD6.99999.BR.480.2025.RF1</ftc:DocRefId>\n");
+        xml.append("      </ftc:DocSpec>\n");
+        xml.append("    </ftc:ReportingFI>\n");
+
+        xml.append("    <ftc:ReportingGroup>\n");
+        for (int i = 0; i < list.size(); i++) {
+            Map<String, Object> r = list.get(i);
+            String trnId = String.valueOf(r.getOrDefault("TRN_ID", i + 1));
+            String brn = escapeXml(r.get("BRN"));
+            String resCountry = escapeXml(r.get("RES_COUNTRY_CODE"));
+            String surname = escapeXml(r.get("SURNAME"));
+            String otherName = escapeXml(r.get("OTHER_NAME"));
+            String passportNo = escapeXml(r.get("PASSPORT_NO"));
+            String foreignCurr = escapeXml(r.get("FOREIGN_CURR"));
+            if (foreignCurr.isEmpty()) foreignCurr = "USD";
+            Object foreignAmount = r.get("FOREIGN_AMOUNT");
+            Object amountMur = r.get("AMOUNT_MUR");
+            String docRefId = "8H4YD6.99999.BR.480.2025.AR" + trnId + ".ID1";
+
+            xml.append("      <ftc:AccountReport>\n");
+            xml.append("        <ftc:DocSpec>\n");
+            xml.append("          <ftc:DocTypeIndic>FATCA1</ftc:DocTypeIndic>\n");
+            xml.append("          <ftc:DocRefId>").append(docRefId).append("</ftc:DocRefId>\n");
+            xml.append("        </ftc:DocSpec>\n");
+            xml.append("        <ftc:AccountNumber>").append(brn.isEmpty() ? "94560190000291" : brn).append("</ftc:AccountNumber>\n");
+            xml.append("        <ftc:AccountClosed>0</ftc:AccountClosed>\n");
+            xml.append("        <ftc:AccountHolder>\n");
+            xml.append("          <ftc:Individual>\n");
+            xml.append("            <sfa:ResCountryCode>").append(resCountry.isEmpty() ? "MU" : resCountry).append("</sfa:ResCountryCode>\n");
+            xml.append("            <sfa:TIN issuedBy=\"US\">").append(passportNo.isEmpty() ? "000000000" : passportNo).append("</sfa:TIN>\n");
+            xml.append("            <sfa:Name>\n");
+            xml.append("              <sfa:FirstName>").append(surname).append("</sfa:FirstName>\n");
+            xml.append("              <sfa:LastName>").append(otherName).append("</sfa:LastName>\n");
+            xml.append("            </sfa:Name>\n");
+            xml.append("            <sfa:Address>\n");
+            xml.append("              <sfa:CountryCode>").append(resCountry.isEmpty() ? "MU" : resCountry).append("</sfa:CountryCode>\n");
+            xml.append("              <sfa:AddressFree>COURT SUITE 308 ST DENIS STREET PORT LOUIS, MAURITIUS</sfa:AddressFree>\n");
+            xml.append("            </sfa:Address>\n");
+            xml.append("          </ftc:Individual>\n");
+            xml.append("        </ftc:AccountHolder>\n");
+            xml.append("        <ftc:AccountBalance currCode=\"").append(foreignCurr).append("\">").append(foreignAmount != null ? foreignAmount : "0.00").append("</ftc:AccountBalance>\n");
+            xml.append("        <ftc:Payment>\n");
+            xml.append("          <ftc:Type>FATCA502</ftc:Type>\n");
+            xml.append("          <ftc:PaymentAmnt currCode=\"").append(foreignCurr).append("\">").append(amountMur != null ? amountMur : "0.00").append("</ftc:PaymentAmnt>\n");
+            xml.append("        </ftc:Payment>\n");
+            xml.append("      </ftc:AccountReport>\n");
+        }
+        xml.append("    </ftc:ReportingGroup>\n");
+        xml.append("  </ftc:FATCA>\n");
+        xml.append("</ftc:FATCA_OECD>");
+
+        return xml.toString();
+    }
+
+    // Client-Matched OECD FATCA XML Generator for a single record
+    public String generateSingleFatcaXml(String refNo) {
+        Map<String, Object> row;
+        try {
+            row = jdbcTemplate.queryForMap(
+                "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE TRN_ID = ? AND ROWNUM = 1", refNo);
+        } catch (Exception ex) {
+            row = jdbcTemplate.queryForMap(
+                "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE ROWNUM = 1");
         }
 
-        xml.append("  </BANK>\n");
-        xml.append("</MCIB>");
+        String currentTimeStamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new java.util.Date());
+        String trnId = String.valueOf(row.getOrDefault("TRN_ID", "1"));
+        String brn = escapeXml(row.get("BRN"));
+        String resCountry = escapeXml(row.get("RES_COUNTRY_CODE"));
+        String surname = escapeXml(row.get("SURNAME"));
+        String otherName = escapeXml(row.get("OTHER_NAME"));
+        String passportNo = escapeXml(row.get("PASSPORT_NO"));
+        String foreignCurr = escapeXml(row.get("FOREIGN_CURR"));
+        if (foreignCurr.isEmpty()) foreignCurr = "USD";
+        Object foreignAmount = row.get("FOREIGN_AMOUNT");
+        Object amountMur = row.get("AMOUNT_MUR");
+
+        StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        xml.append("<ftc:FATCA_OECD xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" ")
+           .append("xmlns:ftc=\"urn:oecd:ties:fatca:v2\" xmlns:sfa=\"urn:oecd:ties:stffatcatypes:v2\" ")
+           .append("version=\"2.0\" xsi:schemaLocation=\"urn:oecd:ties:fatca:v2 FatcaXML_v2.0.xsd\">\n");
+
+        xml.append("  <ftc:MessageSpec>\n");
+        xml.append("    <sfa:SendingCompanyIN>8H4YD6.99999.BR.480</sfa:SendingCompanyIN>\n");
+        xml.append("    <sfa:TransmittingCountry>MU</sfa:TransmittingCountry>\n");
+        xml.append("    <sfa:ReceivingCountry>US</sfa:ReceivingCountry>\n");
+        xml.append("    <sfa:MessageType>FATCA</sfa:MessageType>\n");
+        xml.append("    <sfa:MessageRefId>8H4YD6.99999.BR.480.2026_0001</sfa:MessageRefId>\n");
+        xml.append("    <sfa:ReportingPeriod>2025-12-31</sfa:ReportingPeriod>\n");
+        xml.append("    <sfa:Timestamp>").append(currentTimeStamp).append("</sfa:Timestamp>\n");
+        xml.append("  </ftc:MessageSpec>\n");
+
+        xml.append("  <ftc:FATCA>\n");
+        xml.append("    <ftc:ReportingFI>\n");
+        xml.append("      <sfa:ResCountryCode>MU</sfa:ResCountryCode>\n");
+        xml.append("      <sfa:TIN>8H4YD6.99999.BR.480</sfa:TIN>\n");
+        xml.append("      <sfa:Name>BANK OF BARODA</sfa:Name>\n");
+        xml.append("      <sfa:Address>\n");
+        xml.append("        <sfa:CountryCode>MU</sfa:CountryCode>\n");
+        xml.append("        <sfa:AddressFree>Sir William Newton Street, Port Louis, Mauritius.</sfa:AddressFree>\n");
+        xml.append("      </sfa:Address>\n");
+        xml.append("      <ftc:DocSpec>\n");
+        xml.append("        <ftc:DocTypeIndic>FATCA1</ftc:DocTypeIndic>\n");
+        xml.append("        <ftc:DocRefId>8H4YD6.99999.BR.480.2025.RF1</ftc:DocRefId>\n");
+        xml.append("      </ftc:DocSpec>\n");
+        xml.append("    </ftc:ReportingFI>\n");
+
+        xml.append("    <ftc:ReportingGroup>\n");
+        xml.append("      <ftc:AccountReport>\n");
+        xml.append("        <ftc:DocSpec>\n");
+        xml.append("          <ftc:DocTypeIndic>FATCA1</ftc:DocTypeIndic>\n");
+        xml.append("          <ftc:DocRefId>8H4YD6.99999.BR.480.2025.AR").append(trnId).append(".ID1</ftc:DocRefId>\n");
+        xml.append("        </ftc:DocSpec>\n");
+        xml.append("        <ftc:AccountNumber>").append(brn.isEmpty() ? "94560190000291" : brn).append("</ftc:AccountNumber>\n");
+        xml.append("        <ftc:AccountClosed>0</ftc:AccountClosed>\n");
+        xml.append("        <ftc:AccountHolder>\n");
+        xml.append("          <ftc:Individual>\n");
+        xml.append("            <sfa:ResCountryCode>").append(resCountry.isEmpty() ? "MU" : resCountry).append("</sfa:ResCountryCode>\n");
+        xml.append("            <sfa:TIN issuedBy=\"US\">").append(passportNo.isEmpty() ? "000000000" : passportNo).append("</sfa:TIN>\n");
+        xml.append("            <sfa:Name>\n");
+        xml.append("              <sfa:FirstName>").append(surname).append("</sfa:FirstName>\n");
+        xml.append("              <sfa:LastName>").append(otherName).append("</sfa:LastName>\n");
+        xml.append("            </sfa:Name>\n");
+        xml.append("            <sfa:Address>\n");
+        xml.append("              <sfa:CountryCode>").append(resCountry.isEmpty() ? "MU" : resCountry).append("</sfa:CountryCode>\n");
+        xml.append("              <sfa:AddressFree>COURT SUITE 308 ST DENIS STREET PORT LOUIS, MAURITIUS</sfa:AddressFree>\n");
+        xml.append("            </sfa:Address>\n");
+        xml.append("          </ftc:Individual>\n");
+        xml.append("        </ftc:AccountHolder>\n");
+        xml.append("        <ftc:AccountBalance currCode=\"").append(foreignCurr).append("\">").append(foreignAmount != null ? foreignAmount : "0.00").append("</ftc:AccountBalance>\n");
+        xml.append("        <ftc:Payment>\n");
+        xml.append("          <ftc:Type>FATCA502</ftc:Type>\n");
+        xml.append("          <ftc:PaymentAmnt currCode=\"").append(foreignCurr).append("\">").append(amountMur != null ? amountMur : "0.00").append("</ftc:PaymentAmnt>\n");
+        xml.append("        </ftc:Payment>\n");
+        xml.append("      </ftc:AccountReport>\n");
+        xml.append("    </ftc:ReportingGroup>\n");
+        xml.append("  </ftc:FATCA>\n");
+        xml.append("</ftc:FATCA_OECD>");
+
         return xml.toString();
     }
 
@@ -350,48 +563,64 @@ public class FatcaManagementService {
                   .replace("\"", "&quot;")
                   .replace("'", "&apos;");
     }
-    
-    public String generateSingleFatcaXml(String refNo) {
-        // 1. Fetch only this specific record from DB
-        // e.g., using refNo or UNIQUE_REF_ID
-        Map<String, Object> row = jdbcTemplate.queryForMap(
-            "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE REF_NO = ? AND ROWNUM = 1", refNo);
 
-        // 2. Build the XML structure for just this one record
-        StringBuilder xml = new StringBuilder();
-        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        xml.append("<MCIB>\n");
-        xml.append("  <BANK grp_id=\"BARB\">\n");
-        xml.append("    <CREDIT>\n");
-        xml.append("      <ENTITY_CODE>").append(row.get("ENTITY_CODE")).append("</ENTITY_CODE>\n");
-        xml.append("      <ENTITY_TYPE>").append(row.get("ENTITY_TYPE")).append("</ENTITY_TYPE>\n");
-        xml.append("      <COUNTRY_CODE>").append(row.get("COUNTRY_CODE")).append("</COUNTRY_CODE>\n");
-        xml.append("      <RECORD_STATUS>").append(row.get("RECORD_STATUS")).append("</RECORD_STATUS>\n");
-        xml.append("      <REF_NO>").append(row.get("REF_NO")).append("</REF_NO>\n");
-        xml.append("      <UNIQUE_REF_ID>").append(row.get("UNIQUE_REF_ID")).append("</UNIQUE_REF_ID>\n");
-        xml.append("      <CREDIT_TYPE>").append(row.get("CREDIT_TYPE")).append("</CREDIT_TYPE>\n");
-        xml.append("      <CURR>").append(row.get("CURRENCY") != null ? row.get("CURRENCY") : "").append("</CURR>\n");
-        xml.append("      <DATE_UPDATE>").append(row.get("DATE_UPDATE") != null ? row.get("DATE_UPDATE") : "").append("</DATE_UPDATE>\n");
-        xml.append("      <AMOUNT_ARRS>").append(row.get("AMOUNT_ARRS") != null ? row.get("AMOUNT_ARRS") : "").append("</AMOUNT_ARRS>\n");
-        xml.append("      <DATE_DEFAULT>").append(row.get("DATE_DEFAULT") != null ? row.get("DATE_DEFAULT") : "").append("</DATE_DEFAULT>\n");
-        xml.append("      <TYPE_CLASS>").append(row.get("TYPE_CLASS")).append("</TYPE_CLASS>\n");
-        xml.append("    </CREDIT>\n");
-        xml.append("  </BANK>\n");
-        xml.append("</MCIB>");
-
-        return xml.toString();
-    }
-    
-    public Map<String, Object> getFatcaRecordDetails(String refNo) {
-        String sql = "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE REF_NO = ? AND ROWNUM = 1";
+    // Fetch duplicate records (grouped by BRN and PASSPORT_NO)
+    public List<Map<String, Object>> getFatcaDuplicateRecords() {
+        String sql = "SELECT ROWNUM AS DUP_ID, BRN, RES_COUNTRY_CODE AS COUNTRY_CODE, " +
+                     "       PASSPORT_NO, SURNAME AS ENTITY_NAME, FOREIGN_AMOUNT AS AMOUNT_ORG, " +
+                     "       FOREIGN_CURR, TRN_ID AS REF_NO, 'Duplicate Key Match' AS FILE_NAME, 'PENDING' AS STATUS " +
+                     "FROM BRECON.FACTA_TRANSCATION_DATA " +
+                     "WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND (BRN, PASSPORT_NO) IN (" +
+                     "    SELECT BRN, PASSPORT_NO FROM BRECON.FACTA_TRANSCATION_DATA " +
+                     "    WHERE NVL(DEL_FLAG, 'N') <> 'Y' GROUP BY BRN, PASSPORT_NO HAVING COUNT(*) > 1" +
+                     ")";
         try {
-            return jdbcTemplate.queryForMap(sql, refNo);
-        } catch (Exception ex) {
-            // Fallback by UNIQUE_REF_ID if refNo lookup fails
-            String sqlFallback = "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE UNIQUE_REF_ID = ? AND ROWNUM = 1";
-            return jdbcTemplate.queryForMap(sqlFallback, refNo);
+            return jdbcTemplate.queryForList(sql);
+        } catch (Exception e) {
+            logger.error("Error loading FATCA duplicates", e);
+            return new ArrayList<>();
         }
     }
-    
-    
+
+    @Transactional
+    public boolean rectifyFatcaDuplicate(String dupId, String updatedStatus, String userId) {
+        try {
+            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA " +
+                         "SET RECORD_STATUS = ? " +
+                         "WHERE TRN_ID = ?";
+            int updated = jdbcTemplate.update(sql, updatedStatus, dupId);
+            return updated > 0;
+        } catch (Exception e) {
+            logger.error("Error rectifying FATCA duplicate", e);
+            return false;
+        }
+    }
+
+    @Transactional
+    public boolean deleteFatcaDuplicate(String dupId) {
+        try {
+            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA SET DEL_FLAG = 'Y' WHERE TRN_ID = ?";
+            int updated = jdbcTemplate.update(sql, dupId);
+            return updated > 0;
+        } catch (Exception e) {
+            logger.error("Error deleting FATCA duplicate", e);
+            return false;
+        }
+    }
+
+    @Transactional
+    public boolean deleteAllFatcaDuplicates() {
+        try {
+            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA SET DEL_FLAG = 'Y' " +
+                         "WHERE (BRN, PASSPORT_NO) IN (" +
+                         "    SELECT BRN, PASSPORT_NO FROM BRECON.FACTA_TRANSCATION_DATA " +
+                         "    WHERE NVL(DEL_FLAG, 'N') <> 'Y' GROUP BY BRN, PASSPORT_NO HAVING COUNT(*) > 1" +
+                         ")";
+            jdbcTemplate.update(sql);
+            return true;
+        } catch (Exception e) {
+            logger.error("Error clearing FATCA duplicates", e);
+            return false;
+        }
+    }
 }

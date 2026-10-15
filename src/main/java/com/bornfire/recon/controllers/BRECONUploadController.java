@@ -750,6 +750,52 @@ public class BRECONUploadController {
         }
     }
     
+    @GetMapping("/getFatcaDuplicateRecords")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getFatcaDuplicateRecords() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<Map<String, Object>> duplicates = fatcaService.getFatcaDuplicateRecords();
+            response.put("status", "SUCCESS");
+            response.put("records", duplicates);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error fetching FATCA duplicate records", e);
+            response.put("status", "ERROR");
+            response.put("records", new ArrayList<>());
+            return ResponseEntity.ok(response);
+        }
+    }
+
+    @PostMapping("/rectifyFatcaDuplicate")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> rectifyFatcaDuplicate(
+            @RequestParam("dupId") String dupId,
+            @RequestParam("updatedStatus") String updatedStatus) {
+        Map<String, Object> res = new HashMap<>();
+        boolean success = fatcaService.rectifyFatcaDuplicate(dupId, updatedStatus, null);
+        res.put("status", success ? "SUCCESS" : "ERROR");
+        res.put("message", success ? "Duplicate record rectified successfully" : "Failed to rectify duplicate");
+        return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/deleteFatcaDuplicate")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> deleteFatcaDuplicate(@RequestParam("dupId") String dupId) {
+        Map<String, Object> res = new HashMap<>();
+        boolean success = fatcaService.deleteFatcaDuplicate(dupId);
+        res.put("status", success ? "SUCCESS" : "ERROR");
+        return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/deleteAllFatcaDuplicates")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> deleteAllFatcaDuplicates() {
+        Map<String, Object> res = new HashMap<>();
+        boolean success = fatcaService.deleteAllFatcaDuplicates();
+        res.put("status", success ? "SUCCESS" : "ERROR");
+        return ResponseEntity.ok(res);
+    }
     
     
     @Autowired
