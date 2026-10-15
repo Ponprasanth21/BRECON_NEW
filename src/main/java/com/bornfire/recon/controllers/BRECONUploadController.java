@@ -1017,6 +1017,42 @@ public class BRECONUploadController {
         }
     }
     
+    @PostMapping("/deleteCrsDuplicate")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> deleteCrsDuplicate(@RequestParam("dupId") Long dupId) {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            int deleted = jdbcTemplate.update("DELETE FROM BRECON.CRS_DUPLICATE_RECORDS WHERE DUP_ID = ?", dupId);
+            if (deleted > 0) {
+                res.put("status", "SUCCESS");
+                res.put("message", "Duplicate record deleted successfully.");
+            } else {
+                res.put("status", "ERROR");
+                res.put("message", "Record not found.");
+            }
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+    
+    @PostMapping("/deleteAllCrsDuplicates")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> deleteAllCrsDuplicates() {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            jdbcTemplate.update("DELETE FROM BRECON.CRS_DUPLICATE_RECORDS");
+            res.put("status", "SUCCESS");
+            res.put("message", "All duplicate records cleared successfully.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
     
     
     //

@@ -1,1522 +1,1198 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
-    <title>BRECON | CRS</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRECON | CRS Management</title>
 
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script th:src="@{/js/jquery.min.js}"></script>
+    <script th:src="@{/js/jquery-ui.min.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
-        * {
-            box-sizing: border-box;
+        :root {
+            --brand: #386b7e;
+            --brand-dark: #2c5667;
+            --ink: #263746;
+            --text: #111111;
+            --muted: #6b7a88;
+            --line: #d5dce2;
+            --head-bg: #e9edf1;
+            --head-hover: #dce3e9;
+            --row-alt: #f7f9fb;
+            --row-hover: #eaf2f5;
         }
 
-        /* Lock outer screen so the browser window never creates an outer vertical scrollbar */
+        /* Lock screen viewport cleanly */
         html, body {
             margin: 0;
             padding: 0;
+            width: 100%;
             height: 100vh;
             overflow: hidden;
-            background: #f2f5f7;
-            font-family: Arial, Helvetica, sans-serif;
-            color: #111;
+            background: #f3f6f8;
+            font-family: Arial, sans-serif;
+            color: var(--text);
         }
 
-        /* Takes full vertical space below the top menu bar */
-        .crs-page {
-            width: 96%;
-            max-width: 1700px;
-            margin: 6px auto;
-            height: calc(100vh - 58px);
+        .source-data-wrapper {
+            width: 98%;
+            max-width: 1840px;
+            margin: 8px auto 4px auto;
+            height: calc(100vh - 44px);
             display: flex;
             flex-direction: column;
         }
 
-        .crs-card {
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 6px 20px rgba(31, 55, 68, .12);
+        .source-data-card {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(20, 40, 55, 0.10);
             display: flex;
             flex-direction: column;
             height: 100%;
             overflow: hidden;
         }
 
-        .crs-title {
-            height: 38px;
-            min-height: 38px;
-            padding: 0 16px;
-            background: linear-gradient(180deg, #386b7e, #2c5667);
-            color: #fff;
+        .source-data-header {
+            height: 36px;
+            min-height: 36px;
+            background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
+            color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 15px;
-            font-weight: 700;
-            border-radius: 10px 10px 0 0;
+            font-size: 14px;
+            font-weight: bold;
             letter-spacing: .3px;
+            border-radius: 8px 8px 0 0;
         }
+        .source-data-header i { margin-right: 8px; }
 
-        .crs-title i {
-            margin-right: 8px;
-        }
-
-        .crs-content {
-            padding: 8px 14px 4px 14px;
+        .source-data-table-wrapper {
+            padding: 6px 10px;
+            box-sizing: border-box;
             flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 0; /* Crucial: allows child table to size dynamically without overflow */
+            min-height: 0;
+            gap: 6px;
             overflow: hidden;
         }
 
-        /* Summary cards */
+        /* Summary Cards */
         .crs-summary {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 10px;
-            margin-bottom: 6px;
+            gap: 8px;
+            flex-shrink: 0;
         }
-
         .crs-stat {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 6px 12px;
-            background: #fff;
-            border: 1px solid #dce4e9;
-            border-radius: 7px;
+            gap: 8px;
+            padding: 5px 10px;
+            background: #ffffff;
+            border: 1px solid var(--line);
+            border-radius: 6px;
         }
-
         .crs-stat-icon {
-            width: 34px;
-            height: 34px;
+            width: 26px;
+            height: 26px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 7px;
+            border-radius: 4px;
             background: #e3edf2;
-            color: #315f73;
-            font-size: 16px;
+            color: var(--brand);
+            font-size: 12px;
         }
+        .crs-stat-label { font-size: 10px; color: var(--muted); font-weight: 600; margin-bottom: 1px; }
+        .crs-stat-value { font-size: 15px; font-weight: bold; color: var(--ink); line-height: 1; }
 
-        .crs-stat-label {
-            font-size: 11.5px;
-            margin-bottom: 2px;
-            color: #263746;
-            font-weight: 600;
-        }
-
-        .crs-stat-value {
-            font-size: 19px;
-            font-weight: 700;
-            color: #111;
-            line-height: 1.1;
-        }
-
-        /* Search & Filter toolbar */
-        .crs-filter {
+        /* Toolbar & Filters */
+        .crs-filter-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 8px;
-            margin-bottom: 6px;
+            flex-shrink: 0;
         }
-
-        .crs-search {
+        .crs-search-wrap {
             position: relative;
             flex: 1;
-            min-width: 220px;
-            max-width: 400px;
+            max-width: 340px;
         }
-
-        .crs-search i {
+        .crs-search-wrap i {
             position: absolute;
             left: 10px;
-            top: 10px;
-            color: #526474;
-            font-size: 13px;
+            top: 8px;
+            color: var(--muted);
+            font-size: 12px;
         }
-
-        .crs-search input {
+        .crs-search-wrap input {
             width: 100%;
-            height: 33px;
-            padding: 4px 10px 4px 30px;
-            border: 1px solid #cbd5dc;
+            height: 30px;
+            padding: 4px 8px 4px 28px;
+            border: 1px solid var(--line);
             border-radius: 5px;
-            font-size: 12.5px;
+            font-size: 12px;
             outline: none;
+            background: #ffffff;
         }
-
-        .crs-search input:focus,
-        .crs-filter select:focus {
-            border-color: #386b7e;
-            box-shadow: 0 0 0 2px rgba(56,107,126,.12);
-        }
-
-        .crs-filter select {
-            height: 33px;
-            min-width: 220px;
+        .crs-filter-bar select {
+            height: 30px;
+            min-width: 180px;
             padding: 0 8px;
-            border: 1px solid #cbd5dc;
+            border: 1px solid var(--line);
             border-radius: 5px;
-            background: #fff;
-            color: #111;
-            font-size: 12.5px;
+            background: #ffffff;
+            font-size: 12px;
+            color: var(--ink);
         }
 
-        /* Action buttons */
-        .crs-actions {
+        .crs-toolbar-actions {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
-
-        .crs-btn {
-            height: 33px;
-            min-height: 33px;
+        .crs-toolbar-btn {
+            height: 30px;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 5px;
+            background: #ffffff;
+            color: var(--ink);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
             gap: 5px;
-            padding: 0 12px;
-            border: 1px solid #315f73;
-            border-radius: 5px;
-            background: #fff;
-            color: #264e61;
-            font-size: 12.5px;
-            font-weight: 700;
-            cursor: pointer;
+            transition: background .15s ease;
             text-decoration: none;
-            transition: all .15s ease;
         }
-
-        .crs-btn:hover { background: #eaf1f4; }
-        .crs-btn-primary { color: #fff; background: #315f73; }
-        .crs-btn-primary:hover { background: #244b5e; color: #fff; }
-        .crs-btn-green { border-color: #287a52; color: #226844; }
-        .crs-btn-green:hover { background: #e8f5ee; }
-        .crs-btn-dark { border-color: #465560; color: #263746; }
-
-        .crs-btn-small {
-            height: 25px;
-            min-height: 25px;
-            padding: 0 8px;
-            font-size: 11.5px;
-            border-radius: 4px;
-        }
-
+        .crs-toolbar-btn:hover { background: var(--head-hover); }
+        .crs-toolbar-btn.primary { background: var(--brand); color: #ffffff; border-color: var(--brand); }
+        .crs-toolbar-btn.primary:hover { background: var(--brand-dark); }
+        .crs-toolbar-btn.green { background: #15803d; color: #ffffff; border-color: #15803d; }
+        .crs-toolbar-btn.green:hover { background: #166534; }
         .crs-file-input { display: none; }
 
-        .crs-notice {
-            display: none;
-            padding: 6px 10px;
-            margin-bottom: 6px;
-            border: 1px solid #c8dce7;
-            border-radius: 5px;
-            background: #edf6fa;
-            color: #17394e;
-            font-size: 12px;
+        /* Equal 50/50 Split for Two Lists */
+        .file-list-container {
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+            flex: 1; /* Equal space distribution */
         }
+        .file-list-container.dup-section { border-color: #fca5a5; }
 
-        /* Table & List Header */
-        .crs-list-heading {
+        .file-list-title-bar {
+            padding: 5px 10px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--line);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 6px 12px;
-            background: #f7f9fb;
-            border: 1px solid #d5dfe5;
-            border-bottom: none;
-            border-radius: 7px 7px 0 0;
-            font-size: 12.5px;
-            font-weight: bold;
-        }
-        .crs-list-heading strong { color: #315f73; }
-
-        .crs-table-wrap {
-            width: 100%;
-            flex: 1;
-            min-height: 0; /* Prevents overflow pushing elements off screen */
-            border: 1px solid #d5dfe5;
-            border-radius: 0 0 7px 7px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            overflow: hidden;
-            background: #fff;
-        }
-
-        .crs-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12.5px;
-            table-layout: fixed;
-        }
-
-        .crs-table thead th {
-            padding: 6px 10px;
-            background: #e9eef2;
-            color: #17394e;
-            text-align: left;
-            white-space: nowrap;
-            border-bottom: 2px solid #386b7e;
             font-size: 12px;
-            font-weight: 700;
+            color: var(--ink);
+            flex-shrink: 0;
+        }
+        .file-list-title-bar strong { color: var(--brand-dark); font-size: 12.5px; }
+
+        .table-scroll-box {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
         }
 
-        /* Compact row height so all 10 records stay visible on laptop displays */
-        .crs-table tbody td {
-            padding: 4px 10px;
-            border-bottom: 1px solid #edf1f4;
+        .dedicated-file-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+        .dedicated-file-table th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #f1f5f9;
+            color: var(--ink);
+            text-align: left;
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--line);
+            font-weight: 600;
+        }
+        .dedicated-file-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #edf2f7;
+            color: var(--text);
             vertical-align: middle;
-            color: #111;
-            font-size: 12.5px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .dedicated-file-table tr:nth-child(even) td { background: #f8fafb; }
+        .dedicated-file-table tr:hover td { background: #eaf2f5; }
 
-        .crs-table tbody tr:nth-child(even) { background: #f8fafb; }
-        .crs-table tbody tr:hover { background: #edf4f7; }
+        .ref-link { color: #0284c7; font-weight: bold; text-decoration: underline; cursor: pointer; }
+        .acc-holder-link { color: var(--brand-dark); font-weight: bold; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; max-width: 100%; }
+        .xml-pill { font-size: 9.5px; padding: 1px 4px; border-radius: 3px; background: #e2e8f0; color: #475569; font-weight: bold; flex-shrink: 0; }
 
-        .ref-link {
-            color: #0284c7;
-            font-weight: 700;
-            text-decoration: underline;
-            cursor: pointer;
-        }
-        .ref-link:hover { color: #0369a1; }
+        .crs-status { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: bold; white-space: nowrap; }
+        .crs-status-pending { background: #fef3c7; color: #b45309; }
+        .crs-status-completed { background: #dcfce7; color: #15803d; }
+        .crs-status-error { background: #fee2e2; color: #b91c1c; }
 
-        .acc-holder-link {
-            color: #1e3a8a;
-            font-weight: 700;
-            text-decoration: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            max-width: 100%;
+        /* Action Buttons inside Table */
+        .action-btn-group { display: inline-flex; align-items: center; gap: 4px; justify-content: center; }
+        .edit-row-btn {
+            background: var(--brand); color: #ffffff; border: none; border-radius: 3px;
+            padding: 3px 7px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
         }
-        .acc-holder-link:hover {
-            color: #0284c7;
-            text-decoration: underline;
+        .edit-row-btn:hover { background: var(--brand-dark); }
+        .xml-row-btn {
+            background: #15803d; color: #ffffff; border: none; border-radius: 3px;
+            padding: 3px 7px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
         }
-        .xml-pill {
-            font-size: 10px;
-            padding: 1px 4px;
-            border-radius: 3px;
-            background: #e2e8f0;
-            color: #475569;
-            font-weight: 600;
-            text-decoration: none !important;
-            flex-shrink: 0;
+        .xml-row-btn:hover { background: #166534; }
+        .delete-row-btn {
+            background: #dc2626; color: #ffffff; border: none; border-radius: 3px;
+            padding: 3px 7px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
         }
-
-        .crs-status {
-            display: inline-block;
-            padding: 2px 7px;
-            border-radius: 10px;
-            font-size: 10.5px;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-        .crs-status-pending { background: #fff2d6; color: #815b0b; }
-        .crs-status-completed { background: #def3e6; color: #21683f; }
-        .crs-status-error { background: #fde8e8; color: #a32d2d; }
+        .delete-row-btn:hover { background: #b91c1c; }
 
         /* Pagination bar */
-        .crs-pagination-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 4px 12px;
-            background: #fbfcfd;
-            border-top: 1px solid #d5dfe5;
-            font-size: 12px;
-            min-height: 36px;
+        .table-pagination-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 3px 10px; background: #ffffff; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--ink); flex-shrink: 0;
         }
-
-        .pagination-controls {
-            display: flex;
-            align-items: center;
-            gap: 4px;
+        .pagination-nav-wrap { display: flex; align-items: center; gap: 3px; }
+        .pagination-btn {
+            background: #ffffff; border: 1px solid #cbd5e1; border-radius: 3px; padding: 2px 7px;
+            font-size: 11px; color: var(--ink); cursor: pointer; transition: all .15s ease;
         }
+        .pagination-btn.active { background: var(--brand); color: #ffffff; border-color: var(--brand); font-weight: bold; }
+        .pagination-btn:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border-color: #e2e8f0; }
 
-        .page-btn {
-            min-width: 27px;
-            height: 27px;
-            padding: 0 6px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #cbd5dc;
-            border-radius: 4px;
-            background: #ffffff;
-            color: #263746;
-            font-size: 11.5px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all .15s ease;
+        .no-data { text-align: center !important; color: var(--muted) !important; padding: 14px 10px !important; font-size: 12px; }
+        .no-data i { display: block; font-size: 18px; margin-bottom: 2px; color: #b4c2cc; }
+
+        /* Ultra-Minimized Footer */
+        .source-data-footer {
+            border-top: 1px solid #e3e8ec; padding: 2px 0; text-align: center; background: #ffffff; border-radius: 0 0 8px 8px; flex-shrink: 0;
         }
-
-        .page-btn:hover:not(:disabled) {
-            background: #eaf1f4;
-            border-color: #315f73;
-            color: #315f73;
+        .source-btn {
+            display: inline-block; padding: 2px 10px; margin: 0 2px; background: #ffffff; border: 1px solid #8a98a3;
+            border-radius: 3px; color: var(--ink); font-size: 11px; text-decoration: none; cursor: pointer;
         }
+        .source-btn:hover { background: var(--head-bg); border-color: var(--brand); color: #000; }
 
-        .page-btn.active {
-            background: #315f73;
-            color: #ffffff;
-            border-color: #315f73;
+        /* MODALS & POPUPS */
+        .failed-modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(20, 35, 45, 0.6); z-index: 10000; align-items: center; justify-content: center;
         }
-
-        .page-btn:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
+        .failed-modal-overlay.open { display: flex; }
+        .failed-modal-card {
+            width: 500px; max-width: 92vw; background: #ffffff; border-radius: 8px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25); overflow: hidden;
         }
-
-        /* Bottom footer */
-        .crs-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 4px 14px;
-            border-top: 1px solid #e1e7eb;
-            background: #fff;
-            border-radius: 0 0 10px 10px;
-            height: 38px;
+        .failed-modal-header {
+            padding: 9px 14px; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
+            color: #ffffff; display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: bold;
         }
-
-        .crs-footer-text {
-            font-size: 11.5px;
-            color: #475569;
-            font-weight: 600;
+        .failed-modal-close-x { background: transparent; border: none; color: #ffffff; font-size: 18px; line-height: 1; cursor: pointer; }
+        .failed-modal-body { padding: 10px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .failed-field { display: flex; flex-direction: column; gap: 3px; }
+        .failed-field.full { grid-column: 1 / -1; }
+        .failed-field label { font-size: 11px; font-weight: bold; color: var(--ink); }
+        .failed-field input, .failed-field select {
+            height: 28px; padding: 3px 7px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; outline: none; background: #fff;
         }
+        .failed-modal-footer {
+            padding: 8px 14px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 6px;
+        }
+        .modal-submit-btn { background: #16a34a; color: #ffffff; border: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .modal-submit-btn:hover { background: #15803d; }
+        .modal-cancel-btn { background: #ffffff; border: 1px solid #cbd5dc; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
 
-        /* Floating popup dialogs */
+        /* CUSTOM NOTIFICATION MODAL */
+        .action-alert-body { padding: 18px 16px 12px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .action-alert-icon { font-size: 32px; margin-bottom: 8px; }
+        .action-alert-icon.success { color: #16a34a; }
+        .action-alert-icon.error   { color: #dc2626; }
+        .action-alert-icon.warning { color: #d97706; }
+        .action-alert-icon.info    { color: #0284c7; }
+        .action-alert-title { font-size: 14.5px; font-weight: bold; color: var(--ink); margin-bottom: 4px; }
+        .action-alert-text { font-size: 12px; color: #475569; line-height: 1.4; white-space: pre-line; }
+
+        /* Draggable Multi-Popup System */
         .crs-multi-popup {
-            position: fixed;
-            width: 480px;
-            max-width: 90vw;
-            background: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
-            border: 1px solid #bcd0dc;
-            z-index: 10000;
-            animation: popupFadeIn .18s ease-out;
-            overflow: hidden;
+            position: fixed; width: 450px; max-width: 90vw; background: #ffffff; border-radius: 7px;
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.25); border: 1px solid #bcd0dc; z-index: 10000; overflow: hidden;
         }
-
-        @keyframes popupFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to   { opacity: 1; transform: scale(1); }
-        }
-
         .crs-popup-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 14px;
-            background: linear-gradient(180deg, #386b7e, #2c5667);
-            color: #ffffff;
-            font-size: 13.5px;
-            font-weight: bold;
-            cursor: move;
+            display: flex; justify-content: space-between; align-items: center; padding: 6px 10px;
+            background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color: #ffffff; font-size: 12px; font-weight: bold; cursor: move;
         }
-
-        .crs-popup-close-x {
-            background: transparent;
-            border: none;
-            color: #ffffff;
-            font-size: 20px;
-            line-height: 1;
-            font-weight: bold;
-            cursor: pointer;
-            padding: 0 4px;
-            transition: color .15s ease;
-        }
-
-        .crs-popup-close-x:hover {
-            color: #fca5a5;
-        }
-
-        .crs-popup-body {
-            padding: 12px 16px;
-            max-height: 440px;
-            overflow-y: auto;
-            background: #fdfdfd;
-        }
-
-        .crs-human-kv {
-            display: grid;
-            grid-template-columns: 155px 1fr;
-            padding: 5px 0;
-            border-bottom: 1px solid #edf2f5;
-            font-size: 12.5px;
-            line-height: 1.35;
-        }
-
-        .crs-human-kv:last-child {
-            border-bottom: none;
-        }
-
-        .crs-human-label {
-            font-weight: bold;
-            color: #334e68;
-        }
-
-        .crs-human-value {
-            color: #102a43;
-            word-break: break-word;
-        }
-
-        .crs-popup-footer {
-            padding: 8px 14px;
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            justify-content: flex-end;
-            gap: 6px;
-        }
-
-        /* XML Snippet Code Viewer */
+        .crs-popup-body { padding: 8px 10px; max-height: 280px; overflow-y: auto; background: #fdfdfd; }
+        .crs-human-kv { display: grid; grid-template-columns: 130px 1fr; padding: 3px 0; border-bottom: 1px solid #edf2f5; font-size: 11.5px; }
+        .crs-human-label { font-weight: bold; color: #334e68; }
+        .crs-human-value { color: #102a43; word-break: break-word; }
+        .crs-popup-footer { padding: 5px 10px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 4px; }
         .xml-view-container {
-            background: #1e293b;
-            color: #f8fafc;
-            border-radius: 7px;
-            padding: 12px 14px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            word-break: break-all;
-            overflow-x: auto;
-            border: 1px solid #334155;
-            max-height: 380px;
-            overflow-y: auto;
-        }
-
-        /* Edit Modal */
-        .crs-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 10500;
-            padding: 20px;
-            align-items: center;
-            justify-content: center;
-            background: rgba(20, 34, 43, .55);
-        }
-
-        .crs-modal.open {
-            display: flex;
-        }
-
-        .crs-modal-box {
-            width: 100%;
-            max-width: 650px;
-            max-height: 90vh;
-            overflow-y: auto;
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 15px 45px rgba(0,0,0,.2);
-        }
-
-        .crs-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: #315f73;
-            color: #fff;
-            font-size: 14.5px;
-            font-weight: 700;
-        }
-
-        .crs-modal-close {
-            border: none;
-            background: transparent;
-            color: #fff;
-            font-size: 22px;
-            cursor: pointer;
-        }
-
-        .crs-modal-body {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px 14px;
-            padding: 16px;
-        }
-
-        .crs-field {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .crs-field.full {
-            grid-column: 1 / -1;
-        }
-
-        .crs-field label {
-            font-size: 11.5px;
-            font-weight: 700;
-            color: #263746;
-        }
-
-        .crs-field input,
-        .crs-field select {
-            width: 100%;
-            height: 33px;
-            padding: 5px 9px;
-            border: 1px solid #cbd5dc;
-            border-radius: 5px;
-            font-size: 12.5px;
-            color: #111;
-            background: #fff;
-        }
-
-        .crs-modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 6px;
-            padding: 10px 16px;
-            border-top: 1px solid #e5eaee;
+            background: #1e293b; color: #f8fafc; border-radius: 5px; padding: 8px;
+            font-family: 'Courier New', Courier, monospace; font-size: 11px; line-height: 1.35;
+            white-space: pre-wrap; word-break: break-all; max-height: 220px; overflow-y: auto; border: 1px solid #334155;
         }
     </style>
+
+    <script>
+        let crsMasterRecords = [];
+        let crsDuplicateRecords = [];
+        let currentConfirmCallback = null;
+        let popupCount = 0;
+
+        let currentPageMain = 1;
+        let pageSizeMain = 5;
+        let currentPageDup = 1;
+        let pageSizeDup = 5;
+
+        $(function () {
+            loadDashboardData();
+            loadDuplicatesQueue();
+
+            $('#crsUploadBtn').on('click', function () {
+                $('#crsUploadInput').val('');
+                $('#crsUploadInput').click();
+            });
+
+            $('#crsUploadInput').on('change', function (e) {
+                var file = e.target.files[0];
+                if (!file) return;
+
+                var formData = new FormData();
+                formData.append("file", file);
+
+                showAppAlert("info", "Processing Upload", "Uploading and processing " + file.name + "...");
+
+                $.ajax({
+                    url: './uploadCrsFile',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        if (res.status === "SUCCESS") {
+                            showAppAlert("success", "Upload Successful", res.message || "File ingested successfully.");
+                            loadDashboardData();
+                            loadDuplicatesQueue();
+                        } else {
+                            showAppAlert("error", "Upload Failed", res.message || "Could not process file.");
+                        }
+                    },
+                    error: function (xhr) {
+                        var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+                        showAppAlert("error", "Upload Error", err);
+                    }
+                });
+            });
+
+            $('#crsSearch').on('input', function() { currentPageMain = 1; renderMasterTable(); });
+            $('#crsCategoryFilter').on('change', function() { currentPageMain = 1; renderMasterTable(); });
+
+            $('#pageSizeMainSelect').on('change', function() {
+                pageSizeMain = parseInt($(this).val(), 10);
+                currentPageMain = 1;
+                renderMasterTable();
+            });
+
+            $('#pageSizeDupSelect').on('change', function() {
+                pageSizeDup = parseInt($(this).val(), 10);
+                currentPageDup = 1;
+                renderDuplicateTable();
+            });
+
+            $('#crsDownloadAllBtn').on('click', function() {
+                window.location.href = "./downloadCrsXml?year=2025";
+            });
+
+            $('#crsEditForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: './saveCrsRecord',
+                    type: 'POST',
+                    data: new URLSearchParams(new FormData(this)),
+                    success: function(res) {
+                        closeEditModal();
+                        loadDashboardData();
+                        showAppAlert("success", "Saved Successfully", "CRS report record updated successfully.");
+                    },
+                    error: function(xhr) {
+                        showAppAlert("error", "Update Failed", xhr.statusText);
+                    }
+                });
+            });
+
+            $('#crsDupForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: './rectifyCrsDuplicate',
+                    type: 'POST',
+                    data: new URLSearchParams(new FormData(this)),
+                    success: function(res) {
+                        closeDupModal();
+                        loadDuplicatesQueue();
+                        loadDashboardData();
+                        showAppAlert("success", "Rectification Successful", "Duplicate record resolved, updated, and re-submitted to database.");
+                    },
+                    error: function(xhr) {
+                        showAppAlert("error", "Rectification Failed", xhr.statusText);
+                    }
+                });
+            });
+
+            $('#appModalConfirmBtn').on('click', function () {
+                if (typeof currentConfirmCallback === 'function') {
+                    currentConfirmCallback();
+                }
+                closeAppModal();
+            });
+        });
+
+        function showAppAlert(type, title, message) {
+            var iconClass = "fa-info-circle";
+            if (type === "success") iconClass = "fa-check-circle";
+            if (type === "error")   iconClass = "fa-times-circle";
+            if (type === "warning") iconClass = "fa-exclamation-triangle";
+
+            $('#appModalIcon').attr('class', 'fa action-alert-icon ' + type + ' ' + iconClass);
+            $('#appModalTitle').text(title);
+            $('#appModalText').text(message);
+
+            $('#appModalCancelBtn').hide();
+            $('#appModalConfirmBtn').hide();
+            $('#appModalOkBtn').show();
+            $('#customActionModal').addClass('open');
+        }
+
+        function showAppConfirm(title, message, onConfirm) {
+            $('#appModalIcon').attr('class', 'fa action-alert-icon warning fa-question-circle');
+            $('#appModalTitle').text(title);
+            $('#appModalText').text(message);
+
+            currentConfirmCallback = onConfirm;
+
+            $('#appModalOkBtn').hide();
+            $('#appModalCancelBtn').show();
+            $('#appModalConfirmBtn').show();
+            $('#customActionModal').addClass('open');
+        }
+
+        function closeAppModal() {
+            $('#customActionModal').removeClass('open');
+            currentConfirmCallback = null;
+        }
+
+        function loadDashboardData() {
+            $.ajax({
+                url: './getCrsDashboardData',
+                type: 'GET',
+                success: function(data) {
+                    $('#totalRecords').text((data.totalCount || 0).toLocaleString());
+                    $('#pendingRecords').text((data.pendingCount || 0).toLocaleString());
+                    $('#completedRecords').text((data.completedCount || 0).toLocaleString());
+                    $('#errorRecords').text((data.errorCount || 0).toLocaleString());
+
+                    crsMasterRecords = data.records || [];
+                    renderMasterTable();
+                }
+            });
+        }
+
+        function loadDuplicatesQueue() {
+            $.ajax({
+                url: './getCrsDuplicateRecords',
+                type: 'GET',
+                success: function(data) {
+                    crsDuplicateRecords = data.records || [];
+                    renderDuplicateTable();
+                }
+            });
+        }
+
+        function renderMasterTable() {
+            var search = $('#crsSearch').val().toLowerCase().trim();
+            var category = $('#crsCategoryFilter').val();
+
+            var filtered = crsMasterRecords.filter(function (record) {
+                var acc = String(record.ACCOUNT_NUMBER || "").toLowerCase();
+                var name = String(record.ORGANISATION_NAME || (record.FIRST_NAME + " " + record.LAST_NAME) || "").toLowerCase();
+                var country = String(record.RESIDENCE_COUNTRY || "").toLowerCase();
+                var tin = String(record.TIN || "").toLowerCase();
+
+                var matchesSearch = acc.includes(search) || name.includes(search) || country.includes(search) || tin.includes(search);
+                
+                var isIndiv = (String(record.HOLDER_TYPE || '').toUpperCase() === 'INDIVIDUAL');
+                var recCategory = isIndiv ? 'INDIVIDUAL' : String(record.ACCT_HOLDER_CATEGORY || '').toUpperCase();
+                if (!recCategory || recCategory === 'NULL') {
+                    recCategory = (record.CP_FIRST_NAME || record.CP_LAST_NAME) ? 'CRS101' : 'CRS102';
+                }
+
+                var matchesCategory = !category || recCategory === category;
+                return matchesSearch && matchesCategory;
+            });
+
+            var totalItems = filtered.length;
+            var totalPages = Math.ceil(totalItems / pageSizeMain) || 1;
+            if (currentPageMain > totalPages) currentPageMain = totalPages;
+            if (currentPageMain < 1) currentPageMain = 1;
+
+            var startIndex = (currentPageMain - 1) * pageSizeMain;
+            var endIndex = Math.min(startIndex + pageSizeMain, totalItems);
+            var pageItems = filtered.slice(startIndex, endIndex);
+
+            $('#crsVisibleCount').text(totalItems.toLocaleString());
+            $('#mainPageInfoText').text(totalItems === 0 ? "Showing 0 entries" : 
+                `Showing ${(startIndex + 1).toLocaleString()} to ${endIndex.toLocaleString()} of ${totalItems.toLocaleString()} entries`);
+
+            var $tbody = $('#crsTableBody');
+            $tbody.empty();
+
+            if (pageItems.length === 0) {
+                $tbody.append('<tr><td colspan="9" class="no-data"><i class="fa fa-folder-open-o"></i>No CRS reportable accounts found matching criteria.</td></tr>');
+                renderMainPagination(0, 1);
+                return;
+            }
+
+            pageItems.forEach(function (r, i) {
+                var actualIdx = startIndex + i + 1;
+                var isOrg = (String(r.HOLDER_TYPE || '').toUpperCase() === 'ORGANISATION');
+                var name = isOrg ? r.ORGANISATION_NAME : (r.FIRST_NAME + ' ' + (r.LAST_NAME || ''));
+                var categoryBadge = isOrg ? (r.ACCT_HOLDER_CATEGORY || 'CRS102') : 'IND';
+                var bal = Number(r.ACCOUNT_BALANCE || 0).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' ' + (r.CURRENCY_CODE || 'MUR');
+                var st = r.STATUS || 'COMPLETED';
+                var statusClass = st.toUpperCase() === 'PENDING' ? 'crs-status-pending' : (st.toUpperCase() === 'ERROR' ? 'crs-status-error' : 'crs-status-completed');
+
+                var rowHtml = '<tr>' +
+                    '<td>' + actualIdx + '</td>' +
+                    '<td><span class="ref-link" onclick="openRecordPopup(' + r.REPORT_ID + ')">' + escapeHtml(r.ACCOUNT_NUMBER || '-') + '</span></td>' +
+                    '<td>' +
+                        '<a href="javascript:void(0)" class="acc-holder-link" onclick="openXmlTagPopup(' + r.REPORT_ID + ')">' +
+                            '<span>' + escapeHtml(name || '-') + '</span>' +
+                            '<span class="xml-pill">&lt;' + escapeHtml(categoryBadge) + '&gt;</span>' +
+                        '</a>' +
+                    '</td>' +
+                    '<td><b>' + escapeHtml(r.RESIDENCE_COUNTRY || '-') + '</b></td>' +
+                    '<td>' + escapeHtml(r.TIN || 'N/A') + '</td>' +
+                    '<td>' + escapeHtml(bal) + '</td>' +
+                    '<td><span class="crs-status ' + statusClass + '">' + escapeHtml(st) + '</span></td>' +
+                    '<td><button type="button" class="xml-row-btn" onclick="downloadRowXml(' + r.REPORT_ID + ')"><i class="fa fa-file-code-o"></i> XML</button></td>' +
+                    '<td><button type="button" class="edit-row-btn" onclick="openEditModal(' + r.REPORT_ID + ')"><i class="fa fa-pen"></i> Edit</button></td>' +
+                '</tr>';
+                $tbody.append(rowHtml);
+            });
+
+            renderMainPagination(totalItems, totalPages);
+        }
+
+        function renderMainPagination(totalItems, totalPages) {
+            var $nav = $('#mainPaginationNav');
+            $nav.empty();
+            if (totalItems <= pageSizeMain) return;
+
+            var prevDisabled = currentPageMain === 1 ? 'disabled' : '';
+            $nav.append('<button type="button" class="pagination-btn" ' + prevDisabled + ' onclick="changeMainPage(' + (currentPageMain - 1) + ')">&laquo;</button>');
+
+            for (var p = 1; p <= totalPages; p++) {
+                var activeClass = p === currentPageMain ? 'active' : '';
+                $nav.append('<button type="button" class="pagination-btn ' + activeClass + '" onclick="changeMainPage(' + p + ')">' + p + '</button>');
+            }
+
+            var nextDisabled = currentPageMain === totalPages ? 'disabled' : '';
+            $nav.append('<button type="button" class="pagination-btn" ' + nextDisabled + ' onclick="changeMainPage(' + (currentPageMain + 1) + ')">&raquo;</button>');
+        }
+
+        function changeMainPage(page) {
+            currentPageMain = page;
+            renderMasterTable();
+        }
+
+        function renderDuplicateTable() {
+            var totalItems = crsDuplicateRecords.length;
+            var totalPages = Math.ceil(totalItems / pageSizeDup) || 1;
+            if (currentPageDup > totalPages) currentPageDup = totalPages;
+            if (currentPageDup < 1) currentPageDup = 1;
+
+            var startIndex = (currentPageDup - 1) * pageSizeDup;
+            var endIndex = Math.min(startIndex + pageSizeDup, totalItems);
+            var pageItems = crsDuplicateRecords.slice(startIndex, endIndex);
+
+            $('#dupVisibleCount').text(totalItems.toLocaleString() + " record(s)");
+            $('#dupPageInfoText').text(totalItems === 0 ? "Showing 0 entries" : 
+                `Showing ${(startIndex + 1).toLocaleString()} to ${endIndex.toLocaleString()} of ${totalItems.toLocaleString()} entries`);
+
+            var $tbody =$('#dupTableBody');
+            $tbody.empty();
+
+            if (pageItems.length === 0) {
+                $tbody.append('<tr><td colspan="8" class="no-data"><i class="fa fa-check-circle-o" style="color:#15803d;"></i>No duplicate records pending in queue.</td></tr>');
+                renderDupPagination(0, 1);
+                return;
+            }
+
+            pageItems.forEach(function (r) {
+                var bal = Number(r.ACCOUNT_BALANCE || 0).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' ' + (r.CURRENCY_CODE || 'MUR');
+                
+                var rowHtml = '<tr>' +
+                    '<td>' + r.DUP_ID + '</td>' +
+                    '<td>' + escapeHtml(r.FILE_NAME || '-') + '</td>' +
+                    '<td><b>' + escapeHtml(r.ACCOUNT_NUMBER || '-') + '</b></td>' +
+                    '<td>' + escapeHtml(r.HOLDER_NAME || '-') + '</td>' +
+                    '<td>' + escapeHtml(r.RESIDENCE_COUNTRY || '-') + '</td>' +
+                    '<td>' + escapeHtml(bal) + '</td>' +
+                    '<td><span class="crs-status crs-status-pending">PENDING</span></td>' +
+                    '<td style="text-align: center;">' +
+                        '<div class="action-btn-group">' +
+                            '<button type="button" class="edit-row-btn" onclick="openRectifyModal(' + r.DUP_ID + ')"><i class="fa fa-wrench"></i> Rectify</button>' +
+                            '<button type="button" class="delete-row-btn" onclick="deleteDuplicateRecord(' + r.DUP_ID + ')"><i class="fa fa-trash"></i> Delete</button>' +
+                        '</div>' +
+                    '</td>' +
+                '</tr>';
+                $tbody.append(rowHtml);
+            });
+
+            renderDupPagination(totalItems, totalPages);
+        }
+
+        function renderDupPagination(totalItems, totalPages) {
+            var $nav =$('#dupPaginationNav');
+            $nav.empty();
+            if (totalItems <= pageSizeDup) return;
+
+            var prevDisabled = currentPageDup === 1 ? 'disabled' : '';
+            $nav.append('<button type="button" class="pagination-btn" ' + prevDisabled + ' onclick="changeDupPage(' + (currentPageDup - 1) + ')">&laquo;</button>');
+
+            for (var p = 1; p <= totalPages; p++) {
+                var activeClass = p === currentPageDup ? 'active' : '';
+                $nav.append('<button type="button" class="pagination-btn ' + activeClass + '" onclick="changeDupPage(' + p + ')">' + p + '</button>');
+            }
+
+            var nextDisabled = currentPageDup === totalPages ? 'disabled' : '';
+            $nav.append('<button type="button" class="pagination-btn" ' + nextDisabled + ' onclick="changeDupPage(' + (currentPageDup + 1) + ')">&raquo;</button>');
+        }
+
+        function changeDupPage(page) {
+            currentPageDup = page;
+            renderDuplicateTable();
+        }
+
+        function downloadRowXml(reportId) {
+            window.location.href = "./downloadSingleCrsXml?reportId=" + encodeURIComponent(reportId);
+        }
+
+        function downloadDuplicateCsv() {
+            if (!crsDuplicateRecords || crsDuplicateRecords.length === 0) {
+                showAppAlert("info", "No Records", "No duplicate records found to download.");
+                return;
+            }
+            var columns = ["ID", "File Name", "Account Number", "Holder Name", "Country", "TIN", "Balance", "Currency", "Status"];
+            var csvEscape = val => '"' + String(val ?? "").replace(/"/g, '""') + '"';
+            var rows = crsDuplicateRecords.map(r => [r.DUP_ID, r.FILE_NAME, r.ACCOUNT_NUMBER, r.HOLDER_NAME, r.RESIDENCE_COUNTRY, r.TIN, r.ACCOUNT_BALANCE, r.CURRENCY_CODE, r.STATUS]);
+            
+            var csv = [columns, ...rows].map(row => row.map(csvEscape).join(",")).join("\r\n");
+            var blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement("a");
+            link.href = url;
+            link.download = "CRS_Duplicate_Queue_Extract.csv";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function deleteDuplicateRecord(dupId) {
+            showAppConfirm("Delete Confirmation", "Are you sure you want to permanently delete this duplicate record?", function() {
+                $.ajax({
+                    url: './deleteCrsDuplicate',
+                    type: 'POST',
+                    data: { dupId: dupId },
+                    success: function(res) {
+                        loadDuplicatesQueue();
+                        showAppAlert("success", "Deleted Successfully", "Duplicate record removed.");
+                    }
+                });
+            });
+        }
+
+        function deleteAllDuplicateRecords() {
+            if (!crsDuplicateRecords || crsDuplicateRecords.length === 0) {
+                showAppAlert("info", "No Records", "No duplicate records to delete.");
+                return;
+            }
+            showAppConfirm("Delete All Confirmation", "Are you sure you want to delete ALL pending duplicate records?", function() {
+                $.ajax({
+                    url: './deleteAllCrsDuplicates',
+                    type: 'POST',
+                    success: function(res) {
+                        loadDuplicatesQueue();
+                        showAppAlert("success", "Cleared Successfully", "All duplicate records cleared.");
+                    }
+                });
+            });
+        }
+
+        function openEditModal(reportId) {
+            var r = crsMasterRecords.find(x => x.REPORT_ID == reportId);
+            if (!r) return;
+
+            $('#editReportId').val(r.REPORT_ID);
+            $('#editAccNum').val(r.ACCOUNT_NUMBER || '');
+            $('#editHolderType').val(r.HOLDER_TYPE || 'INDIVIDUAL');
+            $('#editCategory').val(r.HOLDER_TYPE === 'INDIVIDUAL' ? 'INDIVIDUAL' : (r.ACCT_HOLDER_CATEGORY || 'CRS102'));
+            $('#editFirstName').val(r.FIRST_NAME || '');
+            $('#editLastName').val(r.LAST_NAME || '');
+            $('#editOrgName').val(r.ORGANISATION_NAME || '');
+            $('#editCountry').val(r.RESIDENCE_COUNTRY || '');
+            $('#editTin').val(r.TIN || '');
+            $('#editCity').val(r.ADDRESS_CITY || '');
+            $('#editBalance').val(r.ACCOUNT_BALANCE || 0.0);
+            $('#editCurrency').val(r.CURRENCY_CODE || 'MUR');
+            $('#editStatus').val(r.STATUS || 'COMPLETED');
+
+            toggleEditModalHolderFields();
+            $('#crsEditModal').addClass('open');
+        }
+
+        function closeEditModal() { $('#crsEditModal').removeClass('open'); }
+
+        function openRectifyModal(dupId) {
+            var r = crsDuplicateRecords.find(x => x.DUP_ID == dupId);
+            if (!r) return;
+
+            $('#rectifyDupId').val(r.DUP_ID);
+            $('#rectifyAccNum').val(r.ACCOUNT_NUMBER || '');
+            $('#rectifyBalance').val(r.ACCOUNT_BALANCE || 0.0);
+            $('#rectifyHolderName').val(r.HOLDER_NAME || '');
+            $('#crsDupModal').addClass('open');
+        }
+
+        function closeDupModal() { $('#crsDupModal').removeClass('open'); }
+
+        function toggleEditModalHolderFields() {
+            var type = $('#editHolderType').val();
+            if (type === 'ORGANISATION') {
+                $('.holder-indiv').hide();$('.holder-org').show();
+            } else {
+                $('.holder-indiv').show();$('.holder-org').hide();
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value || "").replace(/[&<>"']/g, function (char) {
+                return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char];
+            });
+        }
+
+        function openRecordPopup(reportId) {
+            var r = crsMasterRecords.find(x => x.REPORT_ID == reportId);
+            if (!r) return;
+
+            popupCount++;
+            var popupId = "crs_popup_" + Date.now() + "_" + popupCount;
+            var isOrg = (String(r.HOLDER_TYPE || '').toUpperCase() === 'ORGANISATION');
+            var name = isOrg ? r.ORGANISATION_NAME : (r.FIRST_NAME + ' ' + (r.LAST_NAME || ''));
+            var category = isOrg ? (r.ACCT_HOLDER_CATEGORY || 'CRS102') : 'INDIVIDUAL';
+
+            var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="top:100px; left:180px;">' +
+                '<div class="crs-popup-header"><span>Account: ' + escapeHtml(r.ACCOUNT_NUMBER) + '</span><button type="button" class="failed-modal-close-x" onclick="$(\'#' + popupId + '\').remove()">&times;</button></div>' +
+                '<div class="crs-popup-body">' +
+                    '<div class="crs-human-kv"><span class="crs-human-label">Account Number</span><span class="crs-human-value"><b>' + escapeHtml(r.ACCOUNT_NUMBER) + '</b></span></div>' +
+                    '<div class="crs-human-kv"><span class="crs-human-label">Holder Name</span><span class="crs-human-value"><b>' + escapeHtml(name) + '</b></span></div>' +
+                    '<div class="crs-human-kv"><span class="crs-human-label">Category</span><span class="crs-human-value">' + escapeHtml(category) + '</span></div>' +
+                    '<div class="crs-human-kv"><span class="crs-human-label">Country</span><span class="crs-human-value">' + escapeHtml(r.RESIDENCE_COUNTRY) + '</span></div>' +
+                    '<div class="crs-human-kv"><span class="crs-human-label">Balance</span><span class="crs-human-value"><b>' + Number(r.ACCOUNT_BALANCE || 0).toLocaleString() + ' ' + (r.CURRENCY_CODE || 'MUR') + '</b></span></div>' +
+                '</div>' +
+                '<div class="crs-popup-footer"><button type="button" class="source-btn" onclick="downloadRowXml(' + r.REPORT_ID + ')">Download XML</button></div>' +
+            '</div>');
+
+            $('body').append(popupEl);
+            popupEl.draggable({ handle: ".crs-popup-header" });
+        }
+
+        function openXmlTagPopup(reportId) {
+            var r = crsMasterRecords.find(x => x.REPORT_ID == reportId);
+            if (!r) return;
+
+            popupCount++;
+            var popupId = "crs_xml_popup_" + Date.now() + "_" + popupCount;
+            var isOrg = (String(r.HOLDER_TYPE || '').toUpperCase() === 'ORGANISATION');
+            var category = isOrg ? (r.ACCT_HOLDER_CATEGORY || 'CRS102') : 'IND';
+            var docRefId = "MU2025-" + category + "-" + ("000000" + r.REPORT_ID).slice(-6);
+
+            var xml = '<crs:AccountReport>\n' +
+                      '    <crs:DocSpec>\n' +
+                      '        <stf:DocTypeIndic>OECD1</stf:DocTypeIndic>\n' +
+                      '        <stf:DocRefId>' + docRefId + '</stf:DocRefId>\n' +
+                      '    </crs:DocSpec>\n' +
+                      '    <crs:AccountNumber>' + escapeHtml(r.ACCOUNT_NUMBER) + '</crs:AccountNumber>\n' +
+                      '    <crs:AccountBalance currCode="' + (r.CURRENCY_CODE || 'MUR') + '">' + parseFloat(r.ACCOUNT_BALANCE || 0).toFixed(2) + '</crs:AccountBalance>\n' +
+                      '</crs:AccountReport>';
+
+            var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="width:450px; top:120px; left:220px;">' +
+                '<div class="crs-popup-header"><span>XML Payload Preview</span><button type="button" class="failed-modal-close-x" onclick="$(\'#' + popupId + '\').remove()">&times;</button></div>' +
+                '<div class="crs-popup-body"><div class="xml-view-container">' + escapeHtml(xml) + '</div></div>' +
+                '<div class="crs-popup-footer"><button type="button" class="source-btn" onclick="$(\'#' + popupId + '\').remove()">Close</button></div>' +
+            '</div>');
+
+            $('body').append(popupEl);
+            popupEl.draggable({ handle: ".crs-popup-header" });
+        }
+    </script>
 </head>
 
 <body>
+    <div th:insert="XBRLHeaderMenu :: header"></div>
 
-<!-- Existing common navigation header -->
-<div th:insert="XBRLHeaderMenu :: header"></div>
+    <input type="file" id="crsUploadInput" class="crs-file-input" accept=".xml,.csv,.xlsx,.xls" />
 
-<main class="crs-page">
-    <section class="crs-card">
+    <div class="source-data-wrapper">
+        <div class="source-data-card">
+            <div class="source-data-header">
+                <span><i class="fa fa-globe"></i> Common Reporting Standard (CRS) Management</span>
+            </div>
 
-        <div class="crs-title">
-            <i class="fa fa-globe"></i>
-            Common Reporting Standard (CRS) Management
-        </div>
-
-        <div class="crs-content">
-
-            <!-- Summary cards -->
-            <div class="crs-summary">
-                <div class="crs-stat">
-                    <div class="crs-stat-icon"><i class="fa fa-files-o"></i></div>
-                    <div>
-                        <div class="crs-stat-label">Total Accounts</div>
-                        <div class="crs-stat-value" id="totalRecords">0</div>
+            <div class="source-data-table-wrapper">
+                <!-- Summary Cards -->
+                <div class="crs-summary">
+                    <div class="crs-stat">
+                        <div class="crs-stat-icon"><i class="fa fa-files-o"></i></div>
+                        <div>
+                            <div class="crs-stat-label">Total Accounts</div>
+                            <div class="crs-stat-value" id="totalRecords">0</div>
+                        </div>
+                    </div>
+                    <div class="crs-stat">
+                        <div class="crs-stat-icon"><i class="fa fa-clock-o"></i></div>
+                        <div>
+                            <div class="crs-stat-label">Pending</div>
+                            <div class="crs-stat-value" id="pendingRecords">0</div>
+                        </div>
+                    </div>
+                    <div class="crs-stat">
+                        <div class="crs-stat-icon"><i class="fa fa-check-circle"></i></div>
+                        <div>
+                            <div class="crs-stat-label">Completed</div>
+                            <div class="crs-stat-value" id="completedRecords">0</div>
+                        </div>
+                    </div>
+                    <div class="crs-stat">
+                        <div class="crs-stat-icon"><i class="fa fa-exclamation-circle"></i></div>
+                        <div>
+                            <div class="crs-stat-label">Errors / Excluded</div>
+                            <div class="crs-stat-value" id="errorRecords">0</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="crs-stat">
-                    <div class="crs-stat-icon"><i class="fa fa-clock-o"></i></div>
-                    <div>
-                        <div class="crs-stat-label">Pending</div>
-                        <div class="crs-stat-value" id="pendingRecords">0</div>
+                <!-- Toolbar & Filters -->
+                <div class="crs-filter-bar">
+                    <div class="crs-search-wrap">
+                        <i class="fa fa-search"></i>
+                        <input type="text" id="crsSearch" placeholder="Search account number, customer name, country or TIN..." />
                     </div>
-                </div>
 
-                <div class="crs-stat">
-                    <div class="crs-stat-icon"><i class="fa fa-check-circle"></i></div>
-                    <div>
-                        <div class="crs-stat-label">Completed</div>
-                        <div class="crs-stat-value" id="completedRecords">0</div>
-                    </div>
-                </div>
-
-                <div class="crs-stat">
-                    <div class="crs-stat-icon"><i class="fa fa-exclamation-circle"></i></div>
-                    <div>
-                        <div class="crs-stat-label">Errors / Excluded</div>
-                        <div class="crs-stat-value" id="errorRecords">0</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Search, Category Filter, and Actions Toolbar -->
-            <div class="crs-filter">
-                <div class="crs-search">
-                    <i class="fa fa-search"></i>
-                    <input type="text" id="crsSearch" placeholder="Search account number, customer name, country or TIN...">
-                </div>
-
-                <!-- Pure Category Filter (Removed Status Filter) -->
-                <select id="crsCategoryFilter" aria-label="Filter by Category">
-                    <option value="">All Categories</option>
-                    <option value="INDIVIDUAL">Individual (IND)</option>
-                    <option value="CRS101">CRS101 - Passive NFE (with UBO)</option>
-                    <option value="CRS102">CRS102 - Reportable Person Entity</option>
-                    <option value="CRS103">CRS103 - Passive NFE (Reportable)</option>
-                </select>
-
-                <div class="crs-actions">
-                    <input type="file" id="crsUploadInput" class="crs-file-input" accept=".xml,.csv,.xlsx,.xls">
-
-                    <button type="button" class="crs-btn crs-btn-primary" id="crsUploadBtn">
-                        <i class="fa fa-upload"></i> Upload
-                    </button>
-
-                    <button type="button" class="crs-btn crs-btn-green" id="crsDownloadAllBtn">
-                        <i class="fa fa-file-code-o"></i> Download XML
-                    </button>
-
-                    <button type="button" class="crs-btn crs-btn-dark" id="crsExtractBtn">
-                        <i class="fa fa-download"></i> Extract
-                    </button>
-                </div>
-            </div>
-
-            <div class="crs-notice" id="crsNotice" role="status"></div>
-
-            <!-- Records list -->
-            <div class="crs-list-heading">
-                <span>
-                    <i class="fa fa-list"></i>
-                    &nbsp; CRS Reportable Accounts List (OECD CRS v3.0)
-                </span>
-                <span>
-                    Total: <strong id="crsVisibleCount">0</strong> records
-                </span>
-            </div>
-
-            <div class="crs-table-wrap">
-                <table class="crs-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 5%;">S.No</th>
-                            <th style="width: 17%;">Account Number</th>
-                            <th style="width: 23%;">Account Holder / Organisation</th>
-                            <th style="width: 8%;">Country</th>
-                            <th style="width: 12%;">TIN / ID</th>
-                            <th style="width: 13%;">Balance (31-Dec)</th>
-                            <th style="width: 9%;">Status</th>
-                            <th style="width: 7%;">XML</th>
-                            <th style="width: 6%;">Edit</th>
-                        </tr>
-                    </thead>
-                    <tbody id="crsTableBody">
-                        <tr>
-                            <td colspan="9" style="text-align: center; padding: 25px; color: #64748b;">
-                                <i class="fa fa-folder-open-o" style="font-size: 20px; display: block; margin-bottom: 5px;"></i>
-                                No CRS records available in database.<br>
-                                <small>Click Upload to ingest Excel/CSV files.</small>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <!-- 10-Item Pagination Controls -->
-                <div class="crs-pagination-bar" id="paginationBar">
-                    <span id="pageInfoText" style="color: #475569;">Showing 0 to 0 of 0 entries</span>
-                    <div class="pagination-controls" id="paginationControls"></div>
-                </div>
-            </div>
-
-        </div>
-
-        <div class="crs-footer">
-            <span class="crs-footer-text">BRECON &bull; Mauritius Revenue Authority (MRA) CRS XML v3.0</span>
-            <div class="crs-actions">
-                <button type="button" class="crs-btn" id="crsResetBtn">
-                    <i class="fa fa-refresh"></i> Refresh List
-                </button>
-                <button type="button" class="crs-btn" id="crsHomeBtn">
-                    <i class="fa fa-home"></i> Home
-                </button>
-            </div>
-        </div>
-
-    </section>
-</main>
-
-<!-- Container where multiple popups can open together -->
-<div id="multiPopupContainer"></div>
-
-<!-- Edit record modal -->
-<div class="crs-modal" id="crsEditModal">
-    <div class="crs-modal-box">
-        <div class="crs-modal-header">
-            <span><i class="fa fa-pencil"></i> Edit CRS Record</span>
-            <button type="button" class="crs-modal-close" id="crsCloseModal">&times;</button>
-        </div>
-
-        <form id="crsEditForm">
-            <div class="crs-modal-body">
-                <input type="hidden" id="editReportId" name="reportId">
-
-                <div class="crs-field full">
-                    <label for="editAccNum">Account Number *</label>
-                    <input type="text" id="editAccNum" name="accountNumber" required>
-                </div>
-
-                <div class="crs-field">
-                    <label for="editHolderType">Holder Type *</label>
-                    <select id="editHolderType" name="holderType" onchange="toggleEditModalHolderFields()">
-                        <option value="INDIVIDUAL">INDIVIDUAL</option>
-                        <option value="ORGANISATION">ORGANISATION</option>
-                    </select>
-                </div>
-
-                <div class="crs-field">
-                    <label for="editCategory">Category (v3.0)</label>
-                    <select id="editCategory" name="holderCategory">
-                        <option value="INDIVIDUAL">INDIVIDUAL (IND)</option>
+                    <select id="crsCategoryFilter">
+                        <option value="">All Categories</option>
+                        <option value="INDIVIDUAL">Individual (IND)</option>
                         <option value="CRS101">CRS101 - Passive NFE (with UBO)</option>
                         <option value="CRS102">CRS102 - Reportable Person Entity</option>
                         <option value="CRS103">CRS103 - Passive NFE (Reportable)</option>
                     </select>
+
+                    <div class="crs-toolbar-actions">
+                        <button type="button" class="crs-toolbar-btn primary" id="crsUploadBtn">
+                            <i class="fa fa-upload"></i> Upload
+                        </button>
+                        <button type="button" class="crs-toolbar-btn green" id="crsDownloadAllBtn">
+                            <i class="fa fa-file-code-o"></i> Download XML
+                        </button>
+                    </div>
                 </div>
 
-                <div class="crs-field holder-indiv">
-                    <label for="editFirstName">First Name</label>
-                    <input type="text" id="editFirstName" name="firstName">
+                <!-- 1. CRS Reportable Accounts List (50% Space) -->
+                <div class="file-list-container main-section">
+                    <div class="file-list-title-bar">
+                        <span><i class="fa fa-list" style="margin-right:5px; color:var(--brand);"></i> CRS Reportable Accounts List (OECD CRS v3.0)</span>
+                        <span>Total: <strong id="crsVisibleCount">0</strong> records</span>
+                    </div>
+
+                    <div class="table-scroll-box">
+                        <table class="dedicated-file-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">S.No</th>
+                                    <th style="width: 16%;">Account Number</th>
+                                    <th style="width: 25%;">Account Holder / Organisation</th>
+                                    <th style="width: 7%;">Country</th>
+                                    <th style="width: 12%;">TIN / ID</th>
+                                    <th style="width: 13%;">Balance (31-Dec)</th>
+                                    <th style="width: 9%;">Status</th>
+                                    <th style="width: 7%;">XML</th>
+                                    <th style="width: 6%;">Edit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="crsTableBody">
+                                <tr>
+                                    <td colspan="9" class="no-data">
+                                        <i class="fa fa-folder-open-o"></i>
+                                        No CRS records available in database. Click Upload to ingest files.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Main Pagination Bar -->
+                    <div class="table-pagination-bar">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span>Rows:</span>
+                            <select id="pageSizeMainSelect" style="padding: 1px 3px; border:1px solid #cbd5e1; border-radius:3px; font-size:11px;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                            </select>
+                            <span id="mainPageInfoText" style="color: var(--muted); margin-left: 4px;">Showing entries</span>
+                        </div>
+                        <div class="pagination-nav-wrap" id="mainPaginationNav"></div>
+                    </div>
                 </div>
 
-                <div class="crs-field holder-indiv">
-                    <label for="editLastName">Last Name</label>
-                    <input type="text" id="editLastName" name="lastName">
-                </div>
+                <!-- 2. CRS Duplicate Records Rectification Queue (50% Space) -->
+                <div class="file-list-container dup-section">
+                    <div class="file-list-title-bar" style="background: #fff1f2;">
+                        <div>
+                            <span style="color: #991b1b; font-weight: bold;"><i class="fa fa-exclamation-triangle" style="margin-right: 5px;"></i> CRS Duplicate Records Rectification Queue</span>
+                            <span class="crs-status crs-status-pending" id="dupVisibleCount" style="margin-left: 6px;">0 record(s)</span>
+                        </div>
 
-                <div class="crs-field full holder-org" style="display: none;">
-                    <label for="editOrgName">Organisation / Company Name</label>
-                    <input type="text" id="editOrgName" name="organisationName">
-                </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <button type="button" class="crs-toolbar-btn green" style="height: 25px; font-size: 10.5px; padding: 0 8px;" onclick="downloadDuplicateCsv()">
+                                <i class="fa fa-download"></i> Download
+                            </button>
+                            <button type="button" class="crs-toolbar-btn" style="height: 25px; font-size: 10.5px; padding: 0 8px; background: #dc2626; color: #fff; border-color: #dc2626;" onclick="deleteAllDuplicateRecords()">
+                                <i class="fa fa-trash"></i> Delete All
+                            </button>
+                        </div>
+                    </div>
 
-                <div class="crs-field">
-                    <label for="editCountry">Country (ISO 2) *</label>
-                    <input type="text" id="editCountry" name="residenceCountry" maxlength="2" required>
-                </div>
+                    <div class="table-scroll-box">
+                        <table class="dedicated-file-table">
+                            <thead>
+                                <tr style="background: #fdf2f2;">
+                                    <th style="width: 6%;">ID</th>
+                                    <th style="width: 16%;">File Name</th>
+                                    <th style="width: 16%;">Account Number</th>
+                                    <th style="width: 23%;">Holder Name</th>
+                                    <th style="width: 8%;">Country</th>
+                                    <th style="width: 12%;">Balance</th>
+                                    <th style="width: 9%;">Status</th>
+                                    <th style="width: 10%; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dupTableBody">
+                                <tr>
+                                    <td colspan="8" class="no-data">
+                                        <i class="fa fa-check-circle-o" style="color: #15803d;"></i>
+                                        No duplicate records pending in queue.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                <div class="crs-field">
-                    <label for="editTin">TIN / Identifier</label>
-                    <input type="text" id="editTin" name="tin">
-                </div>
-
-                <div class="crs-field">
-                    <label for="editCity">City</label>
-                    <input type="text" id="editCity" name="addressCity">
-                </div>
-
-                <div class="crs-field">
-                    <label for="editBalance">Account Balance *</label>
-                    <input type="number" step="0.01" id="editBalance" name="accountBalance" required>
-                </div>
-
-                <div class="crs-field">
-                    <label for="editCurrency">Currency Code *</label>
-                    <input type="text" id="editCurrency" name="currencyCode" maxlength="3" required>
-                </div>
-
-                <div class="crs-field">
-                    <label for="editStatus">Status *</label>
-                    <select id="editStatus" name="status">
-                        <option value="COMPLETED">COMPLETED</option>
-                        <option value="PENDING">PENDING</option>
-                        <option value="ERROR">ERROR / EXCLUDED</option>
-                    </select>
+                    <!-- Duplicate Queue Pagination Bar -->
+                    <div class="table-pagination-bar">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span>Rows:</span>
+                            <select id="pageSizeDupSelect" style="padding: 1px 3px; border:1px solid #cbd5e1; border-radius:3px; font-size:11px;">
+                                <option value="5" selected>5</option>
+                                <option value="10">10</option>
+                            </select>
+                            <span id="dupPageInfoText" style="color: var(--muted); margin-left: 4px;">Showing entries</span>
+                        </div>
+                        <div class="pagination-nav-wrap" id="dupPaginationNav"></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="crs-modal-footer">
-                <button type="button" class="crs-btn" id="crsCancelEdit">Cancel</button>
-                <button type="submit" class="crs-btn crs-btn-primary">
-                    <i class="fa fa-save"></i> Save Changes
-                </button>
+            <div class="source-data-footer">
+                <a th:href="@{/Dashboard}" class="source-btn"><i class="fa fa-home"></i> Home</a>
+                <a href="javascript:history.back();" class="source-btn"><i class="fa fa-chevron-left"></i> Back</a>
             </div>
-        </form>
+        </div>
     </div>
-</div>
 
-<script>
-// Row XML Single Download Handler
-function downloadRowXml(reportId) {
-    if (!reportId) {
-        alert("Report ID is missing for this record.");
-        return;
-    }
-    window.location.href = "./downloadSingleCrsXml?reportId=" + encodeURIComponent(reportId);
-}
+    <!-- Edit Record Modal -->
+    <div class="failed-modal-overlay" id="crsEditModal">
+        <div class="failed-modal-card">
+            <div class="failed-modal-header">
+                <span><i class="fa fa-pencil"></i> Edit CRS Record</span>
+                <button type="button" class="failed-modal-close-x" onclick="closeEditModal()">&times;</button>
+            </div>
 
-// MULTI-POPUP SYSTEM: Open as many popups simultaneously as clicked
-let popupCount = 0;
+            <form id="crsEditForm">
+                <div class="failed-modal-body">
+                    <input type="hidden" id="editReportId" name="reportId">
 
-function openRecordPopup(reportId) {
-    if (!reportId) {
-        alert("Invalid Report ID");
-        return;
-    }
+                    <div class="failed-field full">
+                        <label for="editAccNum">Account Number *</label>
+                        <input type="text" id="editAccNum" name="accountNumber" required>
+                    </div>
 
-    const r = crsMasterRecords.find(x => x.REPORT_ID == reportId);
-    if (!r) return;
+                    <div class="failed-field">
+                        <label for="editHolderType">Holder Type *</label>
+                        <select id="editHolderType" name="holderType" onchange="toggleEditModalHolderFields()">
+                            <option value="INDIVIDUAL">INDIVIDUAL</option>
+                            <option value="ORGANISATION">ORGANISATION</option>
+                        </select>
+                    </div>
 
-    popupCount++;
-    const popupId = "crs_popup_" + Date.now() + "_" + popupCount;
-    
-    const offset = (popupCount % 7) * 26;
-    const topPos = Math.min(100 + offset, window.innerHeight - 450);
-    const leftPos = Math.min(140 + offset, window.innerWidth - 500);
+                    <div class="failed-field">
+                        <label for="editCategory">Category (v3.0)</label>
+                        <select id="editCategory" name="holderCategory">
+                            <option value="INDIVIDUAL">INDIVIDUAL (IND)</option>
+                            <option value="CRS101">CRS101 - Passive NFE (with UBO)</option>
+                            <option value="CRS102">CRS102 - Reportable Person Entity</option>
+                            <option value="CRS103">CRS103 - Passive NFE (Reportable)</option>
+                        </select>
+                    </div>
 
-    const container = document.getElementById("multiPopupContainer");
+                    <div class="failed-field holder-indiv">
+                        <label for="editFirstName">First Name</label>
+                        <input type="text" id="editFirstName" name="firstName">
+                    </div>
 
-    const popupEl = document.createElement("div");
-    popupEl.className = "crs-multi-popup";
-    popupEl.id = popupId;
-    popupEl.style.top = topPos + "px";
-    popupEl.style.left = leftPos + "px";
+                    <div class="failed-field holder-indiv">
+                        <label for="editLastName">Last Name</label>
+                        <input type="text" id="editLastName" name="lastName">
+                    </div>
 
-    const isOrg = (String(r.HOLDER_TYPE || '').toUpperCase() === 'ORGANISATION');
-    const name = isOrg ? r.ORGANISATION_NAME : (r.FIRST_NAME + ' ' + (r.LAST_NAME || ''));
-    const category = isOrg ? (r.ACCT_HOLDER_CATEGORY || 'CRS102') : 'INDIVIDUAL';
+                    <div class="failed-field full holder-org" style="display: none;">
+                        <label for="editOrgName">Organisation / Company Name</label>
+                        <input type="text" id="editOrgName" name="organisationName">
+                    </div>
 
-    popupEl.innerHTML = `
-        <div class="crs-popup-header">
-            <span><i class="fa fa-id-card-o"></i> Account: ${escapeHtml(r.ACCOUNT_NUMBER || '-')}</span>
-            <button type="button" class="crs-popup-close-x" onclick="closePopup('${popupId}')" title="Close Popup">&times;</button>
+                    <div class="failed-field">
+                        <label for="editCountry">Country (ISO 2) *</label>
+                        <input type="text" id="editCountry" name="residenceCountry" maxlength="2" required>
+                    </div>
+
+                    <div class="failed-field">
+                        <label for="editTin">TIN / Identifier</label>
+                        <input type="text" id="editTin" name="tin">
+                    </div>
+
+                    <div class="failed-field">
+                        <label for="editCity">City</label>
+                        <input type="text" id="editCity" name="addressCity">
+                    </div>
+
+                    <div class="failed-field">
+                        <label for="editBalance">Account Balance *</label>
+                        <input type="number" step="0.01" id="editBalance" name="accountBalance" required>
+                    </div>
+
+                    <div class="failed-field">
+                        <label for="editCurrency">Currency Code *</label>
+                        <input type="text" id="editCurrency" name="currencyCode" maxlength="3" required>
+                    </div>
+
+                    <div class="failed-field">
+                        <label for="editStatus">Status *</label>
+                        <select id="editStatus" name="status">
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="PENDING">PENDING</option>
+                            <option value="ERROR">ERROR / EXCLUDED</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="failed-modal-footer">
+                    <button type="button" class="modal-cancel-btn" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="modal-submit-btn"><i class="fa fa-save"></i> Save Changes</button>
+                </div>
+            </form>
         </div>
-        <div class="crs-popup-body">
-            <div class="crs-human-kv">
-                <span class="crs-human-label">Account Number</span>
-                <span class="crs-human-value"><b>${escapeHtml(r.ACCOUNT_NUMBER || '-')}</b></span>
+    </div>
+
+    <!-- Duplicate Rectification Modal -->
+    <div class="failed-modal-overlay" id="crsDupModal">
+        <div class="failed-modal-card" style="max-width: 400px;">
+            <div class="failed-modal-header" style="background: #991b1b;">
+                <span><i class="fa fa-wrench"></i> Rectify Duplicate Record</span>
+                <button type="button" class="failed-modal-close-x" onclick="closeDupModal()">&times;</button>
             </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">Holder Type</span>
-                <span class="crs-human-value">${escapeHtml(r.HOLDER_TYPE || 'INDIVIDUAL')}</span>
+
+            <form id="crsDupForm">
+                <div class="failed-modal-body" style="grid-template-columns: 1fr;">
+                    <input type="hidden" id="rectifyDupId" name="dupId">
+
+                    <div class="failed-field">
+                        <label>Account Number (Duplicate)</label>
+                        <input type="text" id="rectifyAccNum" readonly style="background: #f1f5f9;">
+                    </div>
+
+                    <div class="failed-field">
+                        <label>Holder Name</label>
+                        <input type="text" id="rectifyHolderName" readonly style="background: #f1f5f9;">
+                    </div>
+
+                    <div class="failed-field">
+                        <label>Updated Account Balance *</label>
+                        <input type="number" step="0.01" id="rectifyBalance" name="updatedBalance" required>
+                    </div>
+
+                    <div class="failed-field">
+                        <label>Resolution Action *</label>
+                        <select id="rectifyStatus" name="updatedStatus">
+                            <option value="COMPLETED">Resolve & Insert/Update into DB</option>
+                            <option value="ERROR">Exclude / Discard Duplicate</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="failed-modal-footer">
+                    <button type="button" class="modal-cancel-btn" onclick="closeDupModal()">Cancel</button>
+                    <button type="submit" class="modal-submit-btn" style="background: #991b1b;"><i class="fa fa-check"></i> Submit to Database</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Unified System Notification Modal -->
+    <div class="failed-modal-overlay" id="customActionModal">
+        <div class="failed-modal-card" style="max-width: 380px;">
+            <div class="failed-modal-header">
+                <span><i class="fa fa-bell-o"></i> System Notification</span>
+                <button type="button" class="failed-modal-close-x" onclick="closeAppModal()">&times;</button>
             </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">Category Code</span>
-                <span class="crs-human-value"><span class="xml-pill">&lt;${escapeHtml(category)}&gt;</span></span>
+
+            <div class="action-alert-body">
+                <i id="appModalIcon" class="fa fa-info-circle action-alert-icon info"></i>
+                <div id="appModalTitle" class="action-alert-title">Notification</div>
+                <div id="appModalText" class="action-alert-text">Details will appear here.</div>
             </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">Customer Name</span>
-                <span class="crs-human-value"><b>${escapeHtml(name || '-')}</b></span>
-            </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">Residence Country</span>
-                <span class="crs-human-value"><b>${escapeHtml(r.RESIDENCE_COUNTRY || '-')}</b></span>
-            </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">TIN / Identifier</span>
-                <span class="crs-human-value">${escapeHtml(r.TIN || 'N/A')}</span>
-            </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">City / Address</span>
-                <span class="crs-human-value">${escapeHtml(r.ADDRESS_CITY || r.ADDRESS_STREET || 'N/A')}</span>
-            </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">Balance as of 31-Dec</span>
-                <span class="crs-human-value"><b>${Number(r.ACCOUNT_BALANCE || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} ${escapeHtml(r.CURRENCY_CODE || 'MUR')}</b></span>
-            </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">Due Diligence (v3.0)</span>
-                <span class="crs-human-value">${escapeHtml(r.DD_PROCEDURE || 'CRS1202')}</span>
-            </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">Account Type (v3.0)</span>
-                <span class="crs-human-value">${escapeHtml(r.ACCOUNT_TYPE || 'CRS1101')}</span>
-            </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">Self-Certification</span>
-                <span class="crs-human-value">${escapeHtml(r.SELF_CERT_FLAG || 'CRS901')}</span>
-            </div>
-            <div class="crs-human-kv">
-                <span class="crs-human-label">Reporting Status</span>
-                <span class="crs-human-value"><span class="crs-status crs-status-completed">${escapeHtml(r.STATUS || 'COMPLETED')}</span></span>
+
+            <div class="failed-modal-footer">
+                <button type="button" id="appModalCancelBtn" class="modal-cancel-btn" onclick="closeAppModal()" style="display: none;">Cancel</button>
+                <button type="button" id="appModalConfirmBtn" class="modal-submit-btn" style="background: #dc2626; display: none;">Confirm</button>
+                <button type="button" id="appModalOkBtn" class="modal-submit-btn" onclick="closeAppModal()" style="background: var(--brand);">OK</button>
             </div>
         </div>
-        <div class="crs-popup-footer">
-            <button type="button" class="crs-btn crs-btn-small crs-btn-green" onclick="downloadRowXml(${r.REPORT_ID})">
-                <i class="fa fa-file-code-o"></i> Download XML
-            </button>
-            <button type="button" class="crs-btn crs-btn-small" onclick="closePopup('${popupId}')">Close</button>
-        </div>
-    `;
-
-    container.appendChild(popupEl);
-    makePopupDraggable(popupEl);
-}
-
-// XML TAGS POPUP: Shows the exact generated XML snippet for that account report
-function openXmlTagPopup(reportId) {
-    const r = crsMasterRecords.find(x => x.REPORT_ID == reportId);
-    if (!r) return;
-
-    popupCount++;
-    const popupId = "crs_xml_popup_" + Date.now() + "_" + popupCount;
-    
-    const offset = (popupCount % 7) * 26;
-    const topPos = Math.min(90 + offset, window.innerHeight - 480);
-    const leftPos = Math.min(160 + offset, window.innerWidth - 650);
-
-    const container = document.getElementById("multiPopupContainer");
-
-    const popupEl = document.createElement("div");
-    popupEl.className = "crs-multi-popup";
-    popupEl.style.width = "620px";
-    popupEl.id = popupId;
-    popupEl.style.top = topPos + "px";
-    popupEl.style.left = leftPos + "px";
-
-    const isOrg = (String(r.HOLDER_TYPE || '').toUpperCase() === 'ORGANISATION');
-    const category = isOrg ? (r.ACCT_HOLDER_CATEGORY || 'CRS102') : 'IND';
-    const docRefId = "MU2025-" + category + "-" + ("000000" + r.REPORT_ID).slice(-6);
-    const accNum = r.ACCOUNT_NUMBER || 'UNKNOWN_ACC';
-    const country = r.RESIDENCE_COUNTRY || 'IN';
-    const tin = r.TIN || '';
-    const city = r.ADDRESS_CITY || 'Port Louis';
-    const street = r.ADDRESS_STREET || '';
-    const balance = parseFloat(r.ACCOUNT_BALANCE || 0).toFixed(2);
-    const currency = r.CURRENCY_CODE || 'MUR';
-
-    let xml = `<crs:AccountReport>\n`;
-    xml += `    <crs:DocSpec>\n`;
-    xml += `        <stf:DocTypeIndic>OECD1</stf:DocTypeIndic>\n`;
-    xml += `        <stf:DocRefId>${docRefId}</stf:DocRefId>\n`;
-    xml += `    </crs:DocSpec>\n`;
-    xml += `    <crs:AccountNumber AcctNumberType="${r.ACCT_NUMBER_TYPE || 'OECD602'}" ClosedAccount="${r.IS_CLOSED || 'false'}" DormantAccount="${r.IS_DORMANT || 'false'}" UndocumentedAccount="${r.IS_UNDOCUMENTED || 'false'}">${escapeHtml(accNum)}</crs:AccountNumber>\n`;
-    xml += `    <crs:AccountHolder>\n`;
-    xml += `        <crs:SelfCert>${r.SELF_CERT_FLAG || 'CRS901'}</crs:SelfCert>\n`;
-
-    if (isOrg) {
-        xml += `        <crs:Organisation>\n`;
-        xml += `            <crs:ResCountryCode>${country}</crs:ResCountryCode>\n`;
-        if (tin) xml += `            <crs:TIN issuedBy="${country}">${escapeHtml(tin)}</crs:TIN>\n`;
-        xml += `            <crs:Name>${escapeHtml(r.ORGANISATION_NAME || '')}</crs:Name>\n`;
-        xml += `            <crs:Address legalAddressType="OECD304">\n`;
-        xml += `                <cfc:CountryCode>${country}</cfc:CountryCode>\n`;
-        xml += `                <cfc:AddressFix>\n`;
-        if (street) xml += `                    <cfc:Street>${escapeHtml(street)}</cfc:Street>\n`;
-        xml += `                    <cfc:City>${escapeHtml(city)}</cfc:City>\n`;
-        xml += `                </cfc:AddressFix>\n`;
-        xml += `            </crs:Address>\n`;
-        xml += `        </crs:Organisation>\n`;
-        xml += `        <crs:AcctHolderType>${category}</crs:AcctHolderType>\n`;
-    } else {
-        xml += `        <crs:Individual>\n`;
-        xml += `            <crs:ResCountryCode>${country}</crs:ResCountryCode>\n`;
-        if (tin) xml += `            <crs:TIN issuedBy="${country}">${escapeHtml(tin)}</crs:TIN>\n`;
-        xml += `            <crs:Name>\n`;
-        xml += `                <crs:FirstName>${escapeHtml(r.FIRST_NAME || '')}</crs:FirstName>\n`;
-        xml += `                <crs:LastName>${escapeHtml(r.LAST_NAME || '')}</crs:LastName>\n`;
-        xml += `            </crs:Name>\n`;
-        xml += `            <crs:Address>\n`;
-        xml += `                <cfc:CountryCode>${country}</cfc:CountryCode>\n`;
-        xml += `                <cfc:AddressFix>\n`;
-        if (street) xml += `                    <cfc:Street>${escapeHtml(street)}</cfc:Street>\n`;
-        xml += `                    <cfc:City>${escapeHtml(city)}</cfc:City>\n`;
-        xml += `                </cfc:AddressFix>\n`;
-        xml += `            </crs:Address>\n`;
-        if (r.BIRTH_DATE) {
-            xml += `            <crs:BirthInfo>\n`;
-            xml += `                <crs:BirthDate>${String(r.BIRTH_DATE).substring(0, 10)}</crs:BirthDate>\n`;
-            xml += `                <crs:City>${escapeHtml(city)}</crs:City>\n`;
-            xml += `            </crs:BirthInfo>\n`;
-        }
-        xml += `        </crs:Individual>\n`;
-    }
-    xml += `    </crs:AccountHolder>\n`;
-
-    // Add Controlling Person for CRS101
-    if (isOrg && category === 'CRS101' && (r.CP_LAST_NAME || r.CP_FIRST_NAME)) {
-        const cpCtry = r.CP_RESIDENCE_COUNTRY || 'GB';
-        xml += `    <crs:ControllingPerson>\n`;
-        xml += `        <crs:Individual>\n`;
-        xml += `            <crs:ResCountryCode>${cpCtry}</crs:ResCountryCode>\n`;
-        if (r.CP_TIN) xml += `            <crs:TIN issuedBy="${cpCtry}">${escapeHtml(r.CP_TIN)}</crs:TIN>\n`;
-        xml += `            <crs:Name>\n`;
-        xml += `                <crs:FirstName>${escapeHtml(r.CP_FIRST_NAME || '')}</crs:FirstName>\n`;
-        xml += `                <crs:LastName>${escapeHtml(r.CP_LAST_NAME || '')}</crs:LastName>\n`;
-        xml += `            </crs:Name>\n`;
-        xml += `            <crs:Address legalAddressType="OECD304">\n`;
-        xml += `                <cfc:CountryCode>${cpCtry}</cfc:CountryCode>\n`;
-        xml += `                <cfc:AddressFix>\n`;
-        if (r.CP_ADDRESS_STREET) xml += `                    <cfc:Street>${escapeHtml(r.CP_ADDRESS_STREET)}</cfc:Street>\n`;
-        xml += `                    <cfc:City>${escapeHtml(r.CP_ADDRESS_CITY || 'London')}</cfc:City>\n`;
-        xml += `                </cfc:AddressFix>\n`;
-        xml += `            </crs:Address>\n`;
-        if (r.CP_BIRTH_DATE) {
-            xml += `            <crs:BirthInfo>\n`;
-            xml += `                <crs:BirthDate>${String(r.CP_BIRTH_DATE).substring(0, 10)}</crs:BirthDate>\n`;
-            if (r.CP_ADDRESS_CITY) xml += `                <crs:City>${escapeHtml(r.CP_ADDRESS_CITY)}</crs:City>\n`;
-            xml += `                <crs:CountryInfo><crs:CountryCode>${cpCtry}</crs:CountryCode></crs:CountryInfo>\n`;
-            xml += `            </crs:BirthInfo>\n`;
-        }
-        xml += `        </crs:Individual>\n`;
-        xml += `        <crs:CtrlgPersonType>${r.CP_ROLE || 'CRS801'}</crs:CtrlgPersonType>\n`;
-        xml += `        <crs:SelfCert>${r.CP_SELF_CERT || 'CRS1001'}</crs:SelfCert>\n`;
-        xml += `    </crs:ControllingPerson>\n`;
-    }
-
-    xml += `    <crs:AccountBalance currCode="${currency}">${balance}</crs:AccountBalance>\n`;
-    xml += `    <crs:Payment>\n`;
-    xml += `        <crs:Type>CRS502</crs:Type>\n`;
-    xml += `        <crs:PaymentAmnt currCode="${currency}">${parseFloat(r.PAYMENT_AMOUNT || 0).toFixed(2)}</crs:PaymentAmnt>\n`;
-    xml += `    </crs:Payment>\n`;
-    xml += `    <crs:DDProcedure>${r.DD_PROCEDURE || 'CRS1202'}</crs:DDProcedure>\n`;
-    xml += `    <crs:AccountType>${r.ACCOUNT_TYPE || 'CRS1101'}</crs:AccountType>\n`;
-    xml += `</crs:AccountReport>`;
-
-    popupEl.innerHTML = `
-        <div class="crs-popup-header">
-            <span><i class="fa fa-code"></i> XML Tags: &lt;${escapeHtml(category)}&gt;</span>
-            <button type="button" class="crs-popup-close-x" onclick="closePopup('${popupId}')" title="Close Popup">&times;</button>
-        </div>
-        <div class="crs-popup-body">
-            <div class="xml-view-container" id="xml_text_${popupId}">${escapeHtml(xml)}</div>
-        </div>
-        <div class="crs-popup-footer">
-            <button type="button" class="crs-btn crs-btn-small" onclick="copyXmlCode('${popupId}')">
-                <i class="fa fa-copy"></i> Copy XML
-            </button>
-            <button type="button" class="crs-btn crs-btn-small" onclick="closePopup('${popupId}')">Close</button>
-        </div>
-    `;
-
-    container.appendChild(popupEl);
-    makePopupDraggable(popupEl);
-}
-
-function copyXmlCode(popupId) {
-    const el = document.getElementById("xml_text_" + popupId);
-    if (!el) return;
-    navigator.clipboard.writeText(el.textContent).then(() => {
-        alert("XML snippet copied to clipboard.");
-    });
-}
-
-function closePopup(popupId) {
-    const el = document.getElementById(popupId);
-    if (el) el.remove();
-}
-
-function makePopupDraggable(el) {
-    const header = el.querySelector(".crs-popup-header");
-    let isDragging = false;
-    let startX, startY, origX, origY;
-
-    header.addEventListener("mousedown", e => {
-        if (e.target.classList.contains("crs-popup-close-x")) return;
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        origX = el.offsetLeft;
-        origY = el.offsetTop;
-        el.style.zIndex = ++popupCount + 10000;
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-    });
-
-    function onMouseMove(e) {
-        if (!isDragging) return;
-        el.style.left = origX + (e.clientX - startX) + "px";
-        el.style.top = origY + (e.clientY - startY) + "px";
-    }
-
-    function onMouseUp() {
-        isDragging = false;
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-    }
-}
-
-function escapeHtml(value) {
-    return String(value || "").replace(/[&<>"']/g, function (char) {
-        return {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;"
-        }[char];
-    });
-}
-
-let crsMasterRecords = [];
-
-(function () {
-    const tableBody = document.getElementById("crsTableBody");
-    const uploadInput = document.getElementById("crsUploadInput");
-    const notice = document.getElementById("crsNotice");
-    const editModal = document.getElementById("crsEditModal");
-
-    let currentPage = 1;
-    const pageSize = 10; // Exactly 10 records per page
-
-    function showNotice(message, isError) {
-        notice.textContent = message;
-        notice.style.display = "block";
-        notice.style.backgroundColor = isError ? "#fde8e8" : "#edf6fa";
-        notice.style.borderColor = isError ? "#b94b4b" : "#c8dce7";
-        notice.style.color = isError ? "#a52d2d" : "#17394e";
-    }
-
-    function loadDashboardData() {
-        fetch("./getCrsDashboardData")
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById("totalRecords").textContent = (data.totalCount || 0).toLocaleString();
-                document.getElementById("pendingRecords").textContent = (data.pendingCount || 0).toLocaleString();
-                document.getElementById("completedRecords").textContent = (data.completedCount || 0).toLocaleString();
-                document.getElementById("errorRecords").textContent = (data.errorCount || 0).toLocaleString();
-
-                crsMasterRecords = data.records || [];
-                currentPage = 1;
-                renderTable();
-            })
-            .catch(err => {
-                console.error("Failed to load CRS data:", err);
-                showNotice("Error fetching CRS records: " + err, true);
-            });
-    }
-
-    function getFilteredRecords() {
-        const search = document.getElementById("crsSearch").value.toLowerCase().trim();
-        const category = document.getElementById("crsCategoryFilter").value;
-
-        return crsMasterRecords.filter(function (record) {
-            const acc = String(record.ACCOUNT_NUMBER || "").toLowerCase();
-            const name = String(record.ORGANISATION_NAME || (record.FIRST_NAME + " " + record.LAST_NAME) || "").toLowerCase();
-            const country = String(record.RESIDENCE_COUNTRY || "").toLowerCase();
-            const tin = String(record.TIN || "").toLowerCase();
-
-            const matchesSearch = acc.includes(search) || name.includes(search) || country.includes(search) || tin.includes(search);
-
-            const isIndiv = (String(record.HOLDER_TYPE || '').toUpperCase() === 'INDIVIDUAL');
-            const recCategory = isIndiv ? 'INDIVIDUAL' : String(record.ACCT_HOLDER_CATEGORY || 'CRS102').toUpperCase();
-
-            const matchesCategory = !category || recCategory === category;
-
-            return matchesSearch && matchesCategory;
-        });
-    }
-
-    function renderTable() {
-        const filtered = getFilteredRecords();
-        const totalItems = filtered.length;
-        const totalPages = Math.ceil(totalItems / pageSize) || 1;
-
-        if (currentPage > totalPages) currentPage = totalPages;
-        if (currentPage < 1) currentPage = 1;
-
-        const startIndex = (currentPage - 1) * pageSize;
-        const endIndex = Math.min(startIndex + pageSize, totalItems);
-        const pageItems = filtered.slice(startIndex, endIndex);
-
-        document.getElementById("crsVisibleCount").textContent = totalItems.toLocaleString();
-
-        const pageInfoText = document.getElementById("pageInfoText");
-        if (totalItems === 0) {
-            pageInfoText.textContent = "Showing 0 to 0 of 0 entries";
-        } else {
-            pageInfoText.textContent = `Showing ${(startIndex + 1).toLocaleString()} to ${endIndex.toLocaleString()} of ${totalItems.toLocaleString()} entries`;
-        }
-
-        tableBody.replaceChildren();
-
-        if (pageItems.length === 0) {
-            const row = document.createElement("tr");
-            const cell = document.createElement("td");
-            cell.colSpan = 9;
-            cell.style.textAlign = "center";
-            cell.style.padding = "25px";
-            cell.style.color = "#64748b";
-            cell.innerHTML =
-                '<i class="fa fa-folder-open-o" style="font-size: 20px; display: block; margin-bottom: 5px;"></i>' +
-                'No CRS records found matching the filter criteria.<br>' +
-                '<small>Try clearing your search or selecting a different category.</small>';
-
-            row.appendChild(cell);
-            tableBody.appendChild(row);
-            renderPagination(0, 1);
-            return;
-        }
-
-        pageItems.forEach(function (record, i) {
-            const row = document.createElement("tr");
-            const actualIndex = startIndex + i + 1;
-            const isOrg = (String(record.HOLDER_TYPE || '').toUpperCase() === 'ORGANISATION');
-            const name = isOrg ? record.ORGANISATION_NAME : (record.FIRST_NAME + ' ' + (record.LAST_NAME || ''));
-            const categoryBadge = isOrg ? (record.ACCT_HOLDER_CATEGORY || 'CRS102') : 'IND';
-            const bal = Number(record.ACCOUNT_BALANCE || 0).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' ' + (record.CURRENCY_CODE || 'MUR');
-            const st = record.STATUS || 'COMPLETED';
-
-            const statusClass = {
-                PENDING: "crs-status-pending",
-                COMPLETED: "crs-status-completed",
-                ERROR: "crs-status-error"
-            }[st.toUpperCase()] || "crs-status-completed";
-
-            row.innerHTML = `
-                <td>${actualIndex}</td>
-                <td>
-                    <!-- Reference Link opens full info popup -->
-                    <span class="ref-link" onclick="openRecordPopup(${record.REPORT_ID})" title="Click to view details in popup">
-                        ${escapeHtml(record.ACCOUNT_NUMBER || '-')}
-                    </span>
-                </td>
-                <td>
-                    <!-- Click Customer Name to view XML tag preview -->
-                    <a href="javascript:void(0)" class="acc-holder-link" onclick="openXmlTagPopup(${record.REPORT_ID})" title="Click to view generated XML tags">
-                        <span style="overflow: hidden; text-overflow: ellipsis;">${escapeHtml(name || '-')}</span>
-                        <span class="xml-pill">&lt;${escapeHtml(categoryBadge)}&gt;</span>
-                    </a>
-                </td>
-                <td><b>${escapeHtml(record.RESIDENCE_COUNTRY || '-')}</b></td>
-                <td>${escapeHtml(record.TIN || 'N/A')}</td>
-                <td>${escapeHtml(bal)}</td>
-                <td><span class="crs-status ${statusClass}">${escapeHtml(st)}</span></td>
-                <td>
-                    <button type="button" class="crs-btn crs-btn-small crs-btn-green" 
-                            onclick="downloadRowXml(${record.REPORT_ID})" 
-                            title="Download single account XML">
-                        <i class="fa fa-file-code-o"></i> XML
-                    </button>
-                </td>
-                <td>
-                    <button type="button" class="crs-btn crs-btn-small" 
-                            data-id="${record.REPORT_ID}">
-                        <i class="fa-solid fa-pen-to-square"></i> Edit
-                    </button>
-                </td>
-            `;
-
-            tableBody.appendChild(row);
-        });
-
-        renderPagination(totalItems, totalPages);
-    }
-
-    function renderPagination(totalItems, totalPages) {
-        const controls = document.getElementById("paginationControls");
-        controls.innerHTML = "";
-
-        if (totalItems <= pageSize) return;
-
-        const prevBtn = document.createElement("button");
-        prevBtn.type = "button";
-        prevBtn.className = "page-btn";
-        prevBtn.innerHTML = '<i class="fa fa-chevron-left"></i>';
-        prevBtn.disabled = currentPage === 1;
-        prevBtn.onclick = () => {
-            if (currentPage > 1) {
-                currentPage--;
-                renderTable();
-            }
-        };
-        controls.appendChild(prevBtn);
-
-        let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, startPage + 4);
-        if (endPage - startPage < 4) {
-            startPage = Math.max(1, endPage - 4);
-        }
-
-        for (let p = startPage; p <= endPage; p++) {
-            const pageBtn = document.createElement("button");
-            pageBtn.type = "button";
-            pageBtn.className = "page-btn" + (p === currentPage ? " active" : "");
-            pageBtn.textContent = p;
-            pageBtn.onclick = () => {
-                currentPage = p;
-                renderTable();
-            };
-            controls.appendChild(pageBtn);
-        }
-
-        const nextBtn = document.createElement("button");
-        nextBtn.type = "button";
-        nextBtn.className = "page-btn";
-        nextBtn.innerHTML = '<i class="fa fa-chevron-right"></i>';
-        nextBtn.disabled = currentPage === totalPages;
-        nextBtn.onclick = () => {
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderTable();
-            }
-        };
-        controls.appendChild(nextBtn);
-    }
-
-    // Search and Category filter reset to Page 1
-    document.getElementById("crsSearch").addEventListener("input", () => {
-        currentPage = 1;
-        renderTable();
-    });
-
-    document.getElementById("crsCategoryFilter").addEventListener("change", () => {
-        currentPage = 1;
-        renderTable();
-    });
-
-    // File Upload Handler
-    document.getElementById("crsUploadBtn").addEventListener("click", () => uploadInput.click());
-
-    uploadInput.addEventListener("change", function () {
-        if (!uploadInput.files || uploadInput.files.length === 0) return;
-
-        const file = uploadInput.files[0];
-        const formData = new FormData();
-        formData.append("file", file);
-
-        showNotice("Uploading and parsing " + file.name + " into database...", false);
-
-        fetch("./uploadCrsFile", {
-            method: "POST",
-            body: formData
-        })
-        .then(res => res.json())
-        .then(res => {
-            if (res.status === "SUCCESS") {
-                showNotice("Upload Success: " + res.message, false);
-                loadDashboardData();
-            } else {
-                showNotice("Upload Failed: " + (res.message || "Unknown error"), true);
-            }
-        })
-        .catch(err => {
-            showNotice("Error uploading file: " + err, true);
-        })
-        .finally(() => {
-            uploadInput.value = "";
-        });
-    });
-
-    // Edit Modal Click Handler
-    tableBody.addEventListener("click", function (event) {
-        const btn = event.target.closest("button[data-id]");
-        if (!btn) return;
-
-        const reportId = btn.dataset.id;
-        const record = crsMasterRecords.find(r => r.REPORT_ID == reportId);
-        if (!record) return;
-
-        document.getElementById("editReportId").value = record.REPORT_ID;
-        document.getElementById("editAccNum").value = record.ACCOUNT_NUMBER || '';
-        document.getElementById("editHolderType").value = record.HOLDER_TYPE || 'INDIVIDUAL';
-        document.getElementById("editCategory").value = record.HOLDER_TYPE === 'INDIVIDUAL' ? 'INDIVIDUAL' : (record.ACCT_HOLDER_CATEGORY || 'CRS102');
-        document.getElementById("editFirstName").value = record.FIRST_NAME || '';
-        document.getElementById("editLastName").value = record.LAST_NAME || '';
-        document.getElementById("editOrgName").value = record.ORGANISATION_NAME || '';
-        document.getElementById("editCountry").value = record.RESIDENCE_COUNTRY || '';
-        document.getElementById("editTin").value = record.TIN || '';
-        document.getElementById("editCity").value = record.ADDRESS_CITY || '';
-        document.getElementById("editBalance").value = record.ACCOUNT_BALANCE || 0.0;
-        document.getElementById("editCurrency").value = record.CURRENCY_CODE || 'MUR';
-        document.getElementById("editStatus").value = record.STATUS || 'COMPLETED';
-
-        toggleEditModalHolderFields();
-        editModal.classList.add("open");
-    });
-
-    function closeEdit() {
-        editModal.classList.remove("open");
-    }
-
-    document.getElementById("crsCloseModal").addEventListener("click", closeEdit);
-    document.getElementById("crsCancelEdit").addEventListener("click", closeEdit);
-
-    document.getElementById("crsEditForm").addEventListener("submit", function (event) {
-        event.preventDefault();
-        const formData = new URLSearchParams(new FormData(this));
-
-        fetch("./saveCrsRecord", {
-            method: "POST",
-            body: formData
-        })
-        .then(res => res.json())
-        .then(res => {
-            if (res.status === "SUCCESS") {
-                showNotice("Record updated successfully.", false);
-                closeEdit();
-                loadDashboardData();
-            } else {
-                showNotice("Failed to update record: " + (res.message || ""), true);
-            }
-        })
-        .catch(err => {
-            showNotice("Error saving changes: " + err, true);
-        });
-    });
-
-    document.getElementById("crsResetBtn").addEventListener("click", function () {
-        document.getElementById("crsSearch").value = "";
-        document.getElementById("crsCategoryFilter").value = "";
-        notice.style.display = "none";
-        currentPage = 1;
-        loadDashboardData();
-    });
-
-    document.getElementById("crsDownloadAllBtn").addEventListener("click", function () {
-        window.location.href = "./downloadCrsXml?year=2025";
-    });
-
-    document.getElementById("crsExtractBtn").addEventListener("click", function () {
-        const filtered = getFilteredRecords();
-        if (filtered.length === 0) {
-            showNotice("There are no records to extract.", true);
-            return;
-        }
-
-        const columns = ["Account Number", "Holder Type", "Category", "Customer Name", "Country", "TIN", "Balance", "Currency", "Status"];
-        const csvEscape = value => '"' + String(value ?? "").replace(/"/g, '""') + '"';
-
-        const rows = filtered.map(r => {
-            const isOrg = (String(r.HOLDER_TYPE || '').toUpperCase() === 'ORGANISATION');
-            const name = isOrg ? r.ORGANISATION_NAME : (r.FIRST_NAME + ' ' + (r.LAST_NAME || ''));
-            const cat = isOrg ? (r.ACCT_HOLDER_CATEGORY || 'CRS102') : 'IND';
-            return [r.ACCOUNT_NUMBER, r.HOLDER_TYPE, cat, name, r.RESIDENCE_COUNTRY, r.TIN, r.ACCOUNT_BALANCE, r.CURRENCY_CODE, r.STATUS];
-        });
-
-        const csv = [columns, ...rows].map(row => row.map(csvEscape).join(",")).join("\r\n");
-        const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-
-        link.href = url;
-        link.download = "CRS_Extract.csv";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-    });
-
-    document.getElementById("crsHomeBtn").addEventListener("click", function () {
-        const home = document.getElementById("Home");
-        if (home && typeof contentLoad === "function") {
-            contentLoad(home);
-        } else {
-            window.history.back();
-        }
-    });
-
-    // Initial load
-    loadDashboardData();
-})();
-
-function toggleEditModalHolderFields() {
-    const type = document.getElementById("editHolderType").value;
-    const indivFields = document.querySelectorAll(".holder-indiv");
-    const orgFields = document.querySelectorAll(".holder-org");
-
-    if (type === "ORGANISATION") {
-        indivFields.forEach(el => el.style.display = "none");
-        orgFields.forEach(el => el.style.display = "flex");
-    } else {
-        indivFields.forEach(el => el.style.display = "flex");
-        orgFields.forEach(el => el.style.display = "none");
-    }
-}
-</script>
-
+    </div>
 </body>
 </html>
