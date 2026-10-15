@@ -5,27 +5,18 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.DataFormatter;
-import org.apache.poi.ss.usermodel.DateUtil;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class FatcaManagementService {
 
     private static final Logger logger = LoggerFactory.getLogger(FatcaManagementService.class);
+    private static final int CHUNK_SIZE = 1000;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -49,42 +41,44 @@ public class FatcaManagementService {
         "RECORD_STATUS", "DEL_FLAG", "RECORD_SOURCE", "ENTRY_TIME", "ENTRY_USER"
     };
 
-    private static final Set<String> DATE_COLUMNS = new HashSet<>(Arrays.asList(
-        "LOAD_DATE", "MESSAGE_TIMESTAMP"
-    ));
-
-    private static final Set<String> NUMERIC_COLUMNS = new HashSet<>(Arrays.asList(
-        "FOREIGN_AMOUNT", "AMOUNT_MUR", "EXCHANGE_RATE", "ACCOUNT_BALANCE", "PAYMENT_AMOUNT"
-    ));
-
     private String cleanKey(String col) {
         if (col == null) return "";
-        return col.trim().toUpperCase().replaceAll("[^A-Z0-9_]", "");
+        String s = col.trim().toUpperCase();
+        if (s.contains(".")) s = s.substring(s.lastIndexOf('.') + 1);
+        return s.replaceAll("[^A-Z0-9_]", "");
     }
 
-    private Date parseDate(Object cellVal) {
-        if (cellVal == null) return null;
-        if (cellVal instanceof java.util.Date) {
-            return new Date(((java.util.Date) cellVal).getTime());
-        }
-        String s = cellVal.toString().trim();
-        if (s.isEmpty()) return null;
-        String[] formats = {"yyyy-MM-dd", "dd-MM-yyyy", "dd/MM/yyyy", "ddMMyyyy", "yyyyMMdd"};
-        for (String fmt : formats) {
-            try {
-                return new Date(new SimpleDateFormat(fmt).parse(s).getTime());
-            } catch (Exception ignored) {}
-        }
-        return null;
-    }
-
-    private BigDecimal parseBigDecimal(Object cellVal) {
-        if (cellVal == null) return null;
+    private String getFastCellValue(Cell cell) {
+        if (cell == null) return null;
         try {
-            String s = cellVal.toString().replaceAll("[^0-9.-]", "").trim();
-            if (s.isEmpty()) return null;
-            return new BigDecimal(s);
-        } catch (Exception e) {
+            String typeStr = String.valueOf(cell.getCellType()).toUpperCase();
+            if (typeStr.contains("STRING") || "1".equals(typeStr)) {
+                String s = cell.getStringCellValue().trim();
+                return s.isEmpty() ? null : s;
+            } else if (typeStr.contains("NUMERIC") || "0".equals(typeStr)) {
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    Date date = cell.getDateCellValue();
+                    return date != null ? new SimpleDateFormat("yyyy-MM-dd").format(date) : null;
+                }
+                double num = cell.getNumericCellValue();
+                if (num == (long) num) {
+                    return String.valueOf((long) num);
+                }
+                return BigDecimal.valueOf(num).toPlainString();
+            } else if (typeStr.contains("BOOLEAN") || "4".equals(typeStr)) {
+                return String.valueOf(cell.getBooleanCellValue());
+            } else if (typeStr.contains("FORMULA") || "2".equals(typeStr)) {
+                try {
+                    return cell.getStringCellValue().trim();
+                } catch (Exception e) {
+                    double n = cell.getNumericCellValue();
+                    if (n == (long) n) return String.valueOf((long) n);
+                    return BigDecimal.valueOf(n).toPlainString();
+                }
+            } else {
+                return null;
+            }
+        } catch (Exception ex) {
             return null;
         }
     }
@@ -109,154 +103,18 @@ public class FatcaManagementService {
         }
     }
 
+    // =========================================================================
+    // HIGH-PERFORMANCE FILE UPLOAD WITH DUPLICATE QUARANTINE ROUTING
+    // =========================================================================
     @Transactional
-    public int uploadFatcaFile(MultipartFile file, String userId) throws Exception {
+    public Map<String, Object> uploadFatcaFile(MultipartFile file, String userId) throws Exception {
+        Map<String, Object> result = new HashMap<>();
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Uploaded file is empty or null.");
         }
 
-        String originalFilename = file.getOriginalFilename();
-        boolean isCsv = originalFilename != null && originalFilename.toLowerCase().endsWith(".csv");
-
-        List<Object[]> batchParams = new ArrayList<>();
-        Timestamp currentTime = new Timestamp(System.currentTimeMillis());
-        String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
-
-        if (isCsv) {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-                String headerLine = reader.readLine();
-                if (headerLine == null) return 0;
-
-                String[] headers = headerLine.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)", -1);
-                Map<String, Integer> colIndexMap = new HashMap<>();
-                for (int i = 0; i < headers.length; i++) {
-                    String dbColName = mapCsvColumnToDb(headers[i].replace("\"", ""));
-                    colIndexMap.put(dbColName, i);
-                }
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.trim().isEmpty()) continue;
-                    String[] cols = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)", -1);
-
-                    Object[] rowValues = new Object[DB_COLUMNS.length];
-                    boolean hasData = false;
-
-                    for (int i = 0; i < DB_COLUMNS.length; i++) {
-                        String col = DB_COLUMNS[i];
-
-                        if ("ENTRY_TIME".equals(col)) {
-                            rowValues[i] = currentTime;
-                        } else if ("ENTRY_USER".equals(col)) {
-                            rowValues[i] = effectiveUser;
-                        } else if ("DEL_FLAG".equals(col)) {
-                            rowValues[i] = "N";
-                        } else if ("RECORD_STATUS".equals(col)) {
-                            rowValues[i] = "PENDING";
-                        } else if ("RECORD_SOURCE".equals(col)) {
-                            rowValues[i] = "FX_CSV";
-                        } else {
-                            Integer idx = colIndexMap.get(col);
-                            if (idx != null && idx >= 0 && idx < cols.length) {
-                                String val = cols[idx].replace("\"", "").trim();
-                                if (!val.isEmpty() && !"null".equalsIgnoreCase(val)) {
-                                    hasData = true;
-                                    if (DATE_COLUMNS.contains(col)) {
-                                        rowValues[i] = parseDate(val);
-                                    } else if (NUMERIC_COLUMNS.contains(col)) {
-                                        rowValues[i] = parseBigDecimal(val);
-                                    } else {
-                                        rowValues[i] = val;
-                                    }
-                                } else {
-                                    rowValues[i] = null;
-                                }
-                            } else {
-                                rowValues[i] = null;
-                            }
-                        }
-                    }
-                    if (hasData) {
-                        batchParams.add(rowValues);
-                    }
-                }
-            }
-        } else {
-            DataFormatter formatter = new DataFormatter();
-            try (InputStream is = file.getInputStream();
-                 Workbook workbook = WorkbookFactory.create(is)) {
-
-                Sheet sheet = workbook.getSheetAt(0);
-                if (sheet == null || sheet.getPhysicalNumberOfRows() <= 1) return 0;
-
-                Row headerRow = sheet.getRow(0);
-                Map<String, Integer> colIndexMap = new HashMap<>();
-                for (Cell cell : headerRow) {
-                    if (cell != null) {
-                        colIndexMap.put(mapCsvColumnToDb(formatter.formatCellValue(cell)), cell.getColumnIndex());
-                    }
-                }
-
-                for (int r = 1; r <= sheet.getLastRowNum(); r++) {
-                    Row row = sheet.getRow(r);
-                    if (row == null) continue;
-
-                    Object[] rowValues = new Object[DB_COLUMNS.length];
-                    boolean hasData = false;
-
-                    for (int i = 0; i < DB_COLUMNS.length; i++) {
-                        String col = DB_COLUMNS[i];
-
-                        if ("ENTRY_TIME".equals(col)) {
-                            rowValues[i] = currentTime;
-                        } else if ("ENTRY_USER".equals(col)) {
-                            rowValues[i] = effectiveUser;
-                        } else if ("DEL_FLAG".equals(col)) {
-                            rowValues[i] = "N";
-                        } else if ("RECORD_STATUS".equals(col)) {
-                            rowValues[i] = "PENDING";
-                        } else if ("RECORD_SOURCE".equals(col)) {
-                            rowValues[i] = "FX_CSV";
-                        } else {
-                            Integer idx = colIndexMap.get(col);
-                            if (idx != null && idx >= 0) {
-                                Cell cell = row.getCell(idx, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
-                                if (cell != null) {
-                                    hasData = true;
-                                    if (DATE_COLUMNS.contains(col)) {
-                                        try {
-                                            if (DateUtil.isCellDateFormatted(cell)) {
-                                                java.util.Date d = cell.getDateCellValue();
-                                                rowValues[i] = (d != null) ? new Date(d.getTime()) : null;
-                                            } else {
-                                                rowValues[i] = parseDate(formatter.formatCellValue(cell));
-                                            }
-                                        } catch (Exception e) {
-                                            rowValues[i] = parseDate(formatter.formatCellValue(cell));
-                                        }
-                                    } else if (NUMERIC_COLUMNS.contains(col)) {
-                                        rowValues[i] = parseBigDecimal(formatter.formatCellValue(cell));
-                                    } else {
-                                        String str = formatter.formatCellValue(cell).trim();
-                                        rowValues[i] = str.isEmpty() ? null : str;
-                                    }
-                                } else {
-                                    rowValues[i] = null;
-                                }
-                            } else {
-                                rowValues[i] = null;
-                            }
-                        }
-                    }
-
-                    if (hasData) {
-                        batchParams.add(rowValues);
-                    }
-                }
-            }
-        }
-
-        if (batchParams.isEmpty()) return 0;
+        String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+        boolean isCsv = fileName.endsWith(".csv") || fileName.endsWith(".txt");
 
         StringBuilder sql = new StringBuilder("INSERT INTO BRECON.FACTA_TRANSCATION_DATA (");
         StringBuilder placeholders = new StringBuilder(" VALUES (");
@@ -269,50 +127,241 @@ public class FatcaManagementService {
             }
         }
         sql.append(")").append(placeholders).append(")");
+        final String insertSql = sql.toString();
+        final int numColumns = DB_COLUMNS.length;
 
-        final int totalCols = DB_COLUMNS.length;
-        int[] updateCounts = jdbcTemplate.batchUpdate(sql.toString(), new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                Object[] row = batchParams.get(i);
-                for (int c = 0; c < totalCols; c++) {
-                    Object val = row[c];
-                    if (val == null) {
-                        ps.setNull(c + 1, Types.VARCHAR);
-                    } else if (val instanceof Timestamp) {
-                        ps.setTimestamp(c + 1, (Timestamp) val);
-                    } else if (val instanceof Date) {
-                        ps.setDate(c + 1, (Date) val);
-                    } else if (val instanceof BigDecimal) {
-                        ps.setBigDecimal(c + 1, (BigDecimal) val);
-                    } else {
-                        ps.setString(c + 1, val.toString());
+        Timestamp currentTime = new Timestamp(System.currentTimeMillis());
+        String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
+
+        int totalInserted = 0;
+        int totalFailed = 0;
+        List<Object[]> chunk = new ArrayList<>(CHUNK_SIZE);
+        Set<String> seenInBatch = new HashSet<>();
+
+        // 1. CSV / Text Streaming Upload
+        if (isCsv) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+                String headerLine = reader.readLine();
+                if (headerLine == null || headerLine.trim().isEmpty()) {
+                    result.put("insertedRows", 0);
+                    result.put("failedRows", 0);
+                    return result;
+                }
+
+                String delimiter = headerLine.contains(",") ? ",(?=([^\"]*\"[^\"]*\")*[^\"]*$)" : "\\|";
+                String[] headers = headerLine.split(delimiter, -1);
+                Map<String, Integer> colIndexMap = new HashMap<>();
+                for (int i = 0; i < headers.length; i++) {
+                    String norm = mapCsvColumnToDb(headers[i].replace("\"", ""));
+                    if (!norm.isEmpty()) colIndexMap.put(norm, i);
+                }
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().isEmpty()) continue;
+                    String[] tokens = line.split(delimiter, -1);
+
+                    Object[] rowValues = new Object[numColumns];
+                    boolean hasData = false;
+                    String surname = "";
+                    String otherName = "";
+
+                    for (int i = 0; i < numColumns; i++) {
+                        String col = DB_COLUMNS[i];
+                        if ("ENTRY_TIME".equals(col)) rowValues[i] = currentTime;
+                        else if ("ENTRY_USER".equals(col)) rowValues[i] = effectiveUser;
+                        else if ("DEL_FLAG".equals(col)) rowValues[i] = "N";
+                        else if ("RECORD_SOURCE".equals(col)) rowValues[i] = "FX_CSV";
+                        else if ("RECORD_STATUS".equals(col)) {
+                            // Temporary placeholder evaluated below
+                            rowValues[i] = "Completed";
+                        } else {
+                            Integer idx = colIndexMap.get(col);
+                            if (idx != null && idx >= 0 && idx < tokens.length) {
+                                String val = tokens[idx].replace("\"", "").trim();
+                                if (!val.isEmpty() && !"null".equalsIgnoreCase(val)) {
+                                    hasData = true;
+                                    rowValues[i] = val;
+                                    if ("SURNAME".equals(col)) surname = val.toLowerCase();
+                                    if ("OTHER_NAME".equals(col)) otherName = val.toLowerCase();
+                                }
+                            }
+                        }
+                    }
+
+                    if (hasData) {
+                        // Check duplicate in batch or database
+                        String compositeKey = surname + "|" + otherName;
+                        boolean isDuplicate = false;
+                        if (!surname.isEmpty() && seenInBatch.contains(compositeKey)) {
+                            isDuplicate = true;
+                        } else {
+                            seenInBatch.add(compositeKey);
+                        }
+
+                        if (!isDuplicate && !surname.isEmpty()) {
+                            try {
+                                Integer count = jdbcTemplate.queryForObject(
+                                    "SELECT COUNT(*) FROM BRECON.FACTA_TRANSCATION_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'Completed') <> 'DUPLICATE' AND LOWER(TRIM(SURNAME)) = ? AND LOWER(TRIM(NVL(OTHER_NAME, ''))) = ?",
+                                    Integer.class, surname, otherName
+                                );
+                                if (count != null && count > 0) isDuplicate = true;
+                            } catch (Exception ignored) {}
+                        }
+
+                        rowValues[9] = isDuplicate ? "DUPLICATE" : "Completed";
+
+                        chunk.add(rowValues);
+                        if (chunk.size() >= CHUNK_SIZE) {
+                            totalInserted += executeBatchChunk(insertSql, chunk, numColumns);
+                            chunk.clear();
+                        }
                     }
                 }
             }
+        } 
+        // 2. Excel Streaming Upload (.xlsx, .xls)
+        else {
+            try (InputStream is = file.getInputStream();
+                 Workbook workbook = WorkbookFactory.create(is)) {
 
-            @Override
-            public int getBatchSize() {
-                return batchParams.size();
+                Sheet sheet = workbook.getSheetAt(0);
+                if (sheet == null || sheet.getPhysicalNumberOfRows() <= 1) {
+                    result.put("insertedRows", 0);
+                    result.put("failedRows", 0);
+                    return result;
+                }
+
+                Row headerRow = sheet.getRow(0);
+                Map<String, Integer> colMap = new HashMap<>();
+                for (int c = 0; c < headerRow.getLastCellNum(); c++) {
+                    Cell cell = headerRow.getCell(c);
+                    if (cell != null) {
+                        String name = getFastCellValue(cell);
+                        if (name != null) colMap.put(mapCsvColumnToDb(name), c);
+                    }
+                }
+
+                int lastRow = sheet.getLastRowNum();
+                for (int r = 1; r <= lastRow; r++) {
+                    Row row = sheet.getRow(r);
+                    if (row == null) continue;
+
+                    Object[] rowValues = new Object[numColumns];
+                    boolean hasData = false;
+                    String surname = "";
+                    String otherName = "";
+
+                    for (int i = 0; i < numColumns; i++) {
+                        String col = DB_COLUMNS[i];
+                        if ("ENTRY_TIME".equals(col)) rowValues[i] = currentTime;
+                        else if ("ENTRY_USER".equals(col)) rowValues[i] = effectiveUser;
+                        else if ("DEL_FLAG".equals(col)) rowValues[i] = "N";
+                        else if ("RECORD_SOURCE".equals(col)) rowValues[i] = "EXCEL_UP";
+                        else if ("RECORD_STATUS".equals(col)) rowValues[i] = "Completed";
+                        else {
+                            Integer cIdx = colMap.get(col);
+                            if (cIdx != null) {
+                                String val = getCellFast(row, cIdx);
+                                if (val != null) {
+                                    hasData = true;
+                                    rowValues[i] = val;
+                                    if ("SURNAME".equals(col)) surname = val.toLowerCase();
+                                    if ("OTHER_NAME".equals(col)) otherName = val.toLowerCase();
+                                }
+                            }
+                        }
+                    }
+
+                    if (hasData) {
+                        String compositeKey = surname + "|" + otherName;
+                        boolean isDuplicate = false;
+                        if (!surname.isEmpty() && seenInBatch.contains(compositeKey)) {
+                            isDuplicate = true;
+                        } else {
+                            seenInBatch.add(compositeKey);
+                        }
+
+                        if (!isDuplicate && !surname.isEmpty()) {
+                            try {
+                                Integer count = jdbcTemplate.queryForObject(
+                                    "SELECT COUNT(*) FROM BRECON.FACTA_TRANSCATION_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'Completed') <> 'DUPLICATE' AND LOWER(TRIM(SURNAME)) = ? AND LOWER(TRIM(NVL(OTHER_NAME, ''))) = ?",
+                                    Integer.class, surname, otherName
+                                );
+                                if (count != null && count > 0) isDuplicate = true;
+                            } catch (Exception ignored) {}
+                        }
+
+                        rowValues[9] = isDuplicate ? "DUPLICATE" : "Completed";
+
+                        chunk.add(rowValues);
+                        if (chunk.size() >= CHUNK_SIZE) {
+                            totalInserted += executeBatchChunk(insertSql, chunk, numColumns);
+                            chunk.clear();
+                        }
+                    }
+                }
             }
-        });
+        }
 
-        logger.info("Successfully inserted {} records into BRECON.FACTA_TRANSCATION_DATA", updateCounts.length);
-        return updateCounts.length;
+        // Flush remaining chunk
+        if (!chunk.isEmpty()) {
+            totalInserted += executeBatchChunk(insertSql, chunk, numColumns);
+            chunk.clear();
+        }
+
+        result.put("insertedRows", totalInserted);
+        result.put("failedRows", totalFailed);
+        return result;
     }
 
+    private String getCellFast(Row row, Integer idx) {
+        if (row == null || idx == null || idx < 0) return null;
+        Cell cell = row.getCell(idx, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+        return getFastCellValue(cell);
+    }
+
+  
+    private int executeBatchChunk(String sql, List<Object[]> batch, int numColumns) {
+        int[] counts = jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                Object[] row = batch.get(i);
+                for (int colIndex = 0; colIndex < numColumns; colIndex++) {
+                    Object val = (colIndex < row.length) ? row[colIndex] : null;
+                    if (val == null) {
+                        ps.setNull(colIndex + 1, Types.VARCHAR);
+                    } else if (val instanceof Timestamp) {
+                        ps.setTimestamp(colIndex + 1, (Timestamp) val);
+                    } else if (val instanceof java.sql.Date) {
+                        ps.setDate(colIndex + 1, (java.sql.Date) val);
+                    } else {
+                        ps.setString(colIndex + 1, val.toString());
+                    }
+                }
+            }
+            @Override
+            public int getBatchSize() {
+                return batch.size();
+            }
+        });
+        return counts.length;
+    }
+    
+    // =========================================================================
+    // DASHBOARD & QUEUE METHODS
+    // =========================================================================
     public Map<String, Object> getFatcaDashboardData() {
         Map<String, Object> data = new HashMap<>();
-
         int total = 0, pending = 0, completed = 0, error = 0;
         try {
             Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM BRECON.FACTA_TRANSCATION_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y'", Integer.class);
+                "SELECT COUNT(*) FROM BRECON.FACTA_TRANSCATION_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'Completed') <> 'DUPLICATE'", Integer.class);
             total = count != null ? count : 0;
 
             List<Map<String, Object>> statusList = jdbcTemplate.queryForList(
-                "SELECT NVL(RECORD_STATUS, 'PENDING') AS STAT, COUNT(*) AS CNT " +
-                "FROM BRECON.FACTA_TRANSCATION_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y' GROUP BY NVL(RECORD_STATUS, 'PENDING')"
+                "SELECT NVL(RECORD_STATUS, 'Completed') AS STAT, COUNT(*) AS CNT " +
+                "FROM BRECON.FACTA_TRANSCATION_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'Completed') <> 'DUPLICATE' GROUP BY NVL(RECORD_STATUS, 'Completed')"
             );
 
             for (Map<String, Object> r : statusList) {
@@ -323,7 +372,7 @@ public class FatcaManagementService {
                 else pending += cnt;
             }
         } catch (Exception ex) {
-            logger.warn("Querying FACTA_TRANSCATION_DATA counts: {}", ex.getMessage());
+            logger.warn("Querying FATCA counts: {}", ex.getMessage());
         }
 
         data.put("totalRecords", total);
@@ -336,54 +385,104 @@ public class FatcaManagementService {
             records = jdbcTemplate.queryForList(
                 "SELECT TO_CHAR(TRN_ID) AS REF_NO, TO_CHAR(TRN_ID) AS UNIQUE_REF_ID, SURNAME AS ENTITY_NAME, " +
                 "TO_CHAR(ENTRY_TIME, 'YYYY-MM-DD HH24:MI:SS') AS UPLOAD_DATE, " +
-                "NVL(RECORD_STATUS, 'Pending') AS STATUS, FOREIGN_AMOUNT AS AMOUNT_ORG " +
+                "NVL(RECORD_STATUS, 'Completed') AS STATUS, FOREIGN_AMOUNT AS AMOUNT_ORG " +
                 "FROM BRECON.FACTA_TRANSCATION_DATA " +
-                "WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND ROWNUM <= 100 ORDER BY ENTRY_TIME DESC"
+                "WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'Completed') <> 'DUPLICATE' AND ROWNUM <= 100 ORDER BY ENTRY_TIME DESC"
             );
         } catch (Exception ex) {
-            logger.warn("Querying FACTA_TRANSCATION_DATA records: {}", ex.getMessage());
+            logger.warn("Querying FATCA records: {}", ex.getMessage());
         }
         data.put("records", records);
-
         return data;
+    }
+
+    public List<Map<String, Object>> getFatcaDuplicateRecords() {
+        String sql = "SELECT TRN_ID AS DUP_ID, BRN AS ACCOUNT_NUMBER, RES_COUNTRY_CODE AS COUNTRY_CODE, " +
+                     "       PASSPORT_NO AS TIN, SURNAME AS FIRST_NAME, OTHER_NAME AS LAST_NAME, " +
+                     "       FOREIGN_AMOUNT AS ACCOUNT_BALANCE, FOREIGN_CURR AS CURRENCY_CODE, " +
+                     "       TO_CHAR(TRN_ID) AS REF_NO, SURNAME AS ENTITY_NAME, FOREIGN_AMOUNT AS AMOUNT_ORG, " +
+                     "       'File_Upload' AS FILE_NAME, 'PENDING' AS STATUS " +
+                     "FROM BRECON.FACTA_TRANSCATION_DATA " +
+                     "WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND RECORD_STATUS = 'DUPLICATE'";
+        try {
+            return jdbcTemplate.queryForList(sql);
+        } catch (Exception e) {
+            logger.error("Error loading FATCA duplicate queue", e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Transactional
+    public boolean rectifyFatcaDuplicate(String dupId, String accountNumber, String firstName, 
+                                        String lastName, String countryCode, String tin, 
+                                        BigDecimal balance, String currency, String status) {
+        try {
+            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA " +
+                         "SET BRN = ?, SURNAME = ?, OTHER_NAME = ?, RES_COUNTRY_CODE = ?, " +
+                         "    PASSPORT_NO = ?, FOREIGN_AMOUNT = ?, FOREIGN_CURR = ?, RECORD_STATUS = ? " +
+                         "WHERE TRN_ID = ?";
+            int updated = jdbcTemplate.update(sql, accountNumber, firstName, lastName, 
+                                              countryCode, tin, balance, currency, status, dupId);
+            return updated > 0;
+        } catch (Exception e) {
+            logger.error("Error rectifying FATCA duplicate", e);
+            return false;
+        }
+    }
+
+    @Transactional
+    public boolean deleteFatcaDuplicate(String dupId) {
+        try {
+            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA SET DEL_FLAG = 'Y' WHERE TRN_ID = ?";
+            return jdbcTemplate.update(sql, dupId) > 0;
+        } catch (Exception e) {
+            logger.error("Error deleting FATCA duplicate record", e);
+            return false;
+        }
+    }
+
+    @Transactional
+    public boolean deleteAllFatcaDuplicates() {
+        try {
+            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA SET DEL_FLAG = 'Y' WHERE RECORD_STATUS = 'DUPLICATE'";
+            jdbcTemplate.update(sql);
+            return true;
+        } catch (Exception e) {
+            logger.error("Error clearing all FATCA duplicate records", e);
+            return false;
+        }
     }
 
     @Transactional
     public boolean updateFatcaRecord(String refNo, String status, String userId) {
         try {
-            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA " +
-                         "SET RECORD_STATUS = ? " +
-                         "WHERE TRN_ID = ? AND NVL(DEL_FLAG, 'N') <> 'Y'";
-
-            int rowsUpdated = jdbcTemplate.update(sql, status, refNo);
-            return rowsUpdated > 0;
+            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA SET RECORD_STATUS = ? WHERE TRN_ID = ? AND NVL(DEL_FLAG, 'N') <> 'Y'";
+            return jdbcTemplate.update(sql, status, refNo) > 0;
         } catch (Exception e) {
-            logger.error("Error updating FATCA record", e);
             return false;
         }
     }
 
     public Map<String, Object> getFatcaRecordDetails(String refNo) {
-        String sql = "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE TRN_ID = ? AND ROWNUM = 1";
         try {
-            return jdbcTemplate.queryForMap(sql, refNo);
+            return jdbcTemplate.queryForMap("SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE TRN_ID = ? AND ROWNUM = 1", refNo);
         } catch (Exception ex) {
             return jdbcTemplate.queryForMap("SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE ROWNUM = 1");
         }
     }
 
-    // Client-Matched OECD FATCA XML Generator for all records
+    // =========================================================================
+    // OECD XML GENERATORS & EXPORT
+    // =========================================================================
     public String generateFatcaXml() {
         List<Map<String, Object>> list = new ArrayList<>();
         try {
-            String sql = "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y'";
-            list = jdbcTemplate.queryForList(sql);
+            list = jdbcTemplate.queryForList("SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'Completed') <> 'DUPLICATE'");
         } catch (Exception e) {
-            logger.error("Error reading FATCA records for XML generation", e);
+            logger.error("Error reading FATCA records for XML", e);
         }
 
-        String currentTimeStamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new java.util.Date());
-
+        String currentTimeStamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
         StringBuilder xml = new StringBuilder();
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.append("<ftc:FATCA_OECD xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" ")
@@ -399,7 +498,6 @@ public class FatcaManagementService {
         xml.append("    <sfa:ReportingPeriod>2025-12-31</sfa:ReportingPeriod>\n");
         xml.append("    <sfa:Timestamp>").append(currentTimeStamp).append("</sfa:Timestamp>\n");
         xml.append("  </ftc:MessageSpec>\n");
-
         xml.append("  <ftc:FATCA>\n");
         xml.append("    <ftc:ReportingFI>\n");
         xml.append("      <sfa:ResCountryCode>MU</sfa:ResCountryCode>\n");
@@ -414,7 +512,6 @@ public class FatcaManagementService {
         xml.append("        <ftc:DocRefId>8H4YD6.99999.BR.480.2025.RF1</ftc:DocRefId>\n");
         xml.append("      </ftc:DocSpec>\n");
         xml.append("    </ftc:ReportingFI>\n");
-
         xml.append("    <ftc:ReportingGroup>\n");
         for (int i = 0; i < list.size(); i++) {
             Map<String, Object> r = list.get(i);
@@ -461,22 +558,18 @@ public class FatcaManagementService {
         xml.append("    </ftc:ReportingGroup>\n");
         xml.append("  </ftc:FATCA>\n");
         xml.append("</ftc:FATCA_OECD>");
-
         return xml.toString();
     }
 
-    // Client-Matched OECD FATCA XML Generator for a single record
     public String generateSingleFatcaXml(String refNo) {
         Map<String, Object> row;
         try {
-            row = jdbcTemplate.queryForMap(
-                "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE TRN_ID = ? AND ROWNUM = 1", refNo);
+            row = jdbcTemplate.queryForMap("SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE TRN_ID = ? AND ROWNUM = 1", refNo);
         } catch (Exception ex) {
-            row = jdbcTemplate.queryForMap(
-                "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE ROWNUM = 1");
+            row = jdbcTemplate.queryForMap("SELECT * FROM BRECON.FACTA_TRANSCATION_DATA WHERE ROWNUM = 1");
         }
 
-        String currentTimeStamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new java.util.Date());
+        String currentTimeStamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
         String trnId = String.valueOf(row.getOrDefault("TRN_ID", "1"));
         String brn = escapeXml(row.get("BRN"));
         String resCountry = escapeXml(row.get("RES_COUNTRY_CODE"));
@@ -493,7 +586,6 @@ public class FatcaManagementService {
         xml.append("<ftc:FATCA_OECD xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" ")
            .append("xmlns:ftc=\"urn:oecd:ties:fatca:v2\" xmlns:sfa=\"urn:oecd:ties:stffatcatypes:v2\" ")
            .append("version=\"2.0\" xsi:schemaLocation=\"urn:oecd:ties:fatca:v2 FatcaXML_v2.0.xsd\">\n");
-
         xml.append("  <ftc:MessageSpec>\n");
         xml.append("    <sfa:SendingCompanyIN>8H4YD6.99999.BR.480</sfa:SendingCompanyIN>\n");
         xml.append("    <sfa:TransmittingCountry>MU</sfa:TransmittingCountry>\n");
@@ -503,7 +595,6 @@ public class FatcaManagementService {
         xml.append("    <sfa:ReportingPeriod>2025-12-31</sfa:ReportingPeriod>\n");
         xml.append("    <sfa:Timestamp>").append(currentTimeStamp).append("</sfa:Timestamp>\n");
         xml.append("  </ftc:MessageSpec>\n");
-
         xml.append("  <ftc:FATCA>\n");
         xml.append("    <ftc:ReportingFI>\n");
         xml.append("      <sfa:ResCountryCode>MU</sfa:ResCountryCode>\n");
@@ -518,7 +609,6 @@ public class FatcaManagementService {
         xml.append("        <ftc:DocRefId>8H4YD6.99999.BR.480.2025.RF1</ftc:DocRefId>\n");
         xml.append("      </ftc:DocSpec>\n");
         xml.append("    </ftc:ReportingFI>\n");
-
         xml.append("    <ftc:ReportingGroup>\n");
         xml.append("      <ftc:AccountReport>\n");
         xml.append("        <ftc:DocSpec>\n");
@@ -550,77 +640,11 @@ public class FatcaManagementService {
         xml.append("    </ftc:ReportingGroup>\n");
         xml.append("  </ftc:FATCA>\n");
         xml.append("</ftc:FATCA_OECD>");
-
         return xml.toString();
     }
 
     private String escapeXml(Object val) {
         if (val == null) return "";
-        return val.toString()
-                  .replace("&", "&amp;")
-                  .replace("<", "&lt;")
-                  .replace(">", "&gt;")
-                  .replace("\"", "&quot;")
-                  .replace("'", "&apos;");
-    }
-
-    // Fetch duplicate records (grouped by BRN and PASSPORT_NO)
-    public List<Map<String, Object>> getFatcaDuplicateRecords() {
-        String sql = "SELECT ROWNUM AS DUP_ID, BRN, RES_COUNTRY_CODE AS COUNTRY_CODE, " +
-                     "       PASSPORT_NO, SURNAME AS ENTITY_NAME, FOREIGN_AMOUNT AS AMOUNT_ORG, " +
-                     "       FOREIGN_CURR, TRN_ID AS REF_NO, 'Duplicate Key Match' AS FILE_NAME, 'PENDING' AS STATUS " +
-                     "FROM BRECON.FACTA_TRANSCATION_DATA " +
-                     "WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND (BRN, PASSPORT_NO) IN (" +
-                     "    SELECT BRN, PASSPORT_NO FROM BRECON.FACTA_TRANSCATION_DATA " +
-                     "    WHERE NVL(DEL_FLAG, 'N') <> 'Y' GROUP BY BRN, PASSPORT_NO HAVING COUNT(*) > 1" +
-                     ")";
-        try {
-            return jdbcTemplate.queryForList(sql);
-        } catch (Exception e) {
-            logger.error("Error loading FATCA duplicates", e);
-            return new ArrayList<>();
-        }
-    }
-
-    @Transactional
-    public boolean rectifyFatcaDuplicate(String dupId, String updatedStatus, String userId) {
-        try {
-            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA " +
-                         "SET RECORD_STATUS = ? " +
-                         "WHERE TRN_ID = ?";
-            int updated = jdbcTemplate.update(sql, updatedStatus, dupId);
-            return updated > 0;
-        } catch (Exception e) {
-            logger.error("Error rectifying FATCA duplicate", e);
-            return false;
-        }
-    }
-
-    @Transactional
-    public boolean deleteFatcaDuplicate(String dupId) {
-        try {
-            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA SET DEL_FLAG = 'Y' WHERE TRN_ID = ?";
-            int updated = jdbcTemplate.update(sql, dupId);
-            return updated > 0;
-        } catch (Exception e) {
-            logger.error("Error deleting FATCA duplicate", e);
-            return false;
-        }
-    }
-
-    @Transactional
-    public boolean deleteAllFatcaDuplicates() {
-        try {
-            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA SET DEL_FLAG = 'Y' " +
-                         "WHERE (BRN, PASSPORT_NO) IN (" +
-                         "    SELECT BRN, PASSPORT_NO FROM BRECON.FACTA_TRANSCATION_DATA " +
-                         "    WHERE NVL(DEL_FLAG, 'N') <> 'Y' GROUP BY BRN, PASSPORT_NO HAVING COUNT(*) > 1" +
-                         ")";
-            jdbcTemplate.update(sql);
-            return true;
-        } catch (Exception e) {
-            logger.error("Error clearing FATCA duplicates", e);
-            return false;
-        }
+        return val.toString().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
     }
 }

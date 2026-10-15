@@ -661,13 +661,49 @@ public class BRECONUploadController {
         }
     }
 
+ 
+    
+ // =========================================================================
+    // FATCA REPORTING ENDPOINTS (MIRRORS CRS WORKFLOW)
     // =========================================================================
-    // FATCA & EXISTING SERVICES
-    // =========================================================================
+
     @GetMapping("/getFatcaDashboardData")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> getFatcaDashboardData() {
-        return ResponseEntity.ok(fatcaService.getFatcaDashboardData());
+    public Map<String, Object> getFatcaDashboardData() {
+        Map<String, Object> data = new HashMap<>();
+        try {
+            List<Map<String, Object>> records = jdbcTemplate.queryForList(
+                "SELECT TRN_ID AS REF_NO, BRN, RES_COUNTRY_CODE, PASSPORT_NO, SURNAME, " +
+                "       OTHER_NAME, FOREIGN_AMOUNT, FOREIGN_CURR, TXN_TYPE, AMOUNT_MUR, " +
+                "       NVL(RECORD_STATUS, 'COMPLETED') AS STATUS, " +
+                "       TO_CHAR(ENTRY_TIME, 'YYYY-MM-DD HH24:MI:SS') AS UPLOAD_DATE " +
+                "FROM BRECON.FACTA_TRANSCATION_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'COMPLETED') <> 'DUPLICATE' " +
+                "ORDER BY ENTRY_TIME DESC"
+            );
+
+            data.put("records", records);
+            data.put("totalRecords", records.size());
+            data.put("pendingRecords", records.stream()
+                    .filter(r -> "PENDING".equalsIgnoreCase(String.valueOf(r.get("STATUS"))))
+                    .count());
+            data.put("completedRecords", records.stream()
+                    .filter(r -> "COMPLETED".equalsIgnoreCase(String.valueOf(r.get("STATUS"))))
+                    .count());
+            data.put("errorRecords", records.stream()
+                    .filter(r -> "ERROR".equalsIgnoreCase(String.valueOf(r.get("STATUS"))) 
+                            || "REJECTED".equalsIgnoreCase(String.valueOf(r.get("STATUS"))))
+                    .count());
+
+            return data;
+        } catch (Exception e) {
+            logger.error("Error fetching FATCA Dashboard Data", e);
+            data.put("records", Collections.emptyList());
+            data.put("totalRecords", 0);
+            data.put("pendingRecords", 0);
+            data.put("completedRecords", 0);
+            data.put("errorRecords", 0);
+            return data;
+        }
     }
 
     @PostMapping("/uploadFatcaFile")
@@ -677,36 +713,66 @@ public class BRECONUploadController {
             HttpServletRequest request) {
 
         Map<String, Object> res = new HashMap<>();
-        String userId = (String) request.getSession().getAttribute("USERID");
+        String userId = "SYSTEM";
+        if (request != null && request.getSession(false) != null) {
+            Object userObj = request.getSession(false).getAttribute("USERID");
+            if (userObj != null && !userObj.toString().trim().isEmpty()) {
+                userId = userObj.toString().trim();
+            }
+        }
+
+        if (file == null || file.isEmpty()) {
+            res.put("status", "ERROR");
+            res.put("message", "Please select a valid non-empty file to upload.");
+            return ResponseEntity.badRequest().body(res);
+        }
 
         try {
-            int inserted = fatcaService.uploadFatcaFile(file, userId);
+            Map<String, Object> uploadResult = fatcaService.uploadFatcaFile(file, userId);
+            int inserted = (int) uploadResult.getOrDefault("insertedRows", 0);
             res.put("status", "SUCCESS");
             res.put("insertedRows", inserted);
-            res.put("message", "Uploaded " + inserted + " records into BRECON.FACTA_TRANSCATION_DATA.");
+            res.put("message", "Uploaded and processed " + inserted + " record(s) into BRECON.FACTA_TRANSCATION_DATA.");
             return ResponseEntity.ok(res);
         } catch (Exception e) {
-            logger.error("FATCA upload failed", e);
+            logger.error("FATCA file upload failed", e);
             res.put("status", "ERROR");
-            res.put("message", e.getMessage());
+            res.put("message", e.getMessage() != null ? e.getMessage() : "Error processing FATCA upload.");
             return ResponseEntity.badRequest().body(res);
         }
     }
 
     @PostMapping("/updateFatcaRecord")
     @ResponseBody
+    @Transactional(propagation = Propagation.REQUIRED)
     public ResponseEntity<Map<String, Object>> updateFatcaRecord(
             @RequestParam("refNo") String refNo,
             @RequestParam("status") String status,
             HttpServletRequest request) {
 
         Map<String, Object> res = new HashMap<>();
-        String userId = (String) request.getSession().getAttribute("USERID");
-        boolean updated = fatcaService.updateFatcaRecord(refNo, status, userId);
 
-        res.put("status", updated ? "SUCCESS" : "ERROR");
-        res.put("message", updated ? "Record updated successfully" : "Failed to update record");
-        return ResponseEntity.ok(res);
+        if (refNo == null || refNo.trim().isEmpty() || status == null || status.trim().isEmpty()) {
+            res.put("status", "ERROR");
+            res.put("message", "Invalid Reference ID or Status provided.");
+            return ResponseEntity.badRequest().body(res);
+        }
+
+        try {
+            int updated = jdbcTemplate.update(
+                "UPDATE BRECON.FACTA_TRANSCATION_DATA SET RECORD_STATUS = ? WHERE TRN_ID = ? AND NVL(DEL_FLAG, 'N') <> 'Y'", 
+                status.trim().toUpperCase(), refNo
+            );
+
+            res.put("status", updated > 0 ? "SUCCESS" : "ERROR");
+            res.put("message", updated > 0 ? "Record updated successfully." : "Record with Ref No " + refNo + " not found.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            logger.error("Error updating FATCA record Ref No: {}", refNo, e);
+            res.put("status", "ERROR");
+            res.put("message", "Database Error: " + e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
     }
 
     @GetMapping("/getFatcaRecordDetails")
@@ -727,12 +793,16 @@ public class BRECONUploadController {
         try {
             String xmlContent = fatcaService.generateFatcaXml();
             response.setContentType("application/xml");
+            response.setCharacterEncoding("UTF-8");
             response.setHeader("Content-Disposition", 
                     "attachment; filename=\"FATCA_REPORT_" + System.currentTimeMillis() + ".xml\"");
-            response.getOutputStream().write(xmlContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            response.getOutputStream().write(xmlContent.getBytes(StandardCharsets.UTF_8));
             response.getOutputStream().flush();
         } catch (Exception e) {
-            logger.error("Error downloading FATCA XML", e);
+            logger.error("Error generating master FATCA XML", e);
+            try {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate FATCA XML: " + e.getMessage());
+            } catch (Exception ignored) {}
         }
     }
 
@@ -741,29 +811,38 @@ public class BRECONUploadController {
         try {
             String xmlContent = fatcaService.generateSingleFatcaXml(refNo);
             response.setContentType("application/xml");
+            response.setCharacterEncoding("UTF-8");
             response.setHeader("Content-Disposition", 
                     "attachment; filename=\"FATCA_" + refNo + ".xml\"");
-            response.getOutputStream().write(xmlContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            response.getOutputStream().write(xmlContent.getBytes(StandardCharsets.UTF_8));
             response.getOutputStream().flush();
         } catch (Exception e) {
-            logger.error("Error downloading single record XML for " + refNo, e);
+            logger.error("Error downloading individual FATCA XML for Ref No {}", refNo, e);
+            try {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate single FATCA XML: " + e.getMessage());
+            } catch (Exception ignored) {}
         }
     }
-    
+
+    // =========================================================================
+    // FATCA DUPLICATE RECTIFICATION & QUEUE ENDPOINTS
+    // =========================================================================
+
     @GetMapping("/getFatcaDuplicateRecords")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getFatcaDuplicateRecords() {
-        Map<String, Object> response = new HashMap<>();
+        Map<String, Object> res = new HashMap<>();
         try {
-            List<Map<String, Object>> duplicates = fatcaService.getFatcaDuplicateRecords();
-            response.put("status", "SUCCESS");
-            response.put("records", duplicates);
-            return ResponseEntity.ok(response);
+            List<Map<String, Object>> records = fatcaService.getFatcaDuplicateRecords();
+            res.put("status", "SUCCESS");
+            res.put("records", records);
+            return ResponseEntity.ok(res);
         } catch (Exception e) {
             logger.error("Error fetching FATCA duplicate records", e);
-            response.put("status", "ERROR");
-            response.put("records", new ArrayList<>());
-            return ResponseEntity.ok(response);
+            res.put("status", "ERROR");
+            res.put("records", Collections.emptyList());
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
         }
     }
 
@@ -771,31 +850,77 @@ public class BRECONUploadController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> rectifyFatcaDuplicate(
             @RequestParam("dupId") String dupId,
-            @RequestParam("updatedStatus") String updatedStatus) {
+            @RequestParam("accountNumber") String accountNumber,
+            @RequestParam("firstName") String firstName,
+            @RequestParam(value = "lastName", required = false) String lastName,
+            @RequestParam("countryCode") String countryCode,
+            @RequestParam("tin") String tin,
+            @RequestParam("accountBalance") BigDecimal accountBalance,
+            @RequestParam("currencyCode") String currencyCode,
+            @RequestParam("status") String status) {
+        
         Map<String, Object> res = new HashMap<>();
-        boolean success = fatcaService.rectifyFatcaDuplicate(dupId, updatedStatus, null);
-        res.put("status", success ? "SUCCESS" : "ERROR");
-        res.put("message", success ? "Duplicate record rectified successfully" : "Failed to rectify duplicate");
-        return ResponseEntity.ok(res);
+        try {
+            boolean success = fatcaService.rectifyFatcaDuplicate(dupId, accountNumber, firstName, lastName, countryCode, tin, accountBalance, currencyCode, status);
+            if (success) {
+                res.put("status", "SUCCESS");
+                res.put("message", "Duplicate record rectified and promoted successfully.");
+            } else {
+                res.put("status", "ERROR");
+                res.put("message", "Record not found or update failed.");
+            }
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            logger.error("Error rectifying FATCA duplicate ID: {}", dupId, e);
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
     }
 
     @PostMapping("/deleteFatcaDuplicate")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> deleteFatcaDuplicate(@RequestParam("dupId") String dupId) {
         Map<String, Object> res = new HashMap<>();
-        boolean success = fatcaService.deleteFatcaDuplicate(dupId);
-        res.put("status", success ? "SUCCESS" : "ERROR");
-        return ResponseEntity.ok(res);
+        try {
+            boolean success = fatcaService.deleteFatcaDuplicate(dupId);
+            if (success) {
+                res.put("status", "SUCCESS");
+                res.put("message", "Duplicate record deleted successfully.");
+            } else {
+                res.put("status", "ERROR");
+                res.put("message", "Record not found.");
+            }
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            logger.error("Error deleting FATCA duplicate ID: {}", dupId, e);
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
     }
 
     @PostMapping("/deleteAllFatcaDuplicates")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> deleteAllFatcaDuplicates() {
         Map<String, Object> res = new HashMap<>();
-        boolean success = fatcaService.deleteAllFatcaDuplicates();
-        res.put("status", success ? "SUCCESS" : "ERROR");
-        return ResponseEntity.ok(res);
+        try {
+            boolean success = fatcaService.deleteAllFatcaDuplicates();
+            res.put("status", "SUCCESS");
+            res.put("message", "All duplicate records cleared successfully.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            logger.error("Error clearing all FATCA duplicates", e);
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
     }
+
+   
+
+   
+
     
     
     @Autowired
@@ -1100,6 +1225,40 @@ public class BRECONUploadController {
         }
     }
     
+    @GetMapping("/getCrsRecordDetails")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getCrsRecordDetails(@RequestParam("reportId") Long reportId) {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            // First check in active CRS reports
+            List<Map<String, Object>> records = jdbcTemplate.queryForList(
+                "SELECT * FROM BRECON.CRS_REPORT_DATA WHERE REPORT_ID = ?", reportId
+            );
+
+            // If not found, check in duplicate queue table
+            if (records == null || records.isEmpty()) {
+                records = jdbcTemplate.queryForList(
+                    "SELECT DUP_ID AS REPORT_ID, ACCOUNT_NUMBER, RESIDENCE_COUNTRY, " +
+                    "       TIN, HOLDER_NAME AS FIRST_NAME, ACCOUNT_BALANCE, CURRENCY_CODE, " +
+                    "       STATUS FROM BRECON.CRS_DUPLICATE_RECORDS WHERE DUP_ID = ?", reportId
+                );
+            }
+
+            if (records != null && !records.isEmpty()) {
+                res.put("status", "SUCCESS");
+                res.put("record", records.get(0));
+                return ResponseEntity.ok(res);
+            } else {
+                res.put("status", "ERROR");
+                res.put("message", "Record not found with ID: " + reportId);
+                return ResponseEntity.badRequest().body(res);
+            }
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
     
     //
     
