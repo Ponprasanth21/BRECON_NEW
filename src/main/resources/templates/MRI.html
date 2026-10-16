@@ -6,9 +6,6 @@
     <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
     <title>BRECON | MRA</title>
 
-    <link rel="icon" type="image/png"
-          th:href="@{/images/favicon_bob.png}">
-
     <style>
         * { box-sizing: border-box; }
 
@@ -30,7 +27,7 @@
             border-radius: 12px;
             box-shadow: 0 8px 28px rgba(25,50,65,.12);
             overflow: hidden;
-             margin-top: 37px; 
+            margin-top: 37px; 
         }
 
         .mri-title {
@@ -40,6 +37,38 @@
             text-align: center;
             font-size: 17px;
             font-weight: bold;
+        }
+
+        /* Tab Navigation Header Styles */
+        .mri-tabs {
+            display: flex;
+            background: #e9eef2;
+            border-bottom: 1px solid #d5dfe5;
+        }
+
+        .mri-tab {
+            flex: 1;
+            padding: 14px;
+            text-align: center;
+            background: none;
+            border: none;
+            font-size: 14px;
+            font-weight: bold;
+            color: #425466;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            border-bottom: 3px solid transparent;
+        }
+
+        .mri-tab:hover {
+            background: #e2e8ed;
+            color: #315f73;
+        }
+
+        .mri-tab.active {
+            background: #fff;
+            color: #315f73;
+            border-bottom-color: #315f73;
         }
 
         .mri-content { padding: 18px; }
@@ -344,7 +373,13 @@
     <section class="mri-card">
 
         <div class="mri-title">
-            MRA — Management Reporting Interface
+            MRA — Mauritius Revenue Authority
+        </div>
+
+        <!-- SFX / SFT Tab Header Navigation -->
+        <div class="mri-tabs">
+            <button type="button" class="mri-tab active" data-tab="SFX">SFX Management</button>
+            <button type="button" class="mri-tab" data-tab="SFT">SFT Management</button>
         </div>
 
         <div class="mri-content">
@@ -417,7 +452,7 @@
             <div class="mri-notice" id="mriNotice" role="status"></div>
 
             <div class="mri-list-heading">
-                <span><strong>MRA Records List</strong></span>
+                <span><strong>MRA Records List (<span id="mriCurrentTabLabel">SFX</span>)</strong></span>
                 <span>Total: <strong id="mriVisibleCount">0</strong> records</span>
             </div>
 
@@ -512,10 +547,14 @@
     const uploadInput = document.getElementById("mriUploadInput");
     const notice = document.getElementById("mriNotice");
     const modal = document.getElementById("mriModal");
+    const tabButtons = document.querySelectorAll(".mri-tab");
 
-    // Demo data only. Replace with records from the backend API.
-    let records = [];
-    let nextId = 1;
+    // Separate datasets for SFX and SFT tabs
+    let activeTab = "SFX";
+    const dataStores = {
+        SFX: { records: [], nextId: 1 },
+        SFT: { records: [], nextId: 1 }
+    };
 
     function showNotice(text) {
         notice.textContent = text;
@@ -530,11 +569,11 @@
     }
 
     function filteredRecords() {
-        const search = document.getElementById("mriSearch")
-            .value.toLowerCase().trim();
+        const store = dataStores[activeTab];
+        const search = document.getElementById("mriSearch").value.toLowerCase().trim();
         const status = document.getElementById("mriStatusFilter").value;
 
-        return records.filter(r =>
+        return store.records.filter(r =>
             (r.name.toLowerCase().includes(search) ||
              r.ref.toLowerCase().includes(search)) &&
             (!status || r.status === status)
@@ -542,14 +581,17 @@
     }
 
     function render() {
+        const store = dataStores[activeTab];
         const list = filteredRecords();
-        document.getElementById("mriTotal").textContent = records.length;
+
+        document.getElementById("mriCurrentTabLabel").textContent = activeTab;
+        document.getElementById("mriTotal").textContent = store.records.length;
         document.getElementById("mriPending").textContent =
-            records.filter(r => r.status === "Pending").length;
+            store.records.filter(r => r.status === "Pending").length;
         document.getElementById("mriCompleted").textContent =
-            records.filter(r => r.status === "Completed").length;
+            store.records.filter(r => r.status === "Completed").length;
         document.getElementById("mriErrors").textContent =
-            records.filter(r => r.status === "Error").length;
+            store.records.filter(r => r.status === "Error").length;
         document.getElementById("mriVisibleCount").textContent = list.length;
 
         body.replaceChildren();
@@ -559,7 +601,7 @@
             const cell = document.createElement("td");
             cell.colSpan = 8;
             cell.className = "mri-empty";
-            cell.textContent = "No MRA records found.";
+            cell.textContent = `No ${activeTab} records found.`;
             row.appendChild(cell);
             body.appendChild(row);
             return;
@@ -567,10 +609,10 @@
 
         list.forEach((r, i) => {
             const statusClass = {
-                Pending: "mra-pending",
-                Completed: "mra-completed",
-                Error: "mra-error"
-            }[r.status] || "mra-pending";
+                Pending: "mri-pending",
+                Completed: "mri-completed",
+                Error: "mri-error"
+            }[r.status] || "mri-pending";
 
             const row = document.createElement("tr");
             row.innerHTML = `
@@ -596,7 +638,7 @@
         })[ch]);
 
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<MRIRecord>
+<MRIRecord type="${activeTab}">
     <FileName>${xmlEscape(r.name)}</FileName>
     <ReferenceID>${xmlEscape(r.ref)}</ReferenceID>
     <UploadDate>${xmlEscape(r.date)}</UploadDate>
@@ -610,7 +652,7 @@
 
         const a = document.createElement("a");
         a.href = url;
-        a.download = r.name.replace(/\.[^.]+$/, "") + ".xml";
+        a.download = `${activeTab}_` + r.name.replace(/\.[^.]+$/, "") + ".xml";
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -622,7 +664,8 @@
     }
 
     function openEdit(id) {
-        const r = records.find(item => item.id === id);
+        const store = dataStores[activeTab];
+        const r = store.records.find(item => item.id === id);
         if (!r) return;
 
         document.getElementById("mriEditId").value = r.id;
@@ -633,16 +676,30 @@
         modal.classList.add("open");
     }
 
+    // Tab switching event listener
+    tabButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            tabButtons.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            activeTab = btn.dataset.tab;
+            notice.style.display = "none";
+            document.getElementById("mriSearch").value = "";
+            document.getElementById("mriStatusFilter").value = "";
+            render();
+        });
+    });
+
     document.getElementById("mriUploadBtn").addEventListener("click", () => {
         uploadInput.click();
     });
 
     uploadInput.addEventListener("change", () => {
+        const store = dataStores[activeTab];
         Array.from(uploadInput.files || []).forEach(file => {
-            records.push({
-                id: nextId++,
+            store.records.push({
+                id: store.nextId++,
                 name: file.name,
-                ref: "MRI-" + Date.now() + "-" + nextId,
+                ref: `${activeTab}-` + Date.now() + "-" + store.nextId,
                 date: new Date().toLocaleString(),
                 count: 0,
                 status: "Pending",
@@ -653,8 +710,8 @@
         uploadInput.value = "";
         render();
 
-        if (records.length) {
-            showNotice("File added to the demonstration list. Backend upload is not yet connected.");
+        if (store.records.length) {
+            showNotice(`File added to ${activeTab} demonstration list. Backend upload is not yet connected.`);
         }
     });
 
@@ -665,7 +722,8 @@
         if (edit) openEdit(Number(edit.dataset.edit));
 
         if (xml) {
-            const r = records.find(item => item.id === Number(xml.dataset.xml));
+            const store = dataStores[activeTab];
+            const r = store.records.find(item => item.id === Number(xml.dataset.xml));
             if (r) downloadXml(r);
         }
     });
@@ -673,8 +731,9 @@
     document.getElementById("mriEditForm").addEventListener("submit", event => {
         event.preventDefault();
 
+        const store = dataStores[activeTab];
         const id = Number(document.getElementById("mriEditId").value);
-        const r = records.find(item => item.id === id);
+        const r = store.records.find(item => item.id === id);
         if (!r) return;
 
         r.name = document.getElementById("mriEditName").value.trim();
@@ -690,7 +749,7 @@
     document.getElementById("mriDownloadAll").addEventListener("click", () => {
         const list = filteredRecords();
         if (!list.length) {
-            showNotice("No MRA records to download.");
+            showNotice(`No ${activeTab} records to download.`);
             return;
         }
         list.forEach(downloadXml);
@@ -699,7 +758,7 @@
     document.getElementById("mriExtract").addEventListener("click", () => {
         const list = filteredRecords();
         if (!list.length) {
-            showNotice("No MRI records to extract.");
+            showNotice(`No ${activeTab} records to extract.`);
             return;
         }
 
@@ -719,7 +778,7 @@
 
         const a = document.createElement("a");
         a.href = url;
-        a.download = "MRI_Extract.csv";
+        a.download = `${activeTab}_MRI_Extract.csv`;
         document.body.appendChild(a);
         a.click();
         a.remove();
