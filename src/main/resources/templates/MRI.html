@@ -1,810 +1,1197 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
-    <title>BRECON | MRA</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRECON | MRA Management</title>
+
+    <script th:src="@{/js/jquery.min.js}"></script>
+    <script th:src="@{/js/jquery-ui.min.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
-        * { box-sizing: border-box; }
+        :root {
+            --brand: #386b7e;
+            --brand-dark: #2c5667;
+            --ink: #263746;
+            --text: #111111;
+            --muted: #6b7a88;
+            --line: #d5dce2;
+            --head-bg: #e9edf1;
+            --head-hover: #dce3e9;
+            --row-alt: #f7f9fb;
+            --row-hover: #eaf2f5;
+        }
 
-        body {
+        html, body {
             margin: 0;
-            background: #f1f5f7;
-            color: #111;
-            font-family: Arial, Helvetica, sans-serif;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background: #f3f6f8;
         }
 
-        .mri-page {
-            width: 90%;
-            max-width: 1550px;
-            margin: 30px auto;
+        .source-data-wrapper {
+            width: 98%;
+            max-width: 1840px;
+            min-height: calc(100vh - 105px);
+            margin: 34px auto 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 35px;
         }
 
-        .mri-card {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 8px 28px rgba(25,50,65,.12);
-            overflow: hidden;
-            margin-top: 37px; 
+        .source-data-card {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(20, 40, 55, 0.10);
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
         }
 
-        .mri-title {
-            padding: 15px 20px;
-            background: linear-gradient(135deg,#386b7e,#2c5667);
-            color: #fff;
-            text-align: center;
-            font-size: 17px;
+        .source-data-header {
+            height: 38px;
+            background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
             font-weight: bold;
+            letter-spacing: .3px;
+            border-radius: 8px 8px 0 0;
         }
+        .source-data-header i { margin-right: 8px; }
 
-        /* Tab Navigation Header Styles */
-        .mri-tabs {
+        /* Tabs Header */
+        .mra-tabs {
             display: flex;
             background: #e9eef2;
-            border-bottom: 1px solid #d5dfe5;
+            border-bottom: 1px solid var(--line);
         }
-
-        .mri-tab {
+        .mra-tab {
             flex: 1;
-            padding: 14px;
+            padding: 13px;
             text-align: center;
             background: none;
             border: none;
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: bold;
-            color: #425466;
+            color: var(--muted);
             cursor: pointer;
             transition: all 0.2s ease-in-out;
             border-bottom: 3px solid transparent;
         }
+        .mra-tab:hover { background: #e2e8ed; color: var(--brand); }
+        .mra-tab.active { background: #fff; color: var(--brand); border-bottom-color: var(--brand); }
 
-        .mri-tab:hover {
-            background: #e2e8ed;
-            color: #315f73;
+        .source-data-table-wrapper {
+            padding: 14px 16px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .mri-tab.active {
-            background: #fff;
-            color: #315f73;
-            border-bottom-color: #315f73;
-        }
-
-        .mri-content { padding: 18px; }
-
-        .mri-summary {
+        /* Summary Cards */
+        .crs-summary {
             display: grid;
-            grid-template-columns: repeat(4,minmax(0,1fr));
-            gap: 14px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
         }
-
-        .mri-stat {
+        .crs-stat {
             display: flex;
             align-items: center;
-            gap: 13px;
-            padding: 17px;
-            border: 1px solid #dce4e9;
-            border-radius: 9px;
-            background: #fff;
+            gap: 10px;
+            padding: 10px 14px;
+            background: #ffffff;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            transition: transform 0.15s ease;
         }
-
-        .mri-stat-icon {
-            width: 43px;
-            height: 43px;
+        .crs-stat:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .crs-stat-icon {
+            width: 34px;
+            height: 34px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 9px;
-            background: #e4eef3;
-            color: #315f73;
-            font-size: 21px;
+            border-radius: 6px;
+            background: #e3edf2;
+            color: var(--brand);
+            font-size: 15px;
         }
+        .crs-stat-label { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+        .crs-stat-value { font-size: 18px; font-weight: bold; color: var(--ink); line-height: 1; }
 
-        .mri-stat-label {
-            margin-bottom: 6px;
-            font-size: 12px;
-        }
-
-        .mri-stat-value {
-            font-size: 23px;
-            font-weight: bold;
-        }
-
-        .mri-toolbar {
+        /* Toolbar & Filters */
+        .crs-filter-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
             flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 16px;
         }
-
-        .mri-search {
+        .crs-search-wrap {
+            position: relative;
             flex: 1;
-            min-width: 220px;
-            max-width: 400px;
+            min-width: 280px;
+            max-width: 380px;
         }
-
-        .mri-search input,
-        .mri-filter select {
+        .crs-search-wrap i {
+            position: absolute;
+            left: 11px;
+            top: 11px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .crs-search-wrap input {
             width: 100%;
-            height: 38px;
-            padding: 8px 11px;
-            border: 1px solid #cbd5dc;
+            height: 34px;
+            padding: 4px 8px 4px 30px;
+            border: 1px solid var(--line);
             border-radius: 5px;
-            background: #fff;
-            color: #111;
-            font-size: 13px;
+            font-size: 12.5px;
+            outline: none;
+            background: #ffffff;
+        }
+        .crs-filter-bar select {
+            height: 34px;
+            min-width: 170px;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 5px;
+            background: #ffffff;
+            font-size: 12.5px;
+            color: var(--ink);
         }
 
-        .mri-actions {
+        .crs-toolbar-actions {
             display: flex;
+            align-items: center;
+            gap: 6px;
             flex-wrap: wrap;
-            gap: 8px;
         }
-
-        .mri-btn {
-            min-height: 36px;
+        .crs-toolbar-btn {
+            height: 34px;
+            padding: 0 14px;
+            border: 1px solid var(--line);
+            border-radius: 5px;
+            background: #ffffff;
+            color: var(--ink);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 7px;
-            padding: 8px 13px;
-            border: 1px solid #315f73;
-            border-radius: 5px;
-            background: #fff;
-            color: #264e61;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
+            gap: 6px;
+            transition: background .15s ease;
             text-decoration: none;
         }
+        .crs-toolbar-btn:hover { background: var(--head-hover); }
+        .crs-toolbar-btn.primary { background: var(--brand); color: #ffffff; border-color: var(--brand); }
+        .crs-toolbar-btn.primary:hover { background: var(--brand-dark); }
+        .crs-toolbar-btn.green { background: #15803d; color: #ffffff; border-color: #15803d; }
+        .crs-toolbar-btn.green:hover { background: #166534; }
+        .crs-file-input { display: none; }
 
-        .mri-btn:hover { background: #eaf1f4; }
-
-        .mri-primary {
-            background: #315f73;
-            color: #fff;
-        }
-
-        .mri-primary:hover {
-            background: #244b5e;
-            color: #fff;
-        }
-
-        .mri-green {
-            color: #226844;
-            border-color: #287a52;
-        }
-
-        .mri-notice {
-            display: none;
-            margin-bottom: 14px;
-            padding: 11px 13px;
-            background: #edf6fa;
-            border: 1px solid #c8dce7;
-            border-radius: 5px;
-            font-size: 13px;
-        }
-
-        .mri-list-heading {
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 13px;
-            background: #f7f9fb;
-            border: 1px solid #d5dfe5;
-            border-bottom: 0;
-            border-radius: 7px 7px 0 0;
-            font-size: 13px;
-        }
-
-        .mri-list-heading strong { color: #315f73; }
-
-        .mri-table-wrap {
-            overflow-x: auto;
-            border: 1px solid #d5dfe5;
-            border-radius: 0 0 7px 7px;
-        }
-
-        .mri-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-        }
-
-        .mri-table th {
-            padding: 13px 12px;
-            background: #e9eef2;
-            color: #17394e;
-            text-align: left;
-            white-space: nowrap;
-            border-bottom: 2px solid #386b7e;
-        }
-
-        .mri-table td {
-            padding: 12px;
-            border-bottom: 1px solid #e5eaee;
-            vertical-align: middle;
-        }
-
-        .mri-table tbody tr:nth-child(even) { background: #f8fafb; }
-        .mri-table tbody tr:hover { background: #edf4f7; }
-
-        .mri-empty {
-            height: 150px;
-            text-align: center;
-            color: #425466;
-            line-height: 2;
-        }
-
-        .mri-status {
-            display: inline-block;
-            padding: 4px 9px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .mri-pending { background: #fff2d6; color: #815b0b; }
-        .mri-completed { background: #def3e6; color: #21683f; }
-        .mri-error { background: #fde8e8; color: #a32d2d; }
-
-        .mri-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 13px 18px;
-            border-top: 1px solid #e1e7eb;
-            font-size: 12px;
-        }
-
-        .mri-file-input { display: none; }
-
-        .mri-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            padding: 20px;
-            align-items: center;
-            justify-content: center;
-            background: rgba(20,34,43,.55);
-        }
-
-        .mri-modal.open { display: flex; }
-
-        .mri-modal-box {
-            width: 100%;
-            max-width: 520px;
-            background: #fff;
-            border-radius: 9px;
-            overflow: hidden;
-            box-shadow: 0 15px 45px rgba(0,0,0,.2);
-        }
-
-        .mri-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 18px;
-            background: #315f73;
-            color: #fff;
-            font-weight: bold;
-        }
-
-        .mri-close {
-            border: 0;
-            background: none;
-            color: #fff;
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        .mri-form {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-            padding: 20px;
-        }
-
-        .mri-field {
+        /* Tables & Containers */
+        .file-list-container {
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #ffffff;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            overflow: hidden;
         }
+        .file-list-container.dup-section { border-color: #fca5a5; margin-top: 10px; }
 
-        .mri-field.full { grid-column: 1 / -1; }
-
-        .mri-field label {
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .mri-field input,
-        .mri-field select {
-            width: 100%;
-            height: 37px;
-            padding: 8px;
-            border: 1px solid #cbd5dc;
-            border-radius: 5px;
-            color: #111;
-            background: #fff;
-        }
-
-        .mri-modal-footer {
+        .file-list-title-bar {
+            padding: 8px 14px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--line);
             display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            padding: 12px 20px;
-            border-top: 1px solid #e5eaee;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12.5px;
+            color: var(--ink);
+        }
+        .file-list-title-bar strong { color: var(--brand-dark); font-size: 13px; }
+
+        .table-scroll-box {
+            max-height: 320px;
+            overflow-y: auto;
+            position: relative;
         }
 
-        @media(max-width:1000px) {
-            .mri-page { width: 96%; }
-            .mri-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .dedicated-file-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+        .dedicated-file-table th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #f1f5f9;
+            color: var(--ink);
+            text-align: left;
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--line);
+            font-weight: 600;
+        }
+        .dedicated-file-table td {
+            padding: 9px 10px;
+            border-bottom: 1px solid #edf2f7;
+            color: var(--text);
+            vertical-align: middle;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .dedicated-file-table tr:nth-child(even) td { background: #f8fafb; }
+        .dedicated-file-table tr:hover td { background: #eaf2f5; }
+
+        .ref-link { color: #0284c7; font-weight: bold; text-decoration: underline; cursor: pointer; }
+
+        .crs-status { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+        .crs-status-pending { background: #fef3c7; color: #b45309; }
+        .crs-status-completed { background: #dcfce7; color: #15803d; }
+        .crs-status-error { background: #fee2e2; color: #b91c1c; }
+
+        /* Action Buttons */
+        .action-btn-group { display: inline-flex; align-items: center; gap: 4px; justify-content: center; }
+        .edit-row-btn {
+            background: var(--brand); color: #ffffff; border: none; border-radius: 3px;
+            padding: 4px 9px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
+        }
+        .edit-row-btn:hover { background: var(--brand-dark); }
+        .xml-row-btn {
+            background: #15803d; color: #ffffff; border: none; border-radius: 3px;
+            padding: 4px 9px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
+        }
+        .xml-row-btn:hover { background: #166534; }
+        .delete-row-btn {
+            background: #dc2626; color: #ffffff; border: none; border-radius: 3px;
+            padding: 4px 9px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
+        }
+        .delete-row-btn:hover { background: #b91c1c; }
+
+        /* Pagination bar */
+        .table-pagination-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 14px; background: #ffffff; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink);
+        }
+        .pagination-nav-wrap { display: flex; align-items: center; gap: 4px; }
+        .pagination-btn {
+            background: #ffffff; border: 1px solid #cbd5e1; border-radius: 3px; padding: 3px 9px;
+            font-size: 11.5px; color: var(--ink); cursor: pointer; transition: all .15s ease;
+        }
+        .pagination-btn.active { background: var(--brand); color: #ffffff; border-color: var(--brand); font-weight: bold; }
+        .pagination-btn:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border-color: #e2e8f0; }
+
+        .no-data { text-align: center !important; color: var(--muted) !important; padding: 22px 10px !important; font-size: 12.5px; }
+        .no-data i { display: block; font-size: 22px; margin-bottom: 5px; color: #b4c2cc; }
+
+        .source-data-footer {
+            border-top: 1px solid #e3e8ec; padding: 8px 0; text-align: center; background: #ffffff; border-radius: 0 0 8px 8px;
+        }
+        .source-btn {
+            display: inline-block; padding: 4px 14px; margin: 0 3px; background: #ffffff; border: 1px solid #8a98a3;
+            border-radius: 3px; color: var(--ink); font-size: 12px; text-decoration: none; cursor: pointer;
+        }
+        .source-btn:hover { background: var(--head-bg); border-color: var(--brand); color: #000; }
+
+        /* Loading Spinner Overlay */
+        .mra-loading-overlay {
+            position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: none;
+            align-items: center; justify-content: center; z-index: 10; font-size: 13px; font-weight: bold; color: var(--brand);
         }
 
-        @media(max-width:600px) {
-            .mri-page { width: 100%; margin: 12px auto; }
-            .mri-content { padding: 9px; }
-            .mri-summary { gap: 8px; }
-            .mri-stat { padding: 10px; gap: 8px; }
-            .mri-stat-value { font-size: 19px; }
-            .mri-search { max-width: none; }
-            .mri-form { grid-template-columns: 1fr; }
-            .mri-field.full { grid-column: auto; }
+        /* Human Key-Value Popups */
+        .crs-human-kv { display: grid; grid-template-columns: 140px 1fr; padding: 4px 0; border-bottom: 1px solid #edf2f5; font-size: 11.5px; }
+        .crs-human-label { font-weight: bold; color: #334e68; }
+        .crs-human-value { color: #102a43; word-break: break-word; }
+
+        /* Modals */
+        .failed-modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(20, 35, 45, 0.6); z-index: 10000; align-items: center; justify-content: center; padding: 20px;
         }
+        .failed-modal-overlay.open { display: flex; }
+        .failed-modal-card {
+            width: 100%; max-width: 650px; background: #ffffff; border-radius: 10px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25); overflow: hidden;
+        }
+        .failed-modal-header {
+            padding: 12px 18px; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
+            color: #ffffff; display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: bold;
+        }
+        .failed-modal-close-x { background: transparent; border: none; color: #ffffff; font-size: 20px; line-height: 1; cursor: pointer; }
+        .failed-modal-body { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .failed-field { display: flex; flex-direction: column; gap: 4px; }
+        .failed-field.full { grid-column: 1 / -1; }
+        .failed-field label { font-size: 11.5px; font-weight: bold; color: var(--ink); }
+        .failed-field input, .failed-field select {
+            height: 32px; padding: 4px 8px; border: 1px solid #cbd5dc; border-radius: 5px; font-size: 12px; outline: none; background: #fff; width: 100%;
+        }
+        .failed-modal-footer {
+            padding: 12px 18px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 6px;
+        }
+        .modal-submit-btn { background: #16a34a; color: #ffffff; border: none; padding: 6px 14px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .modal-submit-btn:hover { background: #15803d; }
+        .modal-cancel-btn { background: #ffffff; border: 1px solid #cbd5dc; padding: 6px 12px; border-radius: 5px; font-size: 12px; cursor: pointer; }
+
+        .action-alert-body { padding: 18px 16px 12px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .action-alert-icon { font-size: 32px; margin-bottom: 8px; }
+        .action-alert-icon.success { color: #16a34a; }
+        .action-alert-icon.error   { color: #dc2626; }
+        .action-alert-icon.warning { color: #d97706; }
+        .action-alert-icon.info    { color: #0284c7; }
+        .action-alert-title { font-size: 14.5px; font-weight: bold; color: var(--ink); margin-bottom: 4px; }
+        .action-alert-text { font-size: 12px; color: #475569; line-height: 1.4; white-space: pre-line; }
     </style>
-</head>
 
-<body>
+    <script>
+        let activeTab = "SFX";
+        let currentConfirmCallback = null;
+        let searchTimer = null;
+        let popupCount = 0;
 
-<!-- Shared BRECON header: include only once -->
-<div th:insert="XBRLHeaderMenu :: header"></div>
+        let currentPageMain = 1;
+        let pageSizeMain = 25;
+        let totalPagesMain = 1;
 
-<main class="mri-page">
-    <section class="mri-card">
+        let currentPageDup = 1;
+        let pageSizeDup = 5;
 
-        <div class="mri-title">
-            MRA — Mauritius Revenue Authority
-        </div>
+        $(function () {
+            loadDashboardData();
+            loadDuplicatesQueue();
 
-        <!-- SFX / SFT Tab Header Navigation -->
-        <div class="mri-tabs">
-            <button type="button" class="mri-tab active" data-tab="SFX">SFX Management</button>
-            <button type="button" class="mri-tab" data-tab="SFT">SFT Management</button>
-        </div>
+            $('.mra-tab').on('click', function() {
+                $('.mra-tab').removeClass('active');
+                $(this).addClass('active');
+                activeTab = $(this).data('tab');
+                $('#mraCurrentTabLabel').text(activeTab);
+                $('#dupTabLabel').text(activeTab);
+                currentPageMain = 1;
+                currentPageDup = 1;
+                loadDashboardData();
+                loadDuplicatesQueue();
+            });
 
-        <div class="mri-content">
+            $('#mraUploadBtn').on('click', function () {
+                $('#mraUploadInput').val('');
+                $('#mraUploadInput').click();
+            });
 
-            <div class="mri-summary">
-                <div class="mri-stat">
-                    <div class="mri-stat-icon">▤</div>
-                    <div>
-                        <div class="mri-stat-label">Total Files</div>
-                        <div class="mri-stat-value" id="mriTotal">0</div>
-                    </div>
-                </div>
+            $('#mraUploadInput').on('change', function (e) {
+                var file = e.target.files[0];
+                if (!file) return;
 
-                <div class="mri-stat">
-                    <div class="mri-stat-icon">◷</div>
-                    <div>
-                        <div class="mri-stat-label">Pending</div>
-                        <div class="mri-stat-value" id="mriPending">0</div>
-                    </div>
-                </div>
+                var formData = new FormData();
+                formData.append("file", file);
+                formData.append("type", activeTab);
 
-                <div class="mri-stat">
-                    <div class="mri-stat-icon">✓</div>
-                    <div>
-                        <div class="mri-stat-label">Completed</div>
-                        <div class="mri-stat-value" id="mriCompleted">0</div>
-                    </div>
-                </div>
+                showAppAlert("info", "Processing Upload", "Uploading and processing " + file.name + " into " + activeTab + "...");
 
-                <div class="mri-stat">
-                    <div class="mri-stat-icon">!</div>
-                    <div>
-                        <div class="mri-stat-label">Errors</div>
-                        <div class="mri-stat-value" id="mriErrors">0</div>
-                    </div>
-                </div>
-            </div>
+                $.ajax({
+                    url: './uploadMraFile',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        if (res.status === "SUCCESS") {
+                            showAppAlert("success", "Upload Successful", res.message || "File ingested successfully.");
+                            loadDashboardData();
+                            loadDuplicatesQueue();
+                        } else {
+                            showAppAlert("error", "Upload Failed", res.message || "Could not process file.");
+                        }
+                    },
+                    error: function (xhr) {
+                        var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+                        showAppAlert("error", "Upload Error", err);
+                    }
+                });
+            });
 
-            <div class="mri-toolbar">
-                <div class="mri-search">
-                    <input type="search" id="mriSearch"
-                           placeholder="Search file name or reference...">
-                </div>
+            // Debounced Server-Side Search & Filter
+            $('#mraSearch').on('input', function() {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(function() {
+                    currentPageMain = 1;
+                    loadDashboardData();
+                }, 300);
+            });
 
-                <div class="mri-filter">
-                    <select id="mriStatusFilter" aria-label="Filter by status">
-                        <option value="">All Statuses</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Error">Error</option>
-                    </select>
-                </div>
+            $('#mraStatusFilter').on('change', function() {
+                currentPageMain = 1;
+                loadDashboardData();
+            });
 
-                <div class="mri-actions">
-                    <input type="file" id="mriUploadInput"
-                           class="mri-file-input"
-                           accept=".xml,.csv,.xlsx,.xls">
+            $('#pageSizeMainSelect').on('change', function() {
+                pageSizeMain = parseInt($(this).val(), 10);
+                currentPageMain = 1;
+                loadDashboardData();
+            });
 
-                    <button type="button" class="mri-btn mri-primary"
-                            id="mriUploadBtn">↑ Upload</button>
+            $('#pageSizeDupSelect').on('change', function() {
+                pageSizeDup = parseInt($(this).val(), 10);
+                currentPageDup = 1;
+                loadDuplicatesQueue();
+            });
 
-                    <button type="button" class="mri-btn mri-green"
-                            id="mriDownloadAll">⇩ Download XML</button>
+            $('#mraDownloadAllBtn').on('click', function() {
+                window.location.href = "./downloadMraXml?type=" + encodeURIComponent(activeTab);
+            });
 
-                    <button type="button" class="mri-btn"
-                            id="mriExtract">⇩ Extract</button>
-                </div>
-            </div>
+            $('#mraEditForm').on('submit', function(e) {
+                e.preventDefault();
+                var formData = new FormData(this);
+                formData.append("type", activeTab);
+                var params = new URLSearchParams(formData);
 
-            <div class="mri-notice" id="mriNotice" role="status"></div>
+                $.ajax({
+                    url: './updateMraRecord',
+                    type: 'POST',
+                    data: params.toString(),
+                    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                    success: function(res) {
+                        if (res.status === 'SUCCESS') {
+                            closeEditModal();
+                            loadDashboardData();
+                            showAppAlert("success", "Saved Successfully", res.message || "Record updated.");
+                        } else {
+                            showAppAlert("error", "Error", res.message || "Update failed.");
+                        }
+                    },
+                    error: function(xhr) {
+                        showAppAlert("error", "Server Error", xhr.statusText);
+                    }
+                });
+            });
 
-            <div class="mri-list-heading">
-                <span><strong>MRA Records List (<span id="mriCurrentTabLabel">SFX</span>)</strong></span>
-                <span>Total: <strong id="mriVisibleCount">0</strong> records</span>
-            </div>
+            // Rectification Form Submit with Validation
+            $('#mraDupForm').on('submit', function(e) {
+                e.preventDefault();
 
-            <div class="mri-table-wrap">
-                <table class="mri-table">
-                    <thead>
-                        <tr>
-                            <th>S.No</th>
-                            <th>File Name</th>
-                            <th>Reference ID</th>
-                            <th>Upload Date &amp; Time</th>
-                            <th>Records</th>
-                            <th>Status</th>
-                            <th>Download XML</th>
-                            <th>Edit</th>
-                        </tr>
-                    </thead>
-                    <tbody id="mriTableBody">
-                        <tr>
-                            <td colspan="8" class="mri-empty">
-                                No MRA files available.<br>
-                                Select Upload to choose a file.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                var emptyFields = [];
+                $('#rectifyModalFields input[data-required="true"]').each(function() {
+                    if (!$(this).val() || $.trim($(this).val()) === '') {
+                        var fieldLabel = $(this).closest('.failed-field').find('label').text().replace(' *', '');
+                        emptyFields.push(fieldLabel);
+                        $(this).css({'border-color': '#dc2626', 'background': '#fff5f5'});
+                    } else {
+                        $(this).css({'border-color': '#cbd5dc', 'background': '#ffffff'});
+                    }
+                });
 
-        </div>
+                if (emptyFields.length > 0) {
+                    showAppAlert("warning", "Missing Required Fields", "Please fill in the following empty required fields before saving:\n• " + emptyFields.join("\n• "));
+                    return;
+                }
 
-        <div class="mri-footer">
-            <span>MRA Reporting Management</span>
-            <button type="button" class="mri-btn" id="mriRefresh">
-                Refresh List
-            </button>
-        </div>
-    </section>
-</main>
+                var formData = new FormData(this);
+                formData.append("type", activeTab);
+                var params = new URLSearchParams(formData);
 
-<!-- Edit modal -->
-<div class="mri-modal" id="mriModal">
-    <div class="mri-modal-box">
-        <div class="mri-modal-header">
-            <span>Edit MRA Record</span>
-            <button type="button" class="mri-close" id="mriClose">&times;</button>
-        </div>
+                $.ajax({
+                    url: './rectifyMraDuplicateFull',
+                    type: 'POST',
+                    data: params.toString(),
+                    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                    success: function(res) {
+                        if (res.status === 'SUCCESS') {
+                            closeDupModal();
+                            loadDuplicatesQueue();
+                            loadDashboardData();
+                            showAppAlert("success", "Rectification Successful", res.message || "Record successfully updated, stored to database, and promoted to master list.");
+                        } else {
+                            showAppAlert("error", "Error", res.message || "Rectification failed.");
+                        }
+                    },
+                    error: function(xhr) {
+                        showAppAlert("error", "Server Error", xhr.statusText);
+                    }
+                });
+            });
 
-        <form id="mriEditForm">
-            <div class="mri-form">
-                <input type="hidden" id="mriEditId">
-
-                <div class="mri-field full">
-                    <label for="mriEditName">File Name</label>
-                    <input id="mriEditName" required>
-                </div>
-
-                <div class="mri-field">
-                    <label for="mriEditRef">Reference ID</label>
-                    <input id="mriEditRef" required>
-                </div>
-
-                <div class="mri-field">
-                    <label for="mriEditRecords">Record Count</label>
-                    <input id="mriEditRecords" type="number" min="0" required>
-                </div>
-
-                <div class="mri-field full">
-                    <label for="mriEditStatus">Status</label>
-                    <select id="mriEditStatus">
-                        <option>Pending</option>
-                        <option>Completed</option>
-                        <option>Error</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="mri-modal-footer">
-                <button type="button" class="mri-btn" id="mriCancel">
-                    Cancel
-                </button>
-                <button type="submit" class="mri-btn mri-primary">
-                    Save Changes
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-(function () {
-    const body = document.getElementById("mriTableBody");
-    const uploadInput = document.getElementById("mriUploadInput");
-    const notice = document.getElementById("mriNotice");
-    const modal = document.getElementById("mriModal");
-    const tabButtons = document.querySelectorAll(".mri-tab");
-
-    // Separate datasets for SFX and SFT tabs
-    let activeTab = "SFX";
-    const dataStores = {
-        SFX: { records: [], nextId: 1 },
-        SFT: { records: [], nextId: 1 }
-    };
-
-    function showNotice(text) {
-        notice.textContent = text;
-        notice.style.display = "block";
-    }
-
-    function safe(value) {
-        return String(value ?? "").replace(/[&<>"']/g, ch => ({
-            "&": "&amp;", "<": "&lt;", ">": "&gt;",
-            '"': "&quot;", "'": "&#39;"
-        })[ch]);
-    }
-
-    function filteredRecords() {
-        const store = dataStores[activeTab];
-        const search = document.getElementById("mriSearch").value.toLowerCase().trim();
-        const status = document.getElementById("mriStatusFilter").value;
-
-        return store.records.filter(r =>
-            (r.name.toLowerCase().includes(search) ||
-             r.ref.toLowerCase().includes(search)) &&
-            (!status || r.status === status)
-        );
-    }
-
-    function render() {
-        const store = dataStores[activeTab];
-        const list = filteredRecords();
-
-        document.getElementById("mriCurrentTabLabel").textContent = activeTab;
-        document.getElementById("mriTotal").textContent = store.records.length;
-        document.getElementById("mriPending").textContent =
-            store.records.filter(r => r.status === "Pending").length;
-        document.getElementById("mriCompleted").textContent =
-            store.records.filter(r => r.status === "Completed").length;
-        document.getElementById("mriErrors").textContent =
-            store.records.filter(r => r.status === "Error").length;
-        document.getElementById("mriVisibleCount").textContent = list.length;
-
-        body.replaceChildren();
-
-        if (!list.length) {
-            const row = document.createElement("tr");
-            const cell = document.createElement("td");
-            cell.colSpan = 8;
-            cell.className = "mri-empty";
-            cell.textContent = `No ${activeTab} records found.`;
-            row.appendChild(cell);
-            body.appendChild(row);
-            return;
-        }
-
-        list.forEach((r, i) => {
-            const statusClass = {
-                Pending: "mri-pending",
-                Completed: "mri-completed",
-                Error: "mri-error"
-            }[r.status] || "mri-pending";
-
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${i + 1}</td>
-                <td>${safe(r.name)}</td>
-                <td>${safe(r.ref)}</td>
-                <td>${safe(r.date)}</td>
-                <td>${Number(r.count) || 0}</td>
-                <td><span class="mri-status ${statusClass}">
-                    ${safe(r.status)}</span></td>
-                <td><button class="mri-btn mri-green"
-                    type="button" data-xml="${r.id}">XML</button></td>
-                <td><button class="mri-btn"
-                    type="button" data-edit="${r.id}">Edit</button></td>`;
-            body.appendChild(row);
-        });
-    }
-
-    function downloadXml(r) {
-        const xmlEscape = v => String(v).replace(/[<>&'"]/g, ch => ({
-            "<": "&lt;", ">": "&gt;", "&": "&amp;",
-            "'": "&apos;", '"': "&quot;"
-        })[ch]);
-
-        const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<MRIRecord type="${activeTab}">
-    <FileName>${xmlEscape(r.name)}</FileName>
-    <ReferenceID>${xmlEscape(r.ref)}</ReferenceID>
-    <UploadDate>${xmlEscape(r.date)}</UploadDate>
-    <RecordCount>${Number(r.count) || 0}</RecordCount>
-    <Status>${xmlEscape(r.status)}</Status>
-</MRIRecord>`;
-
-        const url = URL.createObjectURL(new Blob([xml], {
-            type: "application/xml;charset=utf-8"
-        }));
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${activeTab}_` + r.name.replace(/\.[^.]+$/, "") + ".xml";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-    }
-
-    function closeModal() {
-        modal.classList.remove("open");
-    }
-
-    function openEdit(id) {
-        const store = dataStores[activeTab];
-        const r = store.records.find(item => item.id === id);
-        if (!r) return;
-
-        document.getElementById("mriEditId").value = r.id;
-        document.getElementById("mriEditName").value = r.name;
-        document.getElementById("mriEditRef").value = r.ref;
-        document.getElementById("mriEditRecords").value = r.count;
-        document.getElementById("mriEditStatus").value = r.status;
-        modal.classList.add("open");
-    }
-
-    // Tab switching event listener
-    tabButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            tabButtons.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            activeTab = btn.dataset.tab;
-            notice.style.display = "none";
-            document.getElementById("mriSearch").value = "";
-            document.getElementById("mriStatusFilter").value = "";
-            render();
-        });
-    });
-
-    document.getElementById("mriUploadBtn").addEventListener("click", () => {
-        uploadInput.click();
-    });
-
-    uploadInput.addEventListener("change", () => {
-        const store = dataStores[activeTab];
-        Array.from(uploadInput.files || []).forEach(file => {
-            store.records.push({
-                id: store.nextId++,
-                name: file.name,
-                ref: `${activeTab}-` + Date.now() + "-" + store.nextId,
-                date: new Date().toLocaleString(),
-                count: 0,
-                status: "Pending",
-                file: file
+            $('#appModalConfirmBtn').on('click', function () {
+                if (typeof currentConfirmCallback === 'function') {
+                    currentConfirmCallback();
+                }
+                closeAppModal();
             });
         });
 
-        uploadInput.value = "";
-        render();
+        function showAppAlert(type, title, message) {
+            var iconClass = "fa-info-circle";
+            if (type === "success") iconClass = "fa-check-circle";
+            if (type === "error")   iconClass = "fa-times-circle";
+            if (type === "warning") iconClass = "fa-exclamation-triangle";
 
-        if (store.records.length) {
-            showNotice(`File added to ${activeTab} demonstration list. Backend upload is not yet connected.`);
-        }
-    });
+            $('#appModalIcon').attr('class', 'fa action-alert-icon ' + type + ' ' + iconClass);
+            $('#appModalTitle').text(title);
+            $('#appModalText').text(message);
 
-    body.addEventListener("click", event => {
-        const edit = event.target.closest("[data-edit]");
-        const xml = event.target.closest("[data-xml]");
-
-        if (edit) openEdit(Number(edit.dataset.edit));
-
-        if (xml) {
-            const store = dataStores[activeTab];
-            const r = store.records.find(item => item.id === Number(xml.dataset.xml));
-            if (r) downloadXml(r);
-        }
-    });
-
-    document.getElementById("mriEditForm").addEventListener("submit", event => {
-        event.preventDefault();
-
-        const store = dataStores[activeTab];
-        const id = Number(document.getElementById("mriEditId").value);
-        const r = store.records.find(item => item.id === id);
-        if (!r) return;
-
-        r.name = document.getElementById("mriEditName").value.trim();
-        r.ref = document.getElementById("mriEditRef").value.trim();
-        r.count = Number(document.getElementById("mriEditRecords").value);
-        r.status = document.getElementById("mriEditStatus").value;
-
-        closeModal();
-        render();
-        showNotice("Record updated in the demonstration list. Backend persistence is not connected.");
-    });
-
-    document.getElementById("mriDownloadAll").addEventListener("click", () => {
-        const list = filteredRecords();
-        if (!list.length) {
-            showNotice(`No ${activeTab} records to download.`);
-            return;
-        }
-        list.forEach(downloadXml);
-    });
-
-    document.getElementById("mriExtract").addEventListener("click", () => {
-        const list = filteredRecords();
-        if (!list.length) {
-            showNotice(`No ${activeTab} records to extract.`);
-            return;
+            $('#appModalCancelBtn').hide();
+            $('#appModalConfirmBtn').hide();
+            $('#appModalOkBtn').show();
+            $('#customActionModal').addClass('open');
         }
 
-        const csvCell = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-        const rows = [
-            ["File Name", "Reference ID", "Upload Date", "Record Count", "Status"],
-            ...list.map(r => [r.name, r.ref, r.date, r.count, r.status])
-        ];
+        function showAppConfirm(title, message, onConfirm) {
+            $('#appModalIcon').attr('class', 'fa action-alert-icon warning fa-question-circle');
+            $('#appModalTitle').text(title);
+            $('#appModalText').text(message);
 
-        const csv = "\uFEFF" + rows
-            .map(row => row.map(csvCell).join(","))
-            .join("\r\n");
+            currentConfirmCallback = onConfirm;
 
-        const url = URL.createObjectURL(new Blob([csv], {
-            type: "text/csv;charset=utf-8;"
-        }));
+            $('#appModalOkBtn').hide();
+            $('#appModalCancelBtn').show();
+            $('#appModalConfirmBtn').show();
+            $('#customActionModal').addClass('open');
+        }
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${activeTab}_MRI_Extract.csv`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-    });
+        function closeAppModal() {
+            $('#customActionModal').removeClass('open');
+            currentConfirmCallback = null;
+        }
 
-    document.getElementById("mriClose").addEventListener("click", closeModal);
-    document.getElementById("mriCancel").addEventListener("click", closeModal);
+        // Fast Asynchronous Server-Side Loading
+        function loadDashboardData() {
+            $('#tableLoadingOverlay').css('display', 'flex');
+            var searchVal = $('#mraSearch').val() || '';
+            var statusVal = $('#mraStatusFilter').val() || '';
 
-    modal.addEventListener("click", event => {
-        if (event.target === modal) closeModal();
-    });
+            $.ajax({
+                url: './getMraDashboardData',
+                type: 'GET',
+                data: {
+                    type: activeTab,
+                    page: currentPageMain,
+                    size: pageSizeMain,
+                    search: searchVal,
+                    status: statusVal
+                },
+                success: function(data) {
+                    $('#totalRecords').text((data.totalCount || 0).toLocaleString());
+                    $('#pendingRecords').text((data.pendingCount || 0).toLocaleString());
+                    $('#completedRecords').text((data.completedCount || 0).toLocaleString());
+                    $('#errorRecords').text((data.errorCount || 0).toLocaleString());
 
-    document.getElementById("mriSearch").addEventListener("input", render);
-    document.getElementById("mriStatusFilter").addEventListener("change", render);
+                    renderMasterTable(data.records || [], data.filteredTotal || 0);
+                    $('#tableLoadingOverlay').hide();
+                },
+                error: function() {
+                    $('#tableLoadingOverlay').hide();
+                }
+            });
+        }
 
-    document.getElementById("mriRefresh").addEventListener("click", () => {
-        document.getElementById("mriSearch").value = "";
-        document.getElementById("mriStatusFilter").value = "";
-        notice.style.display = "none";
-        render();
-    });
+        function loadDuplicatesQueue() {
+            $.ajax({
+                url: './getMraDuplicateRecords',
+                type: 'GET',
+                data: { type: activeTab },
+                success: function(data) {
+                    renderDuplicateTable(data.records || []);
+                }
+            });
+        }
 
-    render();
-})();
-</script>
+        function renderMasterTable(records, totalFiltered) {
+            totalPagesMain = Math.ceil(totalFiltered / pageSizeMain) || 1;
+            if (currentPageMain > totalPagesMain) currentPageMain = totalPagesMain;
+            if (currentPageMain < 1) currentPageMain = 1;
 
+            var startIndex = (currentPageMain - 1) * pageSizeMain;
+            var endIndex = Math.min(startIndex + records.length, totalFiltered);
+
+            $('#mraVisibleCount').text(totalFiltered.toLocaleString());
+            $('#mainPageInfoText').text(totalFiltered === 0 ? "Showing 0 entries" :
+                `Showing ${(startIndex + 1).toLocaleString()} to ${endIndex.toLocaleString()} of ${totalFiltered.toLocaleString()} entries`);
+
+            var $tbody = $('#mraTableBody');
+            $tbody.empty();
+
+            if (records.length === 0) {
+                $tbody.append('<tr><td colspan="9" class="no-data"><i class="fa fa-folder-open-o"></i>No ' + activeTab + ' records found matching criteria.</td></tr>');
+                renderMainPagination(0, 1);
+                return;
+            }
+
+            records.forEach(function (r, i) {
+                var actualIdx = startIndex + i + 1;
+                var bal = Number(r.ACCOUNT_BALANCE || 0).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' ' + (r.CURRENCY_CODE || 'MUR');
+                var st = r.STATUS || 'PENDING';
+                var statusClass = st.toUpperCase() === 'COMPLETED' ? 'crs-status-completed' : (st.toUpperCase() === 'ERROR' ? 'crs-status-error' : 'crs-status-pending');
+                var displayInfo = r.PASSPORT || r.EXTRA_COL || '-';
+
+                var rowHtml = '<tr>' +
+                    '<td>' + actualIdx + '</td>' +
+                    '<td><span class="ref-link" onclick="openRecordDetailsPopup(' + r.REPORT_ID + ')">' + escapeHtml(displayInfo) + '</span></td>' +
+                    '<td><span class="ref-link" style="color:var(--brand-dark);" onclick="openXmlTagPopup(' + r.REPORT_ID + ')"><b>' + escapeHtml(r.ACCOUNT_NUMBER || '-') + '</b></span></td>' +
+                    '<td>' + escapeHtml(r.HOLDER_NAME || '-') + '</td>' +
+                    '<td>' + escapeHtml(r.TAX_COUNTRY || 'MU') + '</td>' +
+                    '<td>' + escapeHtml(bal) + '</td>' +
+                    '<td><span class="crs-status ' + statusClass + '">' + escapeHtml(st) + '</span></td>' +
+                    '<td><button type="button" class="xml-row-btn" onclick="downloadRowXml(' + r.REPORT_ID + ')"><i class="fa fa-file-code-o"></i> XML</button></td>' +
+                    '<td><button type="button" class="edit-row-btn" onclick="openEditModal(' + r.REPORT_ID + ')"><i class="fa fa-pen"></i> Edit</button></td>' +
+                '</tr>';
+                $tbody.append(rowHtml);
+            });
+
+            renderMainPagination(totalFiltered, totalPagesMain);
+        }
+
+        // Popups for Full Details & XML Preview
+        function openRecordDetailsPopup(reportId) {
+            $.get('./getMraRecordDetails', { type: activeTab, reportId: reportId }, function(data) {
+                var r = data.record || data;
+                popupCount++;
+                var popupId = "mra_details_popup_" + Date.now() + "_" + popupCount;
+
+                var contentRows = '';
+                for (var key in r) {
+                    if (r.hasOwnProperty(key)) {
+                        contentRows += '<div class="crs-human-kv"><span class="crs-human-label">' + escapeHtml(key) + '</span><span class="crs-human-value">' + escapeHtml(r[key]) + '</span></div>';
+                    }
+                }
+
+                var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="position:fixed; width:480px; max-width:90vw; background:#fff; border-radius:7px; box-shadow:0 14px 36px rgba(0,0,0,0.25); border:1px solid #bcd0dc; z-index:10000; overflow:hidden; top:120px; left:200px;">' +
+                    '<div class="crs-popup-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color:#fff; font-size:12px; font-weight:bold; cursor:move;">' +
+                        '<span><i class="fa fa-info-circle"></i> Record Details — ID: ' + reportId + '</span>' +
+                        '<button type="button" class="failed-modal-close-x" onclick="$(\'#' + popupId + '\').remove()">&times;</button>' +
+                    '</div>' +
+                    '<div class="crs-popup-body" style="padding:10px; max-height:300px; overflow-y:auto; background:#fdfdfd;">' + contentRows + '</div>' +
+                    '<div class="crs-popup-footer" style="padding:6px 12px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">' +
+                        '<button type="button" class="source-btn" onclick="$(\'#' + popupId + '\').remove()">Close</button>' +
+                    '</div>' +
+                '</div>');
+
+                $('body').append(popupEl);
+                popupEl.draggable({ handle: ".crs-popup-header" });
+            });
+        }
+
+        function openXmlTagPopup(reportId) {
+            $.get('./downloadSingleMraXml', { type: activeTab, reportId: reportId }, function(xmlString) {
+                popupCount++;
+                var popupId = "mra_xml_popup_" + Date.now() + "_" + popupCount;
+
+                var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="position:fixed; width:500px; max-width:90vw; background:#fff; border-radius:7px; box-shadow:0 14px 36px rgba(0,0,0,0.25); border:1px solid #bcd0dc; z-index:10000; overflow:hidden; top:140px; left:240px;">' +
+                    '<div class="crs-popup-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color:#fff; font-size:12px; font-weight:bold; cursor:move;">' +
+                        '<span><i class="fa fa-file-code-o"></i> XML Payload Preview — ID: ' + reportId + '</span>' +
+                        '<button type="button" class="failed-modal-close-x" onclick="$(\'#' + popupId + '\').remove()">&times;</button>' +
+                    '</div>' +
+                    '<div class="crs-popup-body" style="padding:10px; max-height:300px; overflow-y:auto; background:#fdfdfd;">' +
+                        '<div style="background:#1e293b; color:#f8fafc; border-radius:5px; padding:10px; font-family:\'Courier New\', monospace; font-size:11.5px; white-space:pre-wrap; word-break:break-all;">' + escapeHtml(xmlString) + '</div>' +
+                    '</div>' +
+                    '<div class="crs-popup-footer" style="padding:6px 12px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:6px;">' +
+                        '<button type="button" class="source-btn" onclick="downloadRowXml(' + reportId + ')"><i class="fa fa-download"></i> Download XML</button>' +
+                        '<button type="button" class="source-btn" onclick="$(\'#' + popupId + '\').remove()">Close</button>' +
+                    '</div>' +
+                '</div>');
+
+                $('body').append(popupEl);
+                popupEl.draggable({ handle: ".crs-popup-header" });
+            }, 'text');
+        }
+
+        function renderMainPagination(totalItems, totalPages) {
+            var $nav = $('#mainPaginationNav');
+            $nav.empty();
+            if (totalPages <= 1) return;
+
+            var prevDisabled = currentPageMain === 1 ? 'disabled' : '';
+            $nav.append('<button type="button" class="pagination-btn" ' + prevDisabled + ' onclick="changeMainPage(' + (currentPageMain - 1) + ')">&lsaquo;</button>');
+
+            for (var p = 1; p <= totalPages; p++) {
+                if (p === 1 || p === totalPages || (p >= currentPageMain - 1 && p <= currentPageMain + 1)) {
+                    var activeClass = p === currentPageMain ? 'active' : '';
+                    $nav.append('<button type="button" class="pagination-btn ' + activeClass + '" onclick="changeMainPage(' + p + ')">' + p + '</button>');
+                } else if (p === currentPageMain - 2 || p === currentPageMain + 2) {
+                    $nav.append('<span class="pagination-ellipsis">&hellip;</span>');
+                }
+            }
+
+            var nextDisabled = currentPageMain === totalPages ? 'disabled' : '';
+            $nav.append('<button type="button" class="pagination-btn" ' + nextDisabled + ' onclick="changeMainPage(' + (currentPageMain + 1) + ')">&rsaquo;</button>');
+        }
+
+        function changeMainPage(page) {
+            currentPageMain = page;
+            loadDashboardData();
+        }
+
+        function renderDuplicateTable(dupRecords) {
+            var totalItems = dupRecords.length;
+            var totalPages = Math.ceil(totalItems / pageSizeDup) || 1;
+            if (currentPageDup > totalPages) currentPageDup = totalPages;
+            if (currentPageDup < 1) currentPageDup = 1;
+
+            var startIndex = (currentPageDup - 1) * pageSizeDup;
+            var endIndex = Math.min(startIndex + pageSizeDup, totalItems);
+            var pageItems = dupRecords.slice(startIndex, endIndex);
+
+            $('#dupVisibleCount').text(totalItems.toLocaleString() + " record(s)");
+            $('#dupPageInfoText').text(totalItems === 0 ? "Showing 0 entries" :
+                `Showing ${(startIndex + 1).toLocaleString()} to ${endIndex.toLocaleString()} of ${totalItems.toLocaleString()} entries`);
+
+            var $tbody =$('#dupTableBody');
+            $tbody.empty();
+
+            if (pageItems.length === 0) {
+                $tbody.append('<tr><td colspan="8" class="no-data"><i class="fa fa-check-circle-o" style="color:#15803d;"></i>No duplicate records pending in queue.</td></tr>');
+                renderDupPagination(0, 1);
+                return;
+            }
+
+            pageItems.forEach(function (r) {
+                var bal = Number(r.ACCOUNT_BALANCE || 0).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' ' + (r.CURRENCY_CODE || 'MUR');
+
+                var rowHtml = '<tr>' +
+                    '<td>' + r.DUP_ID + '</td>' +
+                    '<td>' + escapeHtml(r.FILE_NAME || '-') + '</td>' +
+                    '<td><b>' + escapeHtml(r.ACCOUNT_NUMBER || '-') + '</b></td>' +
+                    '<td>' + escapeHtml(r.HOLDER_NAME || '-') + '</td>' +
+                    '<td>' + escapeHtml(r.RESIDENCE_COUNTRY || '-') + '</td>' +
+                    '<td>' + escapeHtml(bal) + '</td>' +
+                    '<td><span class="crs-status crs-status-pending">PENDING</span></td>' +
+                    '<td style="text-align: center;">' +
+                        '<div class="action-btn-group">' +
+                            '<button type="button" class="edit-row-btn" onclick="openRectifyModal(' + r.DUP_ID + ')"><i class="fa fa-wrench"></i> Rectify</button>' +
+                            '<button type="button" class="delete-row-btn" onclick="deleteDuplicateRecord(' + r.DUP_ID + ')"><i class="fa fa-trash"></i> Delete</button>' +
+                        '</div>' +
+                    '</td>' +
+                '</tr>';
+                $tbody.append(rowHtml);
+            });
+
+            renderDupPagination(totalItems, totalPages);
+        }
+
+        function renderDupPagination(totalItems, totalPages) {
+            var $nav =$('#dupPaginationNav');
+            $nav.empty();
+            if (totalPages <= 1) return;
+
+            var prevDisabled = currentPageDup === 1 ? 'disabled' : '';
+            $nav.append('<button type="button" class="pagination-btn" ' + prevDisabled + ' onclick="changeDupPage(' + (currentPageDup - 1) + ')">&lsaquo;</button>');
+
+            for (var p = 1; p <= totalPages; p++) {
+                if (p === 1 || p === totalPages || (p >= currentPageDup - 1 && p <= currentPageDup + 1)) {
+                    var activeClass = p === currentPageDup ? 'active' : '';
+                    $nav.append('<button type="button" class="pagination-btn ' + activeClass + '" onclick="changeDupPage(' + p + ')">' + p + '</button>');
+                }
+            }
+
+            var nextDisabled = currentPageDup === totalPages ? 'disabled' : '';
+            $nav.append('<button type="button" class="pagination-btn" ' + nextDisabled + ' onclick="changeDupPage(' + (currentPageDup + 1) + ')">&rsaquo;</button>');
+        }
+
+        function changeDupPage(page) {
+            currentPageDup = page;
+            loadDuplicatesQueue();
+        }
+
+        function downloadRowXml(reportId) {
+            window.location.href = "./downloadSingleMraXml?type=" + encodeURIComponent(activeTab) + "&reportId=" + encodeURIComponent(reportId);
+        }
+
+        function deleteDuplicateRecord(dupId) {
+            showAppConfirm("Delete Confirmation", "Are you sure you want to delete this duplicate record?", function() {
+                $.ajax({
+                    url: './deleteMraDuplicate',
+                    type: 'POST',
+                    data: { type: activeTab, dupId: dupId },
+                    success: function() {
+                        loadDuplicatesQueue();
+                        showAppAlert("success", "Deleted Successfully", "Duplicate removed.");
+                    }
+                });
+            });
+        }
+
+        function deleteAllDuplicateRecords() {
+            showAppConfirm("Delete All Confirmation", "Are you sure you want to delete ALL pending duplicate records?", function() {
+                $.ajax({
+                    url: './deleteAllMraDuplicates',
+                    type: 'POST',
+                    data: { type: activeTab },
+                    success: function() {
+                        loadDuplicatesQueue();
+                        showAppAlert("success", "Cleared Successfully", "All duplicate records cleared.");
+                    }
+                });
+            });
+        }
+
+        function openEditModal(reportId) {
+            $.get('./getMraRecordDetails', { type: activeTab, reportId: reportId }, function(data) {
+                var r = data.record || data;
+                $('#editReportId').val(reportId);
+                $('#editAccNum').val(r.ID || r.ACCOUNT_NUMBER || '');
+                $('#editHolderName').val(r.SURNAME || r.HOLDER_NAME || '');
+                $('#editTaxCountry').val(r.NATIONALITY || r.TAX_COUNTRY || 'MU');
+                $('#editBalance').val(r.AMOUNT || r.BALANCE || r.TOTAL_DEPOSITS || 0.0);
+                $('#editCurrency').val(r.FOREIGN_CURRENCY || 'MUR');
+                $('#editStatus').val(r.RECORD_STATUS || 'COMPLETED');
+
+                $('#mraEditModal').addClass('open');
+            }).fail(function() {
+                showAppAlert("error", "Error", "Failed to load record details.");
+            });
+        }
+
+        function closeEditModal() { $('#mraEditModal').removeClass('open'); }
+
+        // Full Data Rectification Modal with Empty-Field Validation
+        function openRectifyModal(dupId) {
+            $.get('./getMraDuplicateRecordDetails', { type: activeTab, dupId: dupId }, function(data) {
+                var r = data.record || data;
+                $('#rectifyDupId').val(dupId);
+
+                var $fieldsContainer =$('#rectifyModalFields');
+                $fieldsContainer.empty();
+
+                var criticalFields = activeTab === 'SFX' 
+                    ? ['ID', 'SURNAME', 'AMOUNT', 'FOREIGN_CURRENCY', 'TYPE_OF_TRANSACTION'] 
+                    : ['ID', 'SURNAME', 'ACCOUNT_NUMBER', 'BALANCE'];
+
+                for (var key in r) {
+                    if (r.hasOwnProperty(key) && key !== 'DUP_ID' && key !== 'RECORD_STATUS' && key !== 'DEL_FLAG') {
+                        var val = r[key] !== null && r[key] !== undefined ? r[key] : '';
+                        var isRequired = criticalFields.includes(key.toUpperCase());
+                        var labelText = key + (isRequired ? ' *' : '');
+                        var inputStyle = (isRequired && String(val).trim() === '') ? 'border-color: #dc2626; background: #fff5f5;' : '';
+
+                        var fieldHtml = '<div class="failed-field">' +
+                            '<label style="' + (isRequired && String(val).trim() === '' ? 'color:#dc2626;' : '') + '">' + escapeHtml(labelText) + '</label>' +
+                            '<input type="text" name="' + escapeHtml(key) + '" value="' + escapeHtml(val) + '" style="' + inputStyle + '" data-required="' + isRequired + '">' +
+                        '</div>';
+                        $fieldsContainer.append(fieldHtml);
+                    }
+                }
+
+                $fieldsContainer.append(
+                    '<div class="failed-field full" style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 8px;">' +
+                        '<label>Resolution Status *</label>' +
+                        '<select name="updatedStatus" class="failed-field" style="width:100%; height:32px; background:#fff; border:1px solid #cbd5dc; border-radius:5px;">' +
+                            '<option value="COMPLETED">Resolve &amp; Promote to Master List</option>' +
+                            '<option value="ERROR">Discard / Exclude Record</option>' +
+                        '</select>' +
+                    '</div>'
+                );
+
+                $('#mraDupModal').addClass('open');
+            }).fail(function() {
+                showAppAlert("error", "Error", "Failed to load duplicate record details.");
+            });
+        }
+
+        function closeDupModal() { $('#mraDupModal').removeClass('open'); }
+
+        function escapeHtml(value) {
+            return String(value || "").replace(/[&<>"']/g, function (char) {
+                return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char];
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <div th:insert="XBRLHeaderMenu :: header"></div>
+
+    <input type="file" id="mraUploadInput" class="crs-file-input" accept=".xml,.csv,.xlsx,.xls" />
+
+    <div class="source-data-wrapper">
+        <div class="source-data-card">
+            <div class="source-data-header">
+                <span><i class="fa fa-globe"></i> Mauritius Revenue Authority (MRA) Reporting Management</span>
+            </div>
+
+            <!-- Tab Header Navigation -->
+            <div class="mra-tabs">
+                <button type="button" class="mra-tab active" data-tab="SFX">SFX Management (Foreign Currency Transactions)</button>
+                <button type="button" class="mra-tab" data-tab="SFT">SFT Management (Financial Transactions)</button>
+            </div>
+
+            <div class="source-data-table-wrapper">
+                <!-- Summary Cards -->
+                <div class="crs-summary">
+                    <div class="crs-stat">
+                        <div class="crs-stat-icon"><i class="fa fa-files-o"></i></div>
+                        <div>
+                            <div class="crs-stat-label">Total Records</div>
+                            <div class="crs-stat-value" id="totalRecords">0</div>
+                        </div>
+                    </div>
+                    <div class="crs-stat">
+                        <div class="crs-stat-icon"><i class="fa fa-clock-o"></i></div>
+                        <div>
+                            <div class="crs-stat-label">Pending</div>
+                            <div class="crs-stat-value" id="pendingRecords">0</div>
+                        </div>
+                    </div>
+                    <div class="crs-stat">
+                        <div class="crs-stat-icon"><i class="fa fa-check-circle"></i></div>
+                        <div>
+                            <div class="crs-stat-label">Completed</div>
+                            <div class="crs-stat-value" id="completedRecords">0</div>
+                        </div>
+                    </div>
+                    <div class="crs-stat">
+                        <div class="crs-stat-icon"><i class="fa fa-exclamation-circle"></i></div>
+                        <div>
+                            <div class="crs-stat-label">Duplicates in Queue</div>
+                            <div class="crs-stat-value" id="errorRecords">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Toolbar & Filters -->
+                <div class="crs-filter-bar">
+                    <div class="crs-search-wrap">
+                        <i class="fa fa-search"></i>
+                        <input type="text" id="mraSearch" placeholder="Search account ID, name, or country..." />
+                    </div>
+
+                    <select id="mraStatusFilter">
+                        <option value="">All Statuses</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="ERROR">Error</option>
+                    </select>
+
+                    <div class="crs-toolbar-actions">
+                        <button type="button" class="crs-toolbar-btn primary" id="mraUploadBtn">
+                            <i class="fa fa-upload"></i> Upload File
+                        </button>
+                        <button type="button" class="crs-toolbar-btn green" id="mraDownloadAllBtn">
+                            <i class="fa fa-file-code-o"></i> Download XML
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 1. MRA Records List -->
+                <div class="file-list-container main-section">
+                    <div class="file-list-title-bar">
+                        <span><i class="fa fa-list" style="margin-right:5px; color:var(--brand);"></i> MRA Records List (<span id="mraCurrentTabLabel">SFX</span>)</span>
+                        <span>Total: <strong id="mraVisibleCount">0</strong> records</span>
+                    </div>
+
+                    <div class="table-scroll-box" style="position: relative;">
+                        <div class="mra-loading-overlay" id="tableLoadingOverlay">
+                            <span><i class="fa fa-spinner fa-spin" style="margin-right:6px;"></i> Loading records...</span>
+                        </div>
+                        <table class="dedicated-file-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">S.No</th>
+                                    <th style="width: 17%;">Passport / Ref</th>
+                                    <th style="width: 18%;">Account / ID</th>
+                                    <th style="width: 25%;">Holder Name</th>
+                                    <th style="width: 8%;">Country</th>
+                                    <th style="width: 13%;">Balance / Amount</th>
+                                    <th style="width: 9%;">Status</th>
+                                    <th style="width: 5%;">XML</th>
+                                    <th style="width: 5%;">Edit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mraTableBody">
+                                <tr>
+                                    <td colspan="9" class="no-data">
+                                        <i class="fa fa-folder-open-o"></i>
+                                        No records available. Click Upload File to ingest data.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Main Table Pagination Bar -->
+                    <div class="table-pagination-bar">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span>Rows:</span>
+                            <select id="pageSizeMainSelect" style="padding: 1px 3px; border:1px solid #cbd5e1; border-radius:3px; font-size:11px;">
+                                <option value="10">10</option>
+                                <option value="25" selected>25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span id="mainPageInfoText" style="color: var(--muted); margin-left: 4px;">Showing entries</span>
+                        </div>
+                        <div class="pagination-nav-wrap" id="mainPaginationNav"></div>
+                    </div>
+                </div>
+
+                <!-- 2. MRA Duplicate Records Rectification Queue -->
+                <div class="file-list-container dup-section">
+                    <div class="file-list-title-bar" style="background: #fff1f2;">
+                        <div>
+                            <span style="color: #991b1b; font-weight: bold;"><i class="fa fa-exclamation-triangle" style="margin-right: 5px;"></i> MRA Duplicate Records Rectification Queue (<span id="dupTabLabel">SFX</span>)</span>
+                            <span class="crs-status crs-status-pending" id="dupVisibleCount" style="margin-left: 6px;">0 record(s)</span>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <button type="button" class="crs-toolbar-btn" style="height: 25px; font-size: 10.5px; padding: 0 8px; background: #dc2626; color: #fff; border-color: #dc2626;" onclick="deleteAllDuplicateRecords()">
+                                <i class="fa fa-trash"></i> Delete All
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-scroll-box">
+                        <table class="dedicated-file-table">
+                            <thead>
+                                <tr style="background: #fdf2f2;">
+                                    <th style="width: 6%;">ID</th>
+                                    <th style="width: 16%;">File Name</th>
+                                    <th style="width: 16%;">Account Number</th>
+                                    <th style="width: 23%;">Holder Name</th>
+                                    <th style="width: 8%;">Country</th>
+                                    <th style="width: 12%;">Balance</th>
+                                    <th style="width: 9%;">Status</th>
+                                    <th style="width: 10%; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dupTableBody">
+                                <tr>
+                                    <td colspan="8" class="no-data">
+                                        <i class="fa fa-check-circle-o" style="color: #15803d;"></i>
+                                        No duplicate records pending in queue.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Duplicate Queue Pagination Bar -->
+                    <div class="table-pagination-bar">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span>Rows:</span>
+                            <select id="pageSizeDupSelect" style="padding: 1px 3px; border:1px solid #cbd5e1; border-radius:3px; font-size:11px;">
+                                <option value="5" selected>5</option>
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                            </select>
+                            <span id="dupPageInfoText" style="color: var(--muted); margin-left: 4px;">Showing entries</span>
+                        </div>
+                        <div class="pagination-nav-wrap" id="dupPaginationNav"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="source-data-footer">
+                <a th:href="@{/Dashboard}" class="source-btn"><i class="fa fa-home"></i> Home</a>
+                <a href="javascript:history.back();" class="source-btn"><i class="fa fa-chevron-left"></i> Back</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Record Modal -->
+    <div class="failed-modal-overlay" id="mraEditModal">
+        <div class="failed-modal-card">
+            <div class="failed-modal-header">
+                <span><i class="fa fa-pencil"></i> Edit MRA Record</span>
+                <button type="button" class="failed-modal-close-x" onclick="closeEditModal()">&times;</button>
+            </div>
+
+            <form id="mraEditForm">
+                <input type="hidden" id="editReportId" name="reportId">
+                <div class="failed-modal-body">
+                    <div class="failed-field full">
+                        <label>Account / ID *</label>
+                        <input type="text" id="editAccNum" name="accountNumber" required>
+                    </div>
+
+                    <div class="failed-field full">
+                        <label>Holder Name *</label>
+                        <input type="text" id="editHolderName" name="holderName" required>
+                    </div>
+
+                    <div class="failed-field">
+                        <label>Tax Country (ISO 2) *</label>
+                        <input type="text" id="editTaxCountry" name="taxCountry" maxlength="2" required>
+                    </div>
+
+                    <div class="failed-field">
+                        <label>Currency Code *</label>
+                        <input type="text" id="editCurrency" name="currencyCode" maxlength="3" required>
+                    </div>
+
+                    <div class="failed-field">
+                        <label>Balance / Amount *</label>
+                        <input type="number" step="0.01" id="editBalance" name="accountBalance" required>
+                    </div>
+
+                    <div class="failed-field">
+                        <label>Status *</label>
+                        <select id="editStatus" name="status">
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="PENDING">PENDING</option>
+                            <option value="ERROR">ERROR</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="failed-modal-footer">
+                    <button type="button" class="modal-cancel-btn" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="modal-submit-btn"><i class="fa fa-save"></i> Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Duplicate Rectification Modal (Full Data Editor) -->
+    <div class="failed-modal-overlay" id="mraDupModal">
+        <div class="failed-modal-card">
+            <div class="failed-modal-header" style="background: #991b1b;">
+                <span><i class="fa fa-wrench"></i> Rectify Duplicate Record — Full Data Editor</span>
+                <button type="button" class="failed-modal-close-x" onclick="closeDupModal()">&times;</button>
+            </div>
+
+            <form id="mraDupForm">
+                <input type="hidden" id="rectifyDupId" name="dupId">
+                <div class="failed-modal-body" id="rectifyModalFields" style="max-height: 60vh; overflow-y: auto;">
+                    <!-- Dynamically populated fields -->
+                </div>
+
+                <div class="failed-modal-footer">
+                    <button type="button" class="modal-cancel-btn" onclick="closeDupModal()">Cancel</button>
+                    <button type="submit" class="modal-submit-btn" style="background: #991b1b;"><i class="fa fa-check"></i> Save &amp; Promote to Master List</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Unified System Notification Modal -->
+    <div class="failed-modal-overlay" id="customActionModal">
+        <div class="failed-modal-card" style="max-width: 380px;">
+            <div class="failed-modal-header">
+                <span><i class="fa fa-bell-o"></i> System Notification</span>
+                <button type="button" class="failed-modal-close-x" onclick="closeAppModal()">&times;</button>
+            </div>
+
+            <div class="action-alert-body">
+                <i id="appModalIcon" class="fa fa-info-circle action-alert-icon info"></i>
+                <div id="appModalTitle" class="action-alert-title">Notification</div>
+                <div id="appModalText" class="action-alert-text">Details will appear here.</div>
+            </div>
+
+            <div class="failed-modal-footer">
+                <button type="button" id="appModalCancelBtn" class="modal-cancel-btn" onclick="closeAppModal()" style="display: none;">Cancel</button>
+                <button type="button" id="appModalConfirmBtn" class="modal-submit-btn" style="background: #dc2626; display: none;">Confirm</button>
+                <button type="button" id="appModalOkBtn" class="modal-submit-btn" onclick="closeAppModal()" style="background: var(--brand);">OK</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

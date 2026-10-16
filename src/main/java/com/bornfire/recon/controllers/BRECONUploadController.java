@@ -1474,4 +1474,260 @@ public class BRECONUploadController {
         response.getOutputStream().write(excelBytes);
         response.getOutputStream().flush();
     }
+    
+   
+    @Autowired
+    private com.bornfire.recon.services.MraManagementService mraService;
+
+    @GetMapping("/getMraDashboardData")
+    @ResponseBody
+    public Map<String, Object> getMraDashboardData(
+            @RequestParam("type") String type,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "25") int size,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "status", required = false) String status) {
+        try {
+            return mraService.getMraDashboardData(type, page, size, search, status);
+        } catch (Exception e) {
+            logger.error("Error fetching MRA dashboard data for {}", type, e);
+            Map<String, Object> err = new HashMap<>();
+            err.put("totalCount", 0);
+            err.put("pendingCount", 0);
+            err.put("completedCount", 0);
+            err.put("errorCount", 0);
+            err.put("filteredTotal", 0);
+            err.put("records", Collections.emptyList());
+            return err;
+        }
+    }
+
+    @PostMapping("/uploadMraFile")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> uploadMraFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("type") String type,
+            HttpServletRequest request) {
+
+        Map<String, Object> res = new HashMap<>();
+        String userId = "SYSTEM";
+        if (request != null && request.getSession(false) != null) {
+            Object userObj = request.getSession(false).getAttribute("USERID");
+            if (userObj != null) userId = userObj.toString().trim();
+        }
+
+        if (file == null || file.isEmpty()) {
+            res.put("status", "ERROR");
+            res.put("message", "Please select a valid non-empty file to upload.");
+            return ResponseEntity.badRequest().body(res);
+        }
+
+        try {
+            int inserted = mraService.uploadMraFile(file, type, userId);
+            res.put("status", "SUCCESS");
+            res.put("insertedRows", inserted);
+            res.put("message", "Successfully uploaded and parsed " + inserted + " record(s) into " + type.toUpperCase() + " table.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            logger.error("MRA file upload failed for type {}", type, e);
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage() != null ? e.getMessage() : "Error processing file upload.");
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @GetMapping("/getMraDuplicateRecords")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getMraDuplicateRecords(@RequestParam("type") String type) {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            List<Map<String, Object>> records = mraService.getMraDuplicateRecords(type);
+            res.put("status", "SUCCESS");
+            res.put("records", records);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("records", Collections.emptyList());
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @PostMapping("/rectifyMraDuplicate")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> rectifyMraDuplicate(
+            @RequestParam("type") String type,
+            @RequestParam("dupId") Long dupId,
+            @RequestParam("updatedBalance") Double updatedBalance,
+            @RequestParam("updatedStatus") String updatedStatus) {
+        
+        Map<String, Object> res = new HashMap<>();
+        try {
+            boolean success = mraService.rectifyDuplicateRecord(type, dupId, updatedBalance, updatedStatus);
+            res.put("status", success ? "SUCCESS" : "ERROR");
+            res.put("message", success ? "Duplicate resolved and promoted successfully." : "Record not found.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @PostMapping("/deleteMraDuplicate")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> deleteMraDuplicate(
+            @RequestParam("type") String type,
+            @RequestParam("dupId") Long dupId) {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            boolean success = mraService.deleteDuplicateRecord(type, dupId);
+            res.put("status", success ? "SUCCESS" : "ERROR");
+            res.put("message", success ? "Duplicate record deleted." : "Record not found.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @PostMapping("/deleteAllMraDuplicates")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> deleteAllMraDuplicates(@RequestParam("type") String type) {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            mraService.deleteAllDuplicateRecords(type);
+            res.put("status", "SUCCESS");
+            res.put("message", "All duplicate records cleared.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @PostMapping("/updateMraRecord")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> updateMraRecord(
+            @RequestParam("type") String type,
+            @RequestParam("reportId") Long reportId,
+            @RequestParam("accountNumber") String accountNumber,
+            @RequestParam("holderName") String holderName,
+            @RequestParam("taxCountry") String taxCountry,
+            @RequestParam("accountBalance") Double accountBalance,
+            @RequestParam("currencyCode") String currencyCode,
+            @RequestParam("status") String status) {
+
+        Map<String, Object> res = new HashMap<>();
+        try {
+            boolean success = mraService.updateMraRecord(type, reportId, accountNumber, holderName, taxCountry, accountBalance, currencyCode, status);
+            res.put("status", success ? "SUCCESS" : "ERROR");
+            res.put("message", success ? "Record updated successfully." : "Record not found.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @GetMapping("/getMraRecordDetails")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getMraRecordDetails(
+            @RequestParam("type") String type,
+            @RequestParam("reportId") Long reportId) {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            Map<String, Object> data = mraService.getMraRecordDetails(type, reportId);
+            res.put("status", "SUCCESS");
+            res.put("record", data);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @GetMapping("/downloadMraXml")
+    public void downloadMraXml(
+            @RequestParam("type") String type,
+            HttpServletResponse response) {
+        try {
+            String xmlContent = mraService.generateMraXml(type);
+            response.setContentType("application/xml");
+            response.setCharacterEncoding("UTF-8");
+            response.setHeader("Content-Disposition", "attachment; filename=\"MRA_" + type.toUpperCase() + "_" + System.currentTimeMillis() + ".xml\"");
+            response.getOutputStream().write(xmlContent.getBytes(StandardCharsets.UTF_8));
+            response.getOutputStream().flush();
+        } catch (Exception e) {
+            logger.error("Error generating MRA XML for type {}", type, e);
+            try {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate XML: " + e.getMessage());
+            } catch (Exception ignored) {}
+        }
+    }
+
+    @GetMapping("/downloadSingleMraXml")
+    public void downloadSingleMraXml(
+            @RequestParam("type") String type,
+            @RequestParam("reportId") Long reportId,
+            HttpServletResponse response) {
+        try {
+            String xmlContent = mraService.generateSingleMraXml(type, reportId);
+            response.setContentType("application/xml");
+            response.setCharacterEncoding("UTF-8");
+            response.setHeader("Content-Disposition", "attachment; filename=\"MRA_" + type.toUpperCase() + "_" + reportId + ".xml\"");
+            response.getOutputStream().write(xmlContent.getBytes(StandardCharsets.UTF_8));
+            response.getOutputStream().flush();
+        } catch (Exception e) {
+            logger.error("Error generating single MRA XML", e);
+            try {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate XML: " + e.getMessage());
+            } catch (Exception ignored) {}
+        }
+    }
+    
+    @GetMapping("/getMraDuplicateRecordDetails")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getMraDuplicateRecordDetails(
+            @RequestParam("type") String type,
+            @RequestParam("dupId") Long dupId) {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            Map<String, Object> data = mraService.getMraDuplicateRecordDetails(type, dupId);
+            res.put("status", "SUCCESS");
+            res.put("record", data);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @PostMapping("/rectifyMraDuplicateFull")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> rectifyMraDuplicateFull(
+            @RequestParam("type") String type,
+            @RequestParam("dupId") Long dupId,
+            @RequestParam Map<String, String> allParams) {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            boolean success = mraService.rectifyDuplicateRecordFull(type, dupId, allParams);
+            res.put("status", success ? "SUCCESS" : "ERROR"); // Correct
+            res.put("status", success ? "SUCCESS" : "ERROR");
+            res.put("message", success ? "Record updated and stored to database successfully." : "Record not found.");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            logger.error("Error in rectifyMraDuplicateFull", e);
+            res.put("status", "ERROR");
+            res.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+    
+    
 }
