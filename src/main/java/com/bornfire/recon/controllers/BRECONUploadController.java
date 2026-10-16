@@ -1081,13 +1081,31 @@ public class BRECONUploadController {
      */
     @GetMapping("/downloadSingleCrsXml")
     public void downloadSingleCrsXml(
-            @RequestParam("accountNumber") String accountNumber, 
+            @RequestParam(value = "accountNumber", required = false) String accountNumber,
+            @RequestParam(value = "refId", required = false) String refId,
+            @RequestParam(value = "reportId", required = false) String reportId,
             HttpServletResponse response) {
         try {
-            String xmlContent = crsService.generateSingleCrsXml(accountNumber);
-            streamXmlToResponse(response, xmlContent, "CRS_ACC_" + accountNumber + ".xml");
+            // Determine the identifier passed
+            String identifier = (accountNumber != null && !accountNumber.trim().isEmpty()) ? accountNumber :
+                                (refId != null && !refId.trim().isEmpty()) ? refId : reportId;
+
+            if (identifier == null || identifier.trim().isEmpty()) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing account identifier.");
+                return;
+            }
+
+            String xmlContent = crsService.generateSingleCrsXml(identifier.trim());
+            
+            response.setContentType("application/xml");
+            response.setCharacterEncoding("UTF-8");
+            response.setHeader("Content-Disposition", 
+                    "attachment; filename=\"CRS_REC_" + identifier.trim() + ".xml\"");
+            
+            response.getOutputStream().write(xmlContent.getBytes(StandardCharsets.UTF_8));
+            response.getOutputStream().flush();
         } catch (Exception e) {
-            logger.error("Error downloading individual CRS XML for Account {}", accountNumber, e);
+            logger.error("Error downloading individual CRS XML for identifier: {}", accountNumber, e);
             try {
                 response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate single CRS XML: " + e.getMessage());
             } catch (Exception ignored) {}
@@ -1117,50 +1135,69 @@ public class BRECONUploadController {
     @ResponseBody
     @Transactional(propagation = Propagation.REQUIRED)
     public ResponseEntity<Map<String, Object>> saveCrsRecord(
+            @RequestParam(value = "dupId", required = false) Long dupId,
+            @RequestParam("docRefId") String docRefId,
             @RequestParam("accountNumber") String accountNumber,
             @RequestParam("reportType") String reportType,
-            @RequestParam("taxCountry") String taxCountry,
-            @RequestParam(value = "tin", required = false) String tin,
+            @RequestParam(value = "crsCode", required = false, defaultValue = "CRS102") String crsCode,
+            @RequestParam("tin") String tin,
             @RequestParam(value = "firstName", required = false) String firstName,
             @RequestParam(value = "lastName", required = false) String lastName,
             @RequestParam(value = "entityName", required = false) String entityName,
+            @RequestParam("taxCountry") String taxCountry,
+            @RequestParam("city") String city,
             @RequestParam(value = "address", required = false) String address,
-            @RequestParam(value = "city", required = false) String city,
             @RequestParam(value = "accountBalance", defaultValue = "0.0") Double accountBalance,
-            @RequestParam(value = "currencyCode", defaultValue = "MUR") String currencyCode,
-            @RequestParam(value = "crsCode", defaultValue = "CRS102") String crsCode) {
+            @RequestParam(value = "currencyCode", defaultValue = "MUR") String currencyCode) {
 
         Map<String, Object> res = new HashMap<>();
 
-        if (accountNumber == null || accountNumber.trim().isEmpty()) {
-            res.put("status", "ERROR");
-            res.put("message", "Invalid Account Number.");
-            return ResponseEntity.badRequest().body(res);
-        }
-
         try {
-            int updated = jdbcTemplate.update(
-                "UPDATE BRECON.CRS_REPORT_DATA SET " +
-                "  REPORT_TYPE = ?, TAX_COUNTRY = ?, TIN = ?, " +
-                "  FIRST_NAME = ?, LAST_NAME = ?, ENTITY_NAME = ?, ADDRESS = ?, CITY = ?, " +
-                "  ACCOUNT_BALANCE = ?, CURRENCY_CODE = ?, CRS_CODE = ? " +
-                "WHERE ACCOUNT_NUMBER = ?",
-                reportType.toUpperCase(), taxCountry.toUpperCase(), tin,
-                firstName, lastName, entityName, address, city,
-                accountBalance, currencyCode.toUpperCase(), crsCode, accountNumber
+            // Check if record exists by REF_ID in the main reporting table
+            Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM BRECON.CRS_REPORT_DATA WHERE REF_ID = ?", 
+                Integer.class, docRefId.trim()
             );
 
-            if (updated > 0) {
-                res.put("status", "SUCCESS");
-                res.put("message", "CRS record updated successfully.");
-                return ResponseEntity.ok(res);
+            if (count != null && count > 0) {
+                // 1. UPDATE EXISTING RECORD
+                jdbcTemplate.update(
+                    "UPDATE BRECON.CRS_REPORT_DATA SET " +
+                    "  REPORT_TYPE = ?, CRS_CODE = ?, ACCOUNT_NUMBER = ?, IBAN = ?, CURRENCY_CODE = ?, " +
+                    "  ACCOUNT_BALANCE = ?, ENTITY_NAME = ?, FIRST_NAME = ?, LAST_NAME = ?, " +
+                    "  TAX_COUNTRY = ?, TIN = ?, ADDRESS = ?, CITY = ?, COUNTRY = ? " +
+                    "WHERE REF_ID = ?",
+                    reportType.toUpperCase(), crsCode, accountNumber, accountNumber, currencyCode.toUpperCase(),
+                    accountBalance, entityName, firstName, lastName,
+                    taxCountry.toUpperCase(), tin, address, city, taxCountry.toUpperCase(),
+                    docRefId.trim()
+                );
             } else {
-                res.put("status", "ERROR");
-                res.put("message", "Record with Account Number " + accountNumber + " not found.");
-                return ResponseEntity.badRequest().body(res);
+                // 2. INSERT RECTIFIED DUPLICATE INTO MAIN REPORT DATA
+                jdbcTemplate.update(
+                    "INSERT INTO BRECON.CRS_REPORT_DATA (" +
+                    "  REPORT_TYPE, REF_ID, CRS_CODE, ACCOUNT_NUMBER, IBAN, CURRENCY_CODE, " +
+                    "  ACCOUNT_BALANCE, INTEREST_PAID, IS_DORMANT, IS_CLOSED, IS_UNDOCUMENTED, " +
+                    "  CUSTOMER_ID, ENTITY_NAME, FIRST_NAME, LAST_NAME, DATE_OF_BIRTH, " +
+                    "  NATIONALITY, TAX_COUNTRY, TIN, ADDRESS, CITY, COUNTRY, " +
+                    "  CREATED_DATE, ENTRY_USER " +
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'N', 'N', 'N', NULL, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, SYSDATE, 'RECTIFIED')",
+                    reportType.toUpperCase(), docRefId.trim(), crsCode, accountNumber, accountNumber, currencyCode.toUpperCase(),
+                    accountBalance, entityName, firstName, lastName,
+                    taxCountry.toUpperCase(), taxCountry.toUpperCase(), tin, address, city, taxCountry.toUpperCase()
+                );
             }
+
+            // If this was a duplicate from the queue, mark it resolved
+            if (dupId != null && dupId > 0) {
+                jdbcTemplate.update("UPDATE BRECON.CRS_DUPLICATE_RECORDS SET STATUS = 'RESOLVED' WHERE DUP_ID = ?", dupId);
+            }
+
+            res.put("status", "SUCCESS");
+            res.put("message", "Record saved successfully and reflected in reporting table.");
+            return ResponseEntity.ok(res);
         } catch (Exception e) {
-            logger.error("Error saving CRS record Account Number: {}", accountNumber, e);
+            logger.error("Error saving CRS record DocRefId: {}", docRefId, e);
             res.put("status", "ERROR");
             res.put("message", "Database Error: " + e.getMessage());
             return ResponseEntity.badRequest().body(res);
@@ -1208,20 +1245,37 @@ public class BRECONUploadController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> rectifyCrsDuplicate(
             @RequestParam("dupId") Long dupId,
-            @RequestParam("updatedBalance") Double updatedBalance,
-            @RequestParam(value = "updatedStatus", required = false, defaultValue = "COMPLETED") String updatedStatus) {
-        
+            @RequestParam("accountNumber") String accountNumber,
+            @RequestParam("reportType") String reportType,
+            @RequestParam("taxCountry") String taxCountry,
+            @RequestParam(value = "tin", required = false) String tin,
+            @RequestParam(value = "firstName", required = false) String firstName,
+            @RequestParam(value = "lastName", required = false) String lastName,
+            @RequestParam(value = "entityName", required = false) String entityName,
+            @RequestParam(value = "address", required = false) String address,
+            @RequestParam(value = "city", required = false) String city,
+            @RequestParam(value = "accountBalance", defaultValue = "0.0") Double accountBalance,
+            @RequestParam(value = "currencyCode", defaultValue = "MUR") String currencyCode,
+            @RequestParam(value = "crsCode", defaultValue = "CRS102") String crsCode,
+            @RequestParam(value = "docRefId", required = false) String docRefId) {
+
         Map<String, Object> res = new HashMap<>();
         try {
-            boolean success = crsService.rectifyDuplicateRecord(dupId, updatedBalance, updatedStatus);
+            boolean success = crsService.rectifyDuplicateRecord(
+                dupId, accountNumber, reportType, taxCountry, tin,
+                firstName, lastName, entityName, address, city,
+                accountBalance, currencyCode, crsCode, docRefId
+            );
+
             if (success) {
                 res.put("status", "SUCCESS");
-                res.put("message", "Duplicate resolved successfully.");
+                res.put("message", "Duplicate rectified and successfully promoted to CRS Reportable Accounts List.");
+                return ResponseEntity.ok(res);
             } else {
                 res.put("status", "ERROR");
-                res.put("message", "Record not found or update failed.");
+                res.put("message", "Failed to rectify duplicate record. Please ensure unique DocRefId.");
+                return ResponseEntity.badRequest().body(res);
             }
-            return ResponseEntity.ok(res);
         } catch (Exception e) {
             res.put("status", "ERROR");
             res.put("message", e.getMessage());

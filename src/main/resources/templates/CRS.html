@@ -32,7 +32,7 @@
             min-height: 100%;
             overflow-x: hidden;
             overflow-y: auto;
-           /*  background: #f3f6f8; */
+            background: #f3f6f8;
             font-family: Arial, sans-serif;
             color: var(--text);
         }
@@ -454,28 +454,39 @@
                 window.location.href = "./downloadCrsXml?year=2025";
             });
 
-            // Schema-Aligned Edit & Rectification Form Submission
-            $('#crsRectifyForm').on('submit', function(e) {
-                e.preventDefault();
-                $.ajax({
-                    url: './saveCrsRecord',
-                    type: 'POST',
-                    data: new URLSearchParams(new FormData(this)),
-                    success: function(res) {
-                        if (res.status === "SUCCESS") {
-                            showAppAlert("success", "Saved Successfully", res.message || "CRS record updated successfully.");
-                            closeCrsRectifyModal();
-                            loadDashboardData();
-                            loadDuplicatesQueue();
-                        } else {
-                            showAppAlert("error", "Error", res.message || "Could not update record.");
-                        }
-                    },
-                    error: function(xhr) {
-                        showAppAlert("error", "Server Error", xhr.statusText);
-                    }
-                });
-            });
+            // Unified Form Submission Handler
+			$('#crsRectifyForm').off('submit').on('submit', function (e) {
+			    e.preventDefault(); // Prevent standard page refresh
+
+			    var formData = new FormData(this);
+			    var params = new URLSearchParams(formData);
+
+			    // Check which endpoint to call based on dupId
+			    var dupId = $('#crsDupId').val();
+			    var isDuplicate = (dupId !== '' && dupId !== 'null' && dupId !== undefined && dupId !== '0');
+			    var targetUrl = isDuplicate ? './rectifyCrsDuplicate' : './saveCrsRecord';
+
+			    $.ajax({
+			        url: targetUrl,
+			        type: 'POST',
+			        data: params.toString(),
+			        contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+			        success: function (res) {
+			            if (res.status === 'SUCCESS') {
+			                showAppAlert('success', 'Saved Successfully', res.message || 'Record persisted.');
+			                closeCrsRectifyModal();
+			                loadDashboardData();
+			                loadDuplicatesQueue();
+			            } else {
+			                showAppAlert('error', 'Error', res.message || 'Save failed.');
+			            }
+			        },
+			        error: function (xhr) {
+			            var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.statusText;
+			            showAppAlert('error', 'Server Error (' + xhr.status + ')', msg);
+			        }
+			    });
+			});
 
             $('#appModalConfirmBtn').on('click', function () {
                 if (typeof currentConfirmCallback === 'function') {
@@ -610,7 +621,7 @@
                     '<td>' + escapeHtml(bal) + '</td>' +
                     '<td><span class="crs-status crs-status-completed">ACTIVE</span></td>' +
                     '<td><button type="button" class="xml-row-btn" onclick="downloadRowXml(\'' + escapeHtml(r.ACCOUNT_NUMBER) + '\')"><i class="fa fa-file-code-o"></i> XML</button></td>' +
-                    '<td><button type="button" class="edit-row-btn" onclick="openCrsRectifyModal(\'' + escapeHtml(r.ACCOUNT_NUMBER) + '\')"><i class="fa fa-pen"></i> Edit</button></td>' +
+                    '<td><button type="button" class="edit-row-btn" onclick="openCrsRectifyModal(\'' + escapeHtml(r.ACCOUNT_NUMBER) + '\', null)"><i class="fa fa-pen"></i> Edit</button></td>' +
                 '</tr>';
                 $tbody.append(rowHtml);
             });
@@ -623,11 +634,9 @@
             $nav.empty();
             if (totalPages <= 1) return;
 
-            // Previous Button [<]
             var prevDisabled = currentPageMain === 1 ? 'disabled' : '';
             $nav.append('<button type="button" class="pagination-btn" ' + prevDisabled + ' onclick="changeMainPage(' + (currentPageMain - 1) + ')">&lsaquo;</button>');
 
-            // Window configuration (only show current page +/- 1)
             var delta = 1;
             var range = [];
             var rangeWithDots = [];
@@ -660,7 +669,6 @@
                 }
             });
 
-            // Next Button [>]
             var nextDisabled = currentPageMain === totalPages ? 'disabled' : '';
             $nav.append('<button type="button" class="pagination-btn" ' + nextDisabled + ' onclick="changeMainPage(' + (currentPageMain + 1) + ')">&rsaquo;</button>');
         }
@@ -706,7 +714,7 @@
                     '<td><span class="crs-status crs-status-pending">PENDING</span></td>' +
                     '<td style="text-align: center;">' +
                         '<div class="action-btn-group">' +
-                            '<button type="button" class="edit-row-btn" onclick="openCrsRectifyModal(\'' + escapeHtml(r.ACCOUNT_NUMBER) + '\')"><i class="fa fa-wrench"></i> Rectify</button>' +
+                            '<button type="button" class="edit-row-btn" onclick="openCrsRectifyModal(\'' + escapeHtml(r.ACCOUNT_NUMBER) + '\', ' + r.DUP_ID + ')"><i class="fa fa-wrench"></i> Rectify</button>' +
                             '<button type="button" class="delete-row-btn" onclick="deleteDuplicateRecord(' + r.DUP_ID + ')"><i class="fa fa-trash"></i> Delete</button>' +
                         '</div>' +
                     '</td>' +
@@ -722,7 +730,6 @@
             $nav.empty();
             if (totalPages <= 1) return;
 
-            // Previous Button [<]
             var prevDisabled = currentPageDup === 1 ? 'disabled' : '';
             $nav.append('<button type="button" class="pagination-btn" ' + prevDisabled + ' onclick="changeDupPage(' + (currentPageDup - 1) + ')">&lsaquo;</button>');
 
@@ -758,7 +765,6 @@
                 }
             });
 
-            // Next Button [>]
             var nextDisabled = currentPageDup === totalPages ? 'disabled' : '';
             $nav.append('<button type="button" class="pagination-btn" ' + nextDisabled + ' onclick="changeDupPage(' + (currentPageDup + 1) + ')">&rsaquo;</button>');
         }
@@ -768,9 +774,13 @@
             renderDuplicateTable();
         }
 
-        function downloadRowXml(accountNumber) {
-            window.location.href = "./downloadSingleCrsXml?accountNumber=" + encodeURIComponent(accountNumber);
-        }
+		function downloadRowXml(accountNumber) {
+		    if (!accountNumber) {
+		        showAppAlert("error", "Error", "Invalid account number.");
+		        return;
+		    }
+		    window.location.href = "./downloadSingleCrsXml?accountNumber=" + encodeURIComponent(accountNumber);
+		}
 
         function downloadDuplicateCsv() {
             if (!crsDuplicateRecords || crsDuplicateRecords.length === 0) {
@@ -824,40 +834,45 @@
             });
         }
 
-        // Schema-compliant modal population
-        function openCrsRectifyModal(accountNumber) {
-            if (!accountNumber) return;
+        function openCrsRectifyModal(accountNumber, dupId) {
+            if (!accountNumber && !dupId) return;
 
-            var r = crsMasterRecords.find(x => x.ACCOUNT_NUMBER == accountNumber) || 
-                    crsDuplicateRecords.find(x => x.ACCOUNT_NUMBER == accountNumber);
+            var r = (dupId ? crsDuplicateRecords.find(x => x.DUP_ID == dupId) : null) || 
+                    crsMasterRecords.find(x => x.ACCOUNT_NUMBER == accountNumber);
 
             if (r) {
-                populateAndOpenModal(r);
+                populateAndOpenModal(r, dupId);
                 return;
             }
 
             $.get('./getCrsRecordDetails?accountNumber=' + encodeURIComponent(accountNumber), function(data) {
                 var rec = (data && data.record) ? data.record : data;
-                populateAndOpenModal(rec);
+                populateAndOpenModal(rec, dupId);
             }).fail(function() {
                 showAppAlert("error", "Error", "Failed to load CRS record details.");
             });
         }
 
-        function populateAndOpenModal(r) {
-            var isOrg = (String(r.REPORT_TYPE || '').toUpperCase() === 'ORGANISATION' || r.CRS_CODE === 'CRS101' || r.CRS_CODE === 'CRS102');
+        function populateAndOpenModal(r, dupId) {
+            var isOrg = (String(r.REPORT_TYPE || r.HOLDER_TYPE || '').toUpperCase() === 'ORGANISATION' || r.CRS_CODE === 'CRS101' || r.CRS_CODE === 'CRS102');
 
-            $('#crsDocRefId').val(r.REF_ID || ('MU2025-' + (isOrg ? 'CORP' : 'IND') + '-' + r.ACCOUNT_NUMBER));
+            $('#crsDupId').val(dupId ? dupId : (r.DUP_ID || ''));
+
+            var baseRef = r.REF_ID || ('MU2025' + r.ACCOUNT_NUMBER);
+            if (dupId && !baseRef.endsWith("02")) {
+                baseRef = baseRef + "02";
+            }
+            $('#crsDocRefId').val(baseRef);
             $('#crsAccountNumber').val(r.ACCOUNT_NUMBER || '');
             $('#crsReportType').val(r.REPORT_TYPE || (isOrg ? 'CRS102' : 'INDIVIDUAL'));
             $('#crsCrsCode').val(r.CRS_CODE || (isOrg ? 'CRS102' : ''));
             $('#crsTin').val(r.TIN || '');
 
-            $('#crsFirstName').val(r.FIRST_NAME || '');
+            $('#crsFirstName').val(r.FIRST_NAME || (!isOrg ? (r.HOLDER_NAME || '') : ''));
             $('#crsLastName').val(r.LAST_NAME || '');
-            $('#crsEntityName').val(r.ENTITY_NAME || r.HOLDER_NAME || '');
+            $('#crsEntityName').val(r.ENTITY_NAME || (isOrg ? (r.HOLDER_NAME || '') : ''));
 
-            $('#crsTaxCountry').val(r.TAX_COUNTRY || r.COUNTRY || 'MU');
+            $('#crsTaxCountry').val(r.TAX_COUNTRY || r.RESIDENCE_COUNTRY || r.COUNTRY || 'MU');
             $('#crsAddress').val(r.ADDRESS || '');
             $('#crsCity').val(r.CITY || 'PORT LOUIS');
             $('#crsAccountBalance').val(r.ACCOUNT_BALANCE || 0.0);
@@ -895,8 +910,7 @@
                     '<div class="crs-human-kv"><span class="crs-human-label">Country</span><span class="crs-human-value">' + escapeHtml(r.TAX_COUNTRY || r.COUNTRY) + '</span></div>' +
                     '<div class="crs-human-kv"><span class="crs-human-label">Balance</span><span class="crs-human-value"><b>' + Number(r.ACCOUNT_BALANCE || 0).toLocaleString() + ' ' + (r.CURRENCY_CODE || 'MUR') + '</b></span></div>' +
                 '</div>' +
-                '<div class="crs-popup-footer"><button type="button" class="source-btn" onclick="downloadRowXml(\'' + escapeHtml(r.ACCOUNT_NUMBER) + '\')">Download XML</button></div>' +
-            '</div>');
+               '<div class="crs-popup-footer"><button type="button" class="source-btn" onclick="downloadRowXml(\'' + escapeHtml(r.ACCOUNT_NUMBER) + '\')">Download XML</button></div>');
 
             $('body').append(popupEl);
             popupEl.draggable({ handle: ".crs-popup-header" });
@@ -996,6 +1010,7 @@
                             <i class="fa fa-upload"></i> Upload
                         </button>
                         
+                        <!-- 4 Dedicated XML Template Download Buttons -->
                         <button type="button" class="crs-toolbar-btn blue" id="crsDownloadIndividualBtn" title="Download Individual XML based on ind.xml">
                             <i class="fa fa-user"></i> Individual XML
                         </button>
@@ -1137,6 +1152,8 @@
             </div>
 
             <form id="crsRectifyForm">
+                <input type="hidden" id="crsDupId" name="dupId" value="">
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 18px 20px;">
                     <!-- 1. Header Information -->
                     <div style="grid-column: 1 / -1; padding-bottom: 4px; border-bottom: 2px solid #e2e8f0; font-weight: bold; color: #1e3a8a; font-size: 13px;">
@@ -1150,7 +1167,7 @@
 
                     <div class="crs-field">
                         <label style="font-size: 11.5px; font-weight: 700; color: #334155;">DocRefId *</label>
-                        <input type="text" id="crsDocRefId" readonly style="width: 100%; height: 32px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 5px; padding: 4px 8px; font-size: 12px;">
+                        <input type="text" id="crsDocRefId" name="docRefId" required style="width: 100%; height: 32px; border: 1px solid #cbd5e1; border-radius: 5px; padding: 4px 8px; font-size: 12px;">
                     </div>
 
                     <!-- 2. Account Details -->
