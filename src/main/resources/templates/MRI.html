@@ -241,12 +241,12 @@
             background: #f1f5f9;
             color: var(--ink);
             text-align: left;
-            padding: 9px 10px;
+            padding: 6px 8px; /* Reduced vertical & horizontal padding */
             border-bottom: 1px solid var(--line);
             font-weight: 600;
         }
         .dedicated-file-table td {
-            padding: 9px 10px;
+            padding: 6px 8px; /* Reduced vertical & horizontal space between data rows */
             border-bottom: 1px solid #edf2f7;
             color: var(--text);
             vertical-align: middle;
@@ -268,42 +268,42 @@
         .action-btn-group { display: inline-flex; align-items: center; gap: 4px; justify-content: center; }
         .edit-row-btn {
             background: var(--brand); color: #ffffff; border: none; border-radius: 3px;
-            padding: 4px 9px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
+            padding: 3px 8px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
         }
         .edit-row-btn:hover { background: var(--brand-dark); }
         .xml-row-btn {
             background: #15803d; color: #ffffff; border: none; border-radius: 3px;
-            padding: 4px 9px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
+            padding: 3px 8px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
         }
         .xml-row-btn:hover { background: #166534; }
         .delete-row-btn {
             background: #dc2626; color: #ffffff; border: none; border-radius: 3px;
-            padding: 4px 9px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
+            padding: 3px 8px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
         }
         .delete-row-btn:hover { background: #b91c1c; }
 
         /* Pagination bar */
         .table-pagination-bar {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 8px 14px; background: #ffffff; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink);
+            padding: 6px 12px; background: #ffffff; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink);
         }
         .pagination-nav-wrap { display: flex; align-items: center; gap: 4px; }
         .pagination-btn {
-            background: #ffffff; border: 1px solid #cbd5e1; border-radius: 3px; padding: 3px 9px;
-            font-size: 11.5px; color: var(--ink); cursor: pointer; transition: all .15s ease;
+            background: #ffffff; border: 1px solid #cbd5e1; border-radius: 3px; padding: 2px 8px;
+            font-size: 11px; color: var(--ink); cursor: pointer; transition: all .15s ease;
         }
         .pagination-btn.active { background: var(--brand); color: #ffffff; border-color: var(--brand); font-weight: bold; }
         .pagination-btn:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border-color: #e2e8f0; }
 
-        .no-data { text-align: center !important; color: var(--muted) !important; padding: 22px 10px !important; font-size: 12.5px; }
-        .no-data i { display: block; font-size: 22px; margin-bottom: 5px; color: #b4c2cc; }
+        .no-data { text-align: center !important; color: var(--muted) !important; padding: 18px 10px !important; font-size: 12px; }
+        .no-data i { display: block; font-size: 20px; margin-bottom: 4px; color: #b4c2cc; }
 
         .source-data-footer {
-            border-top: 1px solid #e3e8ec; padding: 8px 0; text-align: center; background: #ffffff; border-radius: 0 0 8px 8px;
+            border-top: 1px solid #e3e8ec; padding: 6px 0; text-align: center; background: #ffffff; border-radius: 0 0 8px 8px;
         }
         .source-btn {
-            display: inline-block; padding: 4px 14px; margin: 0 3px; background: #ffffff; border: 1px solid #8a98a3;
-            border-radius: 3px; color: var(--ink); font-size: 12px; text-decoration: none; cursor: pointer;
+            display: inline-block; padding: 4px 12px; margin: 0 3px; background: #ffffff; border: 1px solid #8a98a3;
+            border-radius: 3px; color: var(--ink); font-size: 11.5px; text-decoration: none; cursor: pointer;
         }
         .source-btn:hover { background: var(--head-bg); border-color: var(--brand); color: #000; }
 
@@ -313,10 +313,10 @@
             align-items: center; justify-content: center; z-index: 10; font-size: 13px; font-weight: bold; color: var(--brand);
         }
 
-        /* Human Key-Value Popups */
-        .crs-human-kv { display: grid; grid-template-columns: 140px 1fr; padding: 4px 0; border-bottom: 1px solid #edf2f5; font-size: 11.5px; }
-        .crs-human-label { font-weight: bold; color: #334e68; }
-        .crs-human-value { color: #102a43; word-break: break-word; }
+        /* Clean Human Key-Value Popups */
+        .crs-human-kv { display: grid; grid-template-columns: 180px 1fr; padding: 6px 10px; border-bottom: 1px solid #edf2f5; font-size: 11.5px; align-items: center; }
+        .crs-human-label { font-weight: bold; color: #2c5667; }
+        .crs-human-value { color: #102a43; word-break: break-word; font-family: monospace; font-size: 12px; }
 
         /* Modals */
         .failed-modal-overlay {
@@ -327,32 +327,32 @@
             width: 100%; max-width: 650px; background: #ffffff; border-radius: 10px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25); overflow: hidden;
         }
         .failed-modal-header {
-            padding: 12px 18px; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
-            color: #ffffff; display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: bold;
+            padding: 10px 16px; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
+            color: #ffffff; display: flex; align-items: center; justify-content: space-between; font-size: 13.5px; font-weight: bold;
         }
         .failed-modal-close-x { background: transparent; border: none; color: #ffffff; font-size: 20px; line-height: 1; cursor: pointer; }
-        .failed-modal-body { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .failed-field { display: flex; flex-direction: column; gap: 4px; }
+        .failed-modal-body { padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .failed-field { display: flex; flex-direction: column; gap: 3px; }
         .failed-field.full { grid-column: 1 / -1; }
-        .failed-field label { font-size: 11.5px; font-weight: bold; color: var(--ink); }
+        .failed-field label { font-size: 11px; font-weight: bold; color: var(--ink); }
         .failed-field input, .failed-field select {
-            height: 32px; padding: 4px 8px; border: 1px solid #cbd5dc; border-radius: 5px; font-size: 12px; outline: none; background: #fff; width: 100%;
+            height: 30px; padding: 3px 8px; border: 1px solid #cbd5dc; border-radius: 4px; font-size: 11.5px; outline: none; background: #fff; width: 100%;
         }
         .failed-modal-footer {
-            padding: 12px 18px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 6px;
+            padding: 10px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 6px;
         }
-        .modal-submit-btn { background: #16a34a; color: #ffffff; border: none; padding: 6px 14px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .modal-submit-btn { background: #16a34a; color: #ffffff; border: none; padding: 5px 12px; border-radius: 4px; font-size: 11.5px; font-weight: bold; cursor: pointer; }
         .modal-submit-btn:hover { background: #15803d; }
-        .modal-cancel-btn { background: #ffffff; border: 1px solid #cbd5dc; padding: 6px 12px; border-radius: 5px; font-size: 12px; cursor: pointer; }
+        .modal-cancel-btn { background: #ffffff; border: 1px solid #cbd5dc; padding: 5px 10px; border-radius: 4px; font-size: 11.5px; cursor: pointer; }
 
-        .action-alert-body { padding: 18px 16px 12px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; }
-        .action-alert-icon { font-size: 32px; margin-bottom: 8px; }
+        .action-alert-body { padding: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .action-alert-icon { font-size: 30px; margin-bottom: 6px; }
         .action-alert-icon.success { color: #16a34a; }
         .action-alert-icon.error   { color: #dc2626; }
         .action-alert-icon.warning { color: #d97706; }
         .action-alert-icon.info    { color: #0284c7; }
-        .action-alert-title { font-size: 14.5px; font-weight: bold; color: var(--ink); margin-bottom: 4px; }
-        .action-alert-text { font-size: 12px; color: #475569; line-height: 1.4; white-space: pre-line; }
+        .action-alert-title { font-size: 14px; font-weight: bold; color: var(--ink); margin-bottom: 3px; }
+        .action-alert-text { font-size: 11.5px; color: #475569; line-height: 1.4; white-space: pre-line; }
     </style>
 
     <script>
@@ -447,8 +447,9 @@
                 loadDuplicatesQueue();
             });
 
-            $('#mraDownloadAllBtn').on('click', function() {
-                window.location.href = "./downloadMraXml?type=" + encodeURIComponent(activeTab);
+            // Bulk CSV Download Action
+            $('#mraDownloadCsvBtn').on('click', function() {
+                window.location.href = "./downloadMraCsv?type=" + encodeURIComponent(activeTab);
             });
 
             $('#mraEditForm').on('submit', function(e) {
@@ -637,12 +638,12 @@
                 var rowHtml = '<tr>' +
                     '<td>' + actualIdx + '</td>' +
                     '<td><span class="ref-link" onclick="openRecordDetailsPopup(' + r.REPORT_ID + ')">' + escapeHtml(displayInfo) + '</span></td>' +
-                    '<td><span class="ref-link" style="color:var(--brand-dark);" onclick="openXmlTagPopup(' + r.REPORT_ID + ')"><b>' + escapeHtml(r.ACCOUNT_NUMBER || '-') + '</b></span></td>' +
+                    '<td><span class="ref-link" style="color:var(--brand-dark);" onclick="openHorizontalTablePopup(' + r.REPORT_ID + ')"><b>' + escapeHtml(r.ACCOUNT_NUMBER || '-') + '</b></span></td>' +
                     '<td>' + escapeHtml(r.HOLDER_NAME || '-') + '</td>' +
                     '<td>' + escapeHtml(r.TAX_COUNTRY || 'MU') + '</td>' +
                     '<td>' + escapeHtml(bal) + '</td>' +
                     '<td><span class="crs-status ' + statusClass + '">' + escapeHtml(st) + '</span></td>' +
-                    '<td><button type="button" class="xml-row-btn" onclick="downloadRowXml(' + r.REPORT_ID + ')"><i class="fa fa-file-code-o"></i> XML</button></td>' +
+                    '<td><button type="button" class="xml-row-btn" onclick="downloadRowCsv(' + r.REPORT_ID + ')"><i class="fa fa-file-text-o"></i> CSV</button></td>' +
                     '<td><button type="button" class="edit-row-btn" onclick="openEditModal(' + r.REPORT_ID + ')"><i class="fa fa-pen"></i> Edit</button></td>' +
                 '</tr>';
                 $tbody.append(rowHtml);
@@ -651,7 +652,7 @@
             renderMainPagination(totalFiltered, totalPagesMain);
         }
 
-        // Popups for Full Details & XML Preview
+        // 1. Passport / Ref Click: Clean Human-Readable Details
         function openRecordDetailsPopup(reportId) {
             $.get('./getMraRecordDetails', { type: activeTab, reportId: reportId }, function(data) {
                 var r = data.record || data;
@@ -661,17 +662,18 @@
                 var contentRows = '';
                 for (var key in r) {
                     if (r.hasOwnProperty(key)) {
-                        contentRows += '<div class="crs-human-kv"><span class="crs-human-label">' + escapeHtml(key) + '</span><span class="crs-human-value">' + escapeHtml(r[key]) + '</span></div>';
+                        var humanKey = key.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, function(l) { return l.toUpperCase(); });
+                        contentRows += '<div class="crs-human-kv"><span class="crs-human-label">' + escapeHtml(humanKey) + '</span><span class="crs-human-value">' + escapeHtml(r[key]) + '</span></div>';
                     }
                 }
 
-                var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="position:fixed; width:480px; max-width:90vw; background:#fff; border-radius:7px; box-shadow:0 14px 36px rgba(0,0,0,0.25); border:1px solid #bcd0dc; z-index:10000; overflow:hidden; top:120px; left:200px;">' +
-                    '<div class="crs-popup-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color:#fff; font-size:12px; font-weight:bold; cursor:move;">' +
-                        '<span><i class="fa fa-info-circle"></i> Record Details — ID: ' + reportId + '</span>' +
+                var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="position:fixed; width:520px; max-width:90vw; background:#fff; border-radius:8px; box-shadow:0 14px 36px rgba(0,0,0,0.25); border:1px solid #bcd0dc; z-index:10000; overflow:hidden; top:120px; left:200px;">' +
+                    '<div class="crs-popup-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color:#fff; font-size:13px; font-weight:bold; cursor:move;">' +
+                        '<span><i class="fa fa-info-circle" style="margin-right:6px;"></i> Record Details — ID: ' + reportId + '</span>' +
                         '<button type="button" class="failed-modal-close-x" onclick="$(\'#' + popupId + '\').remove()">&times;</button>' +
                     '</div>' +
-                    '<div class="crs-popup-body" style="padding:10px; max-height:300px; overflow-y:auto; background:#fdfdfd;">' + contentRows + '</div>' +
-                    '<div class="crs-popup-footer" style="padding:6px 12px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">' +
+                    '<div class="crs-popup-body" style="padding:12px 14px; max-height:340px; overflow-y:auto; background:#fdfdfd;">' + contentRows + '</div>' +
+                    '<div class="crs-popup-footer" style="padding:8px 14px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">' +
                         '<button type="button" class="source-btn" onclick="$(\'#' + popupId + '\').remove()">Close</button>' +
                     '</div>' +
                 '</div>');
@@ -681,28 +683,45 @@
             });
         }
 
-        function openXmlTagPopup(reportId) {
-            $.get('./downloadSingleMraXml', { type: activeTab, reportId: reportId }, function(xmlString) {
+        // 2. Account / ID Click: Horizontal Table Popup with requested columns
+        function openHorizontalTablePopup(reportId) {
+            $.get('./getMraRecordDetails', { type: activeTab, reportId: reportId }, function(data) {
+                var r = data.record || data;
                 popupCount++;
-                var popupId = "mra_xml_popup_" + Date.now() + "_" + popupCount;
+                var popupId = "mra_horizontal_popup_" + Date.now() + "_" + popupCount;
 
-                var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="position:fixed; width:500px; max-width:90vw; background:#fff; border-radius:7px; box-shadow:0 14px 36px rgba(0,0,0,0.25); border:1px solid #bcd0dc; z-index:10000; overflow:hidden; top:140px; left:240px;">' +
-                    '<div class="crs-popup-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color:#fff; font-size:12px; font-weight:bold; cursor:move;">' +
-                        '<span><i class="fa fa-file-code-o"></i> XML Payload Preview — ID: ' + reportId + '</span>' +
+                var targetCols = ['ID', 'BRN', 'NATIONALITY', 'PASSPORT', 'SURNAME', 'OTHERNAME', 'JOINT_ACCOUNT', 'ACCOUNT_NUMBER', 'TOTAL_DEPOSITS', 'BALANCE', 'AMOUNT', 'FOREIGN_CURRENCY', 'EQUIVALENT_IN_MUR'];
+                
+                var ths = '';
+                var tds = '';
+
+                targetCols.forEach(function(col) {
+                    if (r.hasOwnProperty(col) && r[col] !== null && r[col] !== undefined && r[col] !== '') {
+                        ths += '<th style="padding:7px 9px; background:#f1f5f9; border:1px solid #cbd5e1; font-size:11px; font-weight:bold; color:var(--ink); white-space:nowrap;">' + col.replace(/_/g, ' ') + '</th>';
+                        tds += '<td style="padding:7px 9px; border:1px solid #cbd5e1; font-size:11.5px; font-family:monospace; color:#102a43; white-space:nowrap;">' + escapeHtml(r[col]) + '</td>';
+                    }
+                });
+
+                var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="position:fixed; width:800px; max-width:95vw; background:#fff; border-radius:8px; box-shadow:0 14px 36px rgba(0,0,0,0.25); border:1px solid #bcd0dc; z-index:10000; overflow:hidden; top:140px; left:150px;">' +
+                    '<div class="crs-popup-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color:#fff; font-size:13px; font-weight:bold; cursor:move;">' +
+                        '<span><i class="fa fa-table" style="margin-right:6px;"></i> Record Data Stream — ID: ' + reportId + '</span>' +
                         '<button type="button" class="failed-modal-close-x" onclick="$(\'#' + popupId + '\').remove()">&times;</button>' +
                     '</div>' +
-                    '<div class="crs-popup-body" style="padding:10px; max-height:300px; overflow-y:auto; background:#fdfdfd;">' +
-                        '<div style="background:#1e293b; color:#f8fafc; border-radius:5px; padding:10px; font-family:\'Courier New\', monospace; font-size:11.5px; white-space:pre-wrap; word-break:break-all;">' + escapeHtml(xmlString) + '</div>' +
+                    '<div class="crs-popup-body" style="padding:14px; max-height:300px; overflow-x:auto; overflow-y:auto; background:#fdfdfd;">' +
+                        '<table style="border-collapse:collapse; width:100%;"><tr>' + ths + '</tr><tr>' + tds + '</tr></table>' +
                     '</div>' +
-                    '<div class="crs-popup-footer" style="padding:6px 12px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:6px;">' +
-                        '<button type="button" class="source-btn" onclick="downloadRowXml(' + reportId + ')"><i class="fa fa-download"></i> Download XML</button>' +
+                    '<div class="crs-popup-footer" style="padding:8px 14px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">' +
                         '<button type="button" class="source-btn" onclick="$(\'#' + popupId + '\').remove()">Close</button>' +
                     '</div>' +
                 '</div>');
 
                 $('body').append(popupEl);
                 popupEl.draggable({ handle: ".crs-popup-header" });
-            }, 'text');
+            });
+        }
+
+        function downloadRowCsv(reportId) {
+            window.location.href = "./downloadSingleMraCsv?type=" + encodeURIComponent(activeTab) + "&reportId=" + encodeURIComponent(reportId);
         }
 
         function renderMainPagination(totalItems, totalPages) {
@@ -802,10 +821,6 @@
             loadDuplicatesQueue();
         }
 
-        function downloadRowXml(reportId) {
-            window.location.href = "./downloadSingleMraXml?type=" + encodeURIComponent(activeTab) + "&reportId=" + encodeURIComponent(reportId);
-        }
-
         function deleteDuplicateRecord(dupId) {
             showAppConfirm("Delete Confirmation", "Are you sure you want to delete this duplicate record?", function() {
                 $.ajax({
@@ -882,9 +897,9 @@
                 }
 
                 $fieldsContainer.append(
-                    '<div class="failed-field full" style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 8px;">' +
+                    '<div class="failed-field full" style="margin-top: 6px; border-top: 1px solid #e2e8f0; padding-top: 6px;">' +
                         '<label>Resolution Status *</label>' +
-                        '<select name="updatedStatus" class="failed-field" style="width:100%; height:32px; background:#fff; border:1px solid #cbd5dc; border-radius:5px;">' +
+                        '<select name="updatedStatus" class="failed-field" style="width:100%; height:30px; background:#fff; border:1px solid #cbd5dc; border-radius:4px;">' +
                             '<option value="COMPLETED">Resolve &amp; Promote to Master List</option>' +
                             '<option value="ERROR">Discard / Exclude Record</option>' +
                         '</select>' +
@@ -975,8 +990,8 @@
                         <button type="button" class="crs-toolbar-btn primary" id="mraUploadBtn">
                             <i class="fa fa-upload"></i> Upload File
                         </button>
-                        <button type="button" class="crs-toolbar-btn green" id="mraDownloadAllBtn">
-                            <i class="fa fa-file-code-o"></i> Download XML
+                        <button type="button" class="crs-toolbar-btn" style="background: #0284c7; color: #fff; border-color: #0284c7;" id="mraDownloadCsvBtn">
+                            <i class="fa fa-file-text-o"></i> Bulk CSV
                         </button>
                     </div>
                 </div>
@@ -1002,7 +1017,7 @@
                                     <th style="width: 8%;">Country</th>
                                     <th style="width: 13%;">Balance / Amount</th>
                                     <th style="width: 9%;">Status</th>
-                                    <th style="width: 5%;">XML</th>
+                                    <th style="width: 5%;">CSV</th>
                                     <th style="width: 5%;">Edit</th>
                                 </tr>
                             </thead>

@@ -1552,7 +1552,7 @@ public class BRECONUploadController {
             return ResponseEntity.badRequest().body(res);
         }
     }
-
+    
     @PostMapping("/rectifyMraDuplicate")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> rectifyMraDuplicate(
@@ -1651,41 +1651,41 @@ public class BRECONUploadController {
         }
     }
 
-    @GetMapping("/downloadMraXml")
-    public void downloadMraXml(
+    @GetMapping("/downloadMraCsv")
+    public void downloadMraCsv(
             @RequestParam("type") String type,
             HttpServletResponse response) {
         try {
-            String xmlContent = mraService.generateMraXml(type);
-            response.setContentType("application/xml");
+            String csvContent = mraService.generateMraCsv(type);
+            response.setContentType("text/csv");
             response.setCharacterEncoding("UTF-8");
-            response.setHeader("Content-Disposition", "attachment; filename=\"MRA_" + type.toUpperCase() + "_" + System.currentTimeMillis() + ".xml\"");
-            response.getOutputStream().write(xmlContent.getBytes(StandardCharsets.UTF_8));
+            response.setHeader("Content-Disposition", "attachment; filename=\"MRA_" + type.toUpperCase() + "_" + System.currentTimeMillis() + ".csv\"");
+            response.getOutputStream().write(csvContent.getBytes(StandardCharsets.UTF_8));
             response.getOutputStream().flush();
         } catch (Exception e) {
-            logger.error("Error generating MRA XML for type {}", type, e);
+            logger.error("Error generating MRA CSV for type {}", type, e);
             try {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate XML: " + e.getMessage());
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate CSV: " + e.getMessage());
             } catch (Exception ignored) {}
         }
     }
 
-    @GetMapping("/downloadSingleMraXml")
-    public void downloadSingleMraXml(
+    @GetMapping("/downloadSingleMraCsv")
+    public void downloadSingleMraCsv(
             @RequestParam("type") String type,
             @RequestParam("reportId") Long reportId,
             HttpServletResponse response) {
         try {
-            String xmlContent = mraService.generateSingleMraXml(type, reportId);
-            response.setContentType("application/xml");
+            String csvContent = mraService.generateSingleMraCsv(type, reportId);
+            response.setContentType("text/csv");
             response.setCharacterEncoding("UTF-8");
-            response.setHeader("Content-Disposition", "attachment; filename=\"MRA_" + type.toUpperCase() + "_" + reportId + ".xml\"");
-            response.getOutputStream().write(xmlContent.getBytes(StandardCharsets.UTF_8));
+            response.setHeader("Content-Disposition", "attachment; filename=\"MRA_" + type.toUpperCase() + "_" + reportId + ".csv\"");
+            response.getOutputStream().write(csvContent.getBytes(StandardCharsets.UTF_8));
             response.getOutputStream().flush();
         } catch (Exception e) {
-            logger.error("Error generating single MRA XML", e);
+            logger.error("Error generating single MRA CSV", e);
             try {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate XML: " + e.getMessage());
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate CSV: " + e.getMessage());
             } catch (Exception ignored) {}
         }
     }
@@ -1717,7 +1717,6 @@ public class BRECONUploadController {
         Map<String, Object> res = new HashMap<>();
         try {
             boolean success = mraService.rectifyDuplicateRecordFull(type, dupId, allParams);
-            res.put("status", success ? "SUCCESS" : "ERROR"); // Correct
             res.put("status", success ? "SUCCESS" : "ERROR");
             res.put("message", success ? "Record updated and stored to database successfully." : "Record not found.");
             return ResponseEntity.ok(res);
@@ -1728,6 +1727,5 @@ public class BRECONUploadController {
             return ResponseEntity.badRequest().body(res);
         }
     }
-    
     
 }

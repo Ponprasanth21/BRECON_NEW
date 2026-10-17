@@ -44,7 +44,6 @@ public class MraManagementService {
         if (col == null) return "";
         String s = col.trim().toUpperCase();
         if (s.contains(".")) s = s.substring(s.lastIndexOf('.') + 1);
-        // Replace spaces and hyphens with underscore first so words stay separated, then strip special chars
         s = s.replaceAll("[\\s\\-]+", "_");
         return s.replaceAll("[^A-Z0-9_]", "");
     }
@@ -140,7 +139,7 @@ public class MraManagementService {
         }
     }
 
- // 1. Get Paginated Dashboard Records
+    // 1. Get Paginated Dashboard Records
     public Map<String, Object> getMraDashboardData(String type, int page, int size, String search, String status) {
         Map<String, Object> data = new HashMap<>();
         boolean isSft = "SFT".equalsIgnoreCase(type);
@@ -148,7 +147,6 @@ public class MraManagementService {
 
         int total = 0, pending = 0, completed = 0, errorAndDup = 0;
         try {
-            // Summary counts
             Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM " + tableName + " WHERE NVL(DEL_FLAG, 'N') <> 'Y'", Integer.class);
             total = count != null ? count : 0;
@@ -174,7 +172,6 @@ public class MraManagementService {
         data.put("completedCount", completed);
         data.put("errorCount", errorAndDup);
 
-        // Server-Side Filter & Pagination Query
         List<Map<String, Object>> records = new ArrayList<>();
         try {
             StringBuilder sql = new StringBuilder();
@@ -231,7 +228,6 @@ public class MraManagementService {
         return data;
     }
 
-    
     @Transactional
     public int uploadMraFile(MultipartFile file, String requestedType, String userId) throws Exception {
         if (file == null || file.isEmpty()) {
@@ -244,7 +240,6 @@ public class MraManagementService {
         Map<String, Integer> colMap = new HashMap<>();
         List<String[]> rawRows = new ArrayList<>();
 
-        // 1. Read File Headers & Rows
         if (isCsv) {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
                 String headerLine = reader.readLine();
@@ -299,15 +294,14 @@ public class MraManagementService {
 
         if (rawRows.isEmpty()) return 0;
 
-        // 2. Smart Header Detection: Route to SFT or SFX based on headers
         boolean hasSftHeaders = colMap.containsKey("ACCOUNT_NUMBER") 
-                             || colMap.containsKey("TOTAL_DEPOSITS") 
-                             || colMap.containsKey("BALANCE") 
-                             || colMap.containsKey("JOINT_ACCOUNT");
+                           || colMap.containsKey("TOTAL_DEPOSITS") 
+                           || colMap.containsKey("BALANCE") 
+                           || colMap.containsKey("JOINT_ACCOUNT");
 
         boolean hasSfxHeaders = colMap.containsKey("FOREIGN_CURRENCY") 
-                             || colMap.containsKey("TYPE_OF_TRANSACTION") 
-                             || colMap.containsKey("EQUIVALENT_IN_MUR");
+                           || colMap.containsKey("TYPE_OF_TRANSACTION") 
+                           || colMap.containsKey("EQUIVALENT_IN_MUR");
 
         String targetType = (requestedType != null) ? requestedType.trim().toUpperCase() : "SFX";
         if (hasSftHeaders && !hasSfxHeaders) {
@@ -320,7 +314,6 @@ public class MraManagementService {
         String tableName = isSft ? "BRECON.SFT_REPORT_DATA" : "BRECON.SFX_REPORT_DATA";
         String[] targetColumns = isSft ? SFT_COLUMNS : SFX_COLUMNS;
 
-        // 3. Build INSERT SQL
         StringBuilder sql = new StringBuilder("INSERT INTO ").append(tableName).append(" (");
         StringBuilder placeholders = new StringBuilder(" VALUES (");
         for (int i = 0; i < targetColumns.length; i++) {
@@ -335,7 +328,6 @@ public class MraManagementService {
         final String insertSql = sql.toString();
         final int numColumns = targetColumns.length;
 
-        // 4. Extract Row Data
         String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
         List<Object[]> processedBatch = new ArrayList<>();
 
@@ -367,11 +359,9 @@ public class MraManagementService {
 
         if (processedBatch.isEmpty()) return 0;
 
-        // 5. Load Existing Keys from DB in Bulk (Fast & Accurate Duplicate Detection)
         Set<String> existingKeys = new HashSet<>();
         try {
             if (isSft) {
-                // For SFT: Unique combination of (ID or PASSPORT or BRN) + ACCOUNT_NUMBER
                 List<String> dbKeys = jdbcTemplate.queryForList(
                     "SELECT LOWER(TRIM(NVL(ID, NVL(PASSPORT, NVL(BRN, ''))))) || '|' || LOWER(TRIM(NVL(ACCOUNT_NUMBER, ''))) " +
                     "FROM BRECON.SFT_REPORT_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'PENDING') <> 'DUPLICATE'",
@@ -379,7 +369,6 @@ public class MraManagementService {
                 );
                 existingKeys.addAll(dbKeys);
             } else {
-                // For SFX: Unique combination of (ID or PASSPORT or BRN) + SURNAME + AMOUNT + FOREIGN_CURRENCY
                 List<String> dbKeys = jdbcTemplate.queryForList(
                     "SELECT LOWER(TRIM(NVL(ID, NVL(PASSPORT, NVL(BRN, ''))))) || '|' || LOWER(TRIM(NVL(SURNAME, ''))) || '|' || TO_CHAR(NVL(AMOUNT, 0)) || '|' || LOWER(TRIM(NVL(FOREIGN_CURRENCY, ''))) " +
                     "FROM BRECON.SFX_REPORT_DATA WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'PENDING') <> 'DUPLICATE'",
@@ -391,7 +380,6 @@ public class MraManagementService {
             logger.warn("Could not pre-fetch existing keys for duplicate check: {}", e.getMessage());
         }
 
-        // 6. Flag Duplicates (Quarantine as 'DUPLICATE' so they appear only in the Bottom Queue)
         Set<String> seenInBatch = new HashSet<>();
         List<Object[]> finalBatch = new ArrayList<>();
 
@@ -401,16 +389,13 @@ public class MraManagementService {
             String passportVal = (row[3] != null) ? row[3].toString().trim().toLowerCase() : "";
             String surname = (row[4] != null) ? row[4].toString().trim().toLowerCase() : "";
 
-            // Pick primary identifier: ID -> PASSPORT -> BRN
             String personId = !idVal.isEmpty() ? idVal : (!passportVal.isEmpty() ? passportVal : brnVal);
 
             String compositeKey;
             if (isSft) {
-                // SFT row[7] = ACCOUNT_NUMBER
                 String accNo = (row[7] != null) ? row[7].toString().trim().toLowerCase() : "";
                 compositeKey = personId + "|" + accNo;
             } else {
-                // SFX row[6] = AMOUNT, row[7] = FOREIGN_CURRENCY
                 String amt = (row[6] != null) ? row[6].toString().trim() : "0";
                 try {
                     amt = new BigDecimal(amt).stripTrailingZeros().toPlainString();
@@ -426,7 +411,6 @@ public class MraManagementService {
                 seenInBatch.add(compositeKey);
             }
 
-            // Active records get 'PENDING' (shows in top list); Duplicates get 'DUPLICATE' (shows in bottom queue)
             row[numColumns + 1] = isDuplicate ? "DUPLICATE" : "PENDING";
             finalBatch.add(row);
         }
@@ -563,48 +547,41 @@ public class MraManagementService {
         }
     }
 
-    public String generateSingleMraXml(String type, Long reportId) {
+    public String generateSingleMraCsv(String type, Long reportId) {
         Map<String, Object> r = getMraRecordDetails(type, reportId);
-        return buildXmlString(type, Collections.singletonList(r));
+        return buildCsvString(Collections.singletonList(r));
     }
 
-    public String generateMraXml(String type) {
+    public String generateMraCsv(String type) {
         boolean isSft = "SFT".equalsIgnoreCase(type);
         String tableName = isSft ? "BRECON.SFT_REPORT_DATA" : "BRECON.SFX_REPORT_DATA";
         List<Map<String, Object>> list = jdbcTemplate.queryForList("SELECT * FROM " + tableName + " WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'PENDING') <> 'DUPLICATE'");
-        return buildXmlString(type, list);
+        return buildCsvString(list);
     }
 
-    private String buildXmlString(String type, List<Map<String, Object>> list) {
-        StringBuilder xml = new StringBuilder();
-        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        xml.append("<MRA_Submission type=\"").append(type.toUpperCase()).append("\" version=\"1.0\">\n");
-        xml.append("  <Header>\n");
-        xml.append("    <Authority>Mauritius Revenue Authority</Authority>\n");
-        xml.append("    <Timestamp>").append(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date())).append("</Timestamp>\n");
-        xml.append("  </Header>\n");
-        xml.append("  <Records>\n");
+    private String buildCsvString(List<Map<String, Object>> list) {
+        StringBuilder csv = new StringBuilder();
+        if (list == null || list.isEmpty()) return "";
 
+        // Header row from first record keys
+        Set<String> keys = list.get(0).keySet();
+        csv.append(String.join(",", keys)).append("\n");
+
+        // Data rows
         for (Map<String, Object> r : list) {
-            xml.append("    <Record>\n");
-            for (Map.Entry<String, Object> entry : r.entrySet()) {
-                if (entry.getValue() != null) {
-                    xml.append("      <").append(entry.getKey()).append(">")
-                       .append(escapeXml(entry.getValue()))
-                       .append("</").append(entry.getKey()).append(">\n");
+            List<String> vals = new ArrayList<>();
+            for (String key : keys) {
+                Object val = r.get(key);
+                String valStr = val != null ? val.toString().replace("\"", "\"\"") : "";
+                if (valStr.contains(",") || valStr.contains("\n") || valStr.contains("\"")) {
+                    vals.add("\"" + valStr + "\"");
+                } else {
+                    vals.add(valStr);
                 }
             }
-            xml.append("    </Record>\n");
+            csv.append(String.join(",", vals)).append("\n");
         }
-
-        xml.append("  </Records>\n");
-        xml.append("</MRA_Submission>");
-        return xml.toString();
-    }
-
-    private String escapeXml(Object val) {
-        if (val == null) return "";
-        return val.toString().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
+        return csv.toString();
     }
     
     public Map<String, Object> getMraDuplicateRecordDetails(String type, Long dupId) {
@@ -624,7 +601,6 @@ public class MraManagementService {
         String tableName = isSft ? "BRECON.SFT_REPORT_DATA" : "BRECON.SFX_REPORT_DATA";
         String idCol = isSft ? "SFT_ID" : "SFX_ID";
 
-        // DEBUG LOGGING
         logger.info("=== RECTIFY DEBUG ===");
         logger.info("Table: {}, ID Column: {}, Received dupId: {}", tableName, idCol, dupId);
         logger.info("Form Params received: {}", formParams);
