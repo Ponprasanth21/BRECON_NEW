@@ -7,11 +7,14 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -1708,23 +1711,91 @@ public class BRECONUploadController {
         }
     }
 
+    @Transactional
+    public boolean rectifyDuplicateRecordFull(String type, Long dupId, Map<String, String> formParams) {
+        boolean isSft = "SFT".equalsIgnoreCase(type);
+        String tableName = isSft ? "BRECON.SFT_REPORT_DATA" : "BRECON.SFX_REPORT_DATA";
+        String idCol = isSft ? "SFT_ID" : "SFX_ID";
+
+        // Fallback: If dupId is null or 0, try to pull it from form parameters
+        if ((dupId == null || dupId <= 0) && formParams.containsKey("dupId")) {
+            try {
+                dupId = Long.parseLong(formParams.get("dupId"));
+            } catch (Exception ignored) {}
+        }
+
+        try {
+            StringBuilder updateSql = new StringBuilder("UPDATE ").append(tableName)
+                .append(" SET RECORD_STATUS = ?, ")
+                .append("     MODIFY_TIME = SYSDATE, ")
+                .append("     MODIFY_USER = 'SYSTEM', ")
+                .append("     MODIFY_FLAG = 'M', ")
+                .append("     ENTITY_FLAG = NVL(ENTITY_FLAG, 'A') ");
+
+            List<Object> args = new ArrayList<>();
+            // Set resolution status (Completed or Error/Discard)
+            String resolutionStatus = formParams.getOrDefault("updatedStatus", "COMPLETED").toUpperCase();
+            args.add(resolutionStatus);
+
+            Set<String> excludedCols = new HashSet<>(Arrays.asList(
+                "DUP_ID", "TYPE", "UPDATEDSTATUS", "SFX_ID", "SFT_ID", 
+                "MODIFY_TIME", "MODIFY_USER", "VERIFY_TIME", "VERIFY_USER", 
+                "MODIFY_FLAG", "ENTITY_FLAG", "ENTRY_TIME", "ENTRY_USER"
+            ));
+
+            for (Map.Entry<String, String> entry : formParams.entrySet()) {
+                String key = entry.getKey().toUpperCase();
+                if (!excludedCols.contains(key) && entry.getValue() != null) {
+                    updateSql.append(", \"").append(key).append("\" = ? ");
+                    args.add(entry.getValue());
+                }
+            }
+
+            updateSql.append(" WHERE ").append(idCol).append(" = ?");
+            args.add(dupId);
+
+            int updated = jdbcTemplate.update(updateSql.toString(), args.toArray());
+
+            // Fallback check: If 0 rows updated, try matching by standard ID column
+            if (updated == 0 && dupId != null) {
+                updated = jdbcTemplate.update(
+                    "UPDATE " + tableName + " SET RECORD_STATUS = ?, MODIFY_TIME = SYSDATE WHERE ID = ?",
+                    resolutionStatus, dupId.toString()
+                );
+            }
+
+            return updated > 0;
+        } catch (Exception e) {
+            logger.error("Error rectifying full MRA duplicate: {}", e.getMessage(), e);
+            throw new RuntimeException("Database Update Failed: " + e.getMessage());
+        }
+    }
+    
     @PostMapping("/rectifyMraDuplicateFull")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> rectifyMraDuplicateFull(
-            @RequestParam("type") String type,
-            @RequestParam("dupId") Long dupId,
-            @RequestParam Map<String, String> allParams) {
+    public ResponseEntity<Map<String, Object>> rectifyMraDuplicateFull(@RequestParam Map<String, String> allParams) {
         Map<String, Object> res = new HashMap<>();
         try {
+            String type = allParams.getOrDefault("type", "SFX");
+            String dupIdStr = allParams.get("dupId");
+            
+            if (dupIdStr == null || dupIdStr.trim().isEmpty()) {
+                res.put("status", "ERROR");
+                res.put("message", "Error: Missing Record ID (dupId) for rectification.");
+                return ResponseEntity.ok(res);
+            }
+
+            Long dupId = Long.parseLong(dupIdStr.trim());
             boolean success = mraService.rectifyDuplicateRecordFull(type, dupId, allParams);
+            
             res.put("status", success ? "SUCCESS" : "ERROR");
-            res.put("message", success ? "Record updated and stored to database successfully." : "Record not found.");
+            res.put("message", success ? "Record updated and stored to database successfully." : "Record not found in database table.");
             return ResponseEntity.ok(res);
         } catch (Exception e) {
             logger.error("Error in rectifyMraDuplicateFull", e);
             res.put("status", "ERROR");
-            res.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(res);
+            res.put("message", "Error: " + e.getMessage());
+            return ResponseEntity.ok(res);
         }
     }
     

@@ -61,8 +61,9 @@ public class MraManagementService {
                     return date != null ? new SimpleDateFormat("yyyy-MM-dd").format(date) : null;
                 }
                 double num = cell.getNumericCellValue();
-                if (num == (long) num) return String.valueOf((long) num);
-                return BigDecimal.valueOf(num).toPlainString();
+                // Use BigDecimal.toPlainString() to strictly avoid scientific notation (E+13)
+                BigDecimal bd = BigDecimal.valueOf(num);
+                return bd.stripTrailingZeros().toPlainString();
             } else if (typeStr.contains("BOOLEAN") || "4".equals(typeStr)) {
                 return String.valueOf(cell.getBooleanCellValue());
             } else if (typeStr.contains("FORMULA") || "2".equals(typeStr)) {
@@ -70,8 +71,7 @@ public class MraManagementService {
                     return cell.getStringCellValue().trim();
                 } catch (Exception e) {
                     double n = cell.getNumericCellValue();
-                    if (n == (long) n) return String.valueOf((long) n);
-                    return BigDecimal.valueOf(n).toPlainString();
+                    return BigDecimal.valueOf(n).stripTrailingZeros().toPlainString();
                 }
             } else {
                 return null;
@@ -80,7 +80,6 @@ public class MraManagementService {
             return null;
         }
     }
-
     private String mapColumn(String rawHeader) {
         String clean = cleanKey(rawHeader);
         switch (clean) {
@@ -178,7 +177,7 @@ public class MraManagementService {
             List<Object> params = new ArrayList<>();
 
             if (isSft) {
-                sql.append("SELECT SFT_ID AS REPORT_ID, NVL(ACCOUNT_NUMBER, ID) AS ACCOUNT_NUMBER, ")
+                sql.append("SELECT SFT_ID AS REPORT_ID, TO_CHAR(NVL(ACCOUNT_NUMBER, ID)) AS ACCOUNT_NUMBER, ")
                    .append("       'MRA-' || TO_CHAR(SFT_ID) AS REF_ID, ")
                    .append("       TO_CHAR(NVL(ENTRY_TIME, SYSDATE), 'YYYY-MM-DD HH24:MI:SS') AS UPLOAD_DATE, ")
                    .append("       NVL(RECORD_STATUS, 'PENDING') AS STATUS, ")
@@ -188,7 +187,7 @@ public class MraManagementService {
                    .append("FROM BRECON.SFT_REPORT_DATA ")
                    .append("WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'PENDING') <> 'DUPLICATE' ");
             } else {
-                sql.append("SELECT SFX_ID AS REPORT_ID, ID AS ACCOUNT_NUMBER, ")
+                sql.append("SELECT SFX_ID AS REPORT_ID, TO_CHAR(ID) AS ACCOUNT_NUMBER, ")
                    .append("       'MRA-' || TO_CHAR(SFX_ID) AS REF_ID, ")
                    .append("       TO_CHAR(NVL(ENTRY_TIME, SYSDATE), 'YYYY-MM-DD HH24:MI:SS') AS UPLOAD_DATE, ")
                    .append("       NVL(RECORD_STATUS, 'PENDING') AS STATUS, ")
@@ -198,7 +197,6 @@ public class MraManagementService {
                    .append("FROM BRECON.SFX_REPORT_DATA ")
                    .append("WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'PENDING') <> 'DUPLICATE' ");
             }
-
             if (search != null && !search.trim().isEmpty()) {
                 sql.append("AND (LOWER(ID) LIKE ? OR LOWER(SURNAME) LIKE ? OR LOWER(NATIONALITY) LIKE ?) ");
                 String sParam = "%" + search.trim().toLowerCase() + "%";
@@ -424,7 +422,7 @@ public class MraManagementService {
             String sql;
             if (isSft) {
                 sql = "SELECT SFT_ID AS DUP_ID, NVL(SOURCE_FILE, 'Dataset.csv') AS FILE_NAME, " +
-                      "       NVL(ACCOUNT_NUMBER, NVL(ID, PASSPORT)) AS ACCOUNT_NUMBER, " +
+                      "       TO_CHAR(NVL(ACCOUNT_NUMBER, NVL(ID, PASSPORT)), 'FM999999999999999999999999999999') AS ACCOUNT_NUMBER, " +
                       "       TRIM(SURNAME || ' ' || NVL(OTHERNAME, '')) AS HOLDER_NAME, " +
                       "       NATIONALITY AS RESIDENCE_COUNTRY, " +
                       "       NVL(BALANCE, NVL(TOTAL_DEPOSITS, 0)) AS ACCOUNT_BALANCE, " +
@@ -434,7 +432,7 @@ public class MraManagementService {
                       "ORDER BY SFT_ID DESC";
             } else {
                 sql = "SELECT SFX_ID AS DUP_ID, NVL(SOURCE_FILE, 'Dataset.csv') AS FILE_NAME, " +
-                      "       NVL(ID, NVL(PASSPORT, BRN)) AS ACCOUNT_NUMBER, " +
+                      "       TO_CHAR(NVL(ID, NVL(PASSPORT, BRN)), 'FM999999999999999999999999999999') AS ACCOUNT_NUMBER, " +
                       "       TRIM(SURNAME || ' ' || NVL(OTHERNAME, '')) AS HOLDER_NAME, " +
                       "       NATIONALITY AS RESIDENCE_COUNTRY, " +
                       "       NVL(AMOUNT, 0) AS ACCOUNT_BALANCE, " +
@@ -594,53 +592,59 @@ public class MraManagementService {
             return new HashMap<>();
         }
     }
-
+    
     @Transactional
     public boolean rectifyDuplicateRecordFull(String type, Long dupId, Map<String, String> formParams) {
         boolean isSft = "SFT".equalsIgnoreCase(type);
         String tableName = isSft ? "BRECON.SFT_REPORT_DATA" : "BRECON.SFX_REPORT_DATA";
         String idCol = isSft ? "SFT_ID" : "SFX_ID";
 
-        logger.info("=== RECTIFY DEBUG ===");
-        logger.info("Table: {}, ID Column: {}, Received dupId: {}", tableName, idCol, dupId);
-        logger.info("Form Params received: {}", formParams);
-
         try {
             StringBuilder updateSql = new StringBuilder("UPDATE ").append(tableName)
-                .append(" SET RECORD_STATUS = 'COMPLETED', ")
+                .append(" SET RECORD_STATUS = ?, ")
                 .append("     MODIFY_TIME = SYSDATE, ")
                 .append("     MODIFY_USER = 'SYSTEM', ")
                 .append("     MODIFY_FLAG = 'M', ")
                 .append("     ENTITY_FLAG = NVL(ENTITY_FLAG, 'A') ");
 
             List<Object> args = new ArrayList<>();
+            
+            // Resolution status (Completed or Error)
+            String resolutionStatus = formParams.getOrDefault("updatedStatus", "COMPLETED").toUpperCase();
+            args.add(resolutionStatus);
 
+            // Columns to exclude from dynamic database column update
             Set<String> excludedCols = new HashSet<>(Arrays.asList(
-                "DUP_ID", "TYPE", "UPDATEDSTATUS", "SFX_ID", "SFT_ID", 
+                "DUPID", "DUP_ID", "TYPE", "UPDATEDSTATUS", "SFX_ID", "SFT_ID", 
                 "MODIFY_TIME", "MODIFY_USER", "VERIFY_TIME", "VERIFY_USER", 
                 "MODIFY_FLAG", "ENTITY_FLAG", "ENTRY_TIME", "ENTRY_USER"
             ));
 
             for (Map.Entry<String, String> entry : formParams.entrySet()) {
                 String key = entry.getKey().toUpperCase();
-                if (!excludedCols.contains(key)) {
+                if (!excludedCols.contains(key) && entry.getValue() != null) {
                     updateSql.append(", \"").append(key).append("\" = ? ");
                     args.add(entry.getValue());
                 }
             }
+
             updateSql.append(" WHERE ").append(idCol).append(" = ?");
             args.add(dupId);
 
-            logger.info("Executing SQL: {}", updateSql.toString());
-            logger.info("SQL Arguments: {}", args);
-
             int updated = jdbcTemplate.update(updateSql.toString(), args.toArray());
-            logger.info("Rows updated: {}", updated);
+            
+            // Fallback: If 0 rows updated, try matching by standard ID column
+            if (updated == 0) {
+                updated = jdbcTemplate.update(
+                    "UPDATE " + tableName + " SET RECORD_STATUS = ?, MODIFY_TIME = SYSDATE WHERE ID = ?",
+                    resolutionStatus, dupId.toString()
+                );
+            }
 
             return updated > 0;
         } catch (Exception e) {
             logger.error("Error rectifying full MRA duplicate: {}", e.getMessage(), e);
-            return false;
+            throw new RuntimeException(e.getMessage());
         }
     }
 }

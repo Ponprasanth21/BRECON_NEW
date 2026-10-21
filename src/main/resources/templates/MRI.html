@@ -29,9 +29,8 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            min-height: 100%;
-            overflow-x: hidden;
-            overflow-y: auto;
+            height: 100vh;
+            overflow: hidden; /* Locks outer page scrolling completely */
             font-family: Arial, sans-serif;
             color: var(--text);
             background: #f3f6f8;
@@ -40,34 +39,35 @@
         .source-data-wrapper {
             width: 98%;
             max-width: 1840px;
-            min-height: calc(100vh - 105px);
-            margin: 34px auto 20px;
+            height: calc(100vh - 75px);
+            margin: 12px auto;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            padding-bottom: 35px;
         }
 
         .source-data-card {
             background: #ffffff;
             border-radius: 8px;
-            box-shadow: 0 6px 20px rgba(20, 40, 55, 0.10);
+            box-shadow: 0 4px 15px rgba(20, 40, 55, 0.08);
             display: flex;
             flex-direction: column;
-            overflow: visible;
+            height: 100%;
+            overflow: hidden;
         }
 
         .source-data-header {
-            height: 38px;
+            height: 36px;
             background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
             color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: bold;
             letter-spacing: .3px;
             border-radius: 8px 8px 0 0;
+            flex-shrink: 0;
         }
         .source-data-header i { margin-right: 8px; }
 
@@ -76,14 +76,15 @@
             display: flex;
             background: #e9eef2;
             border-bottom: 1px solid var(--line);
+            flex-shrink: 0;
         }
         .mra-tab {
             flex: 1;
-            padding: 13px;
+            padding: 10px;
             text-align: center;
             background: none;
             border: none;
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: bold;
             color: var(--muted);
             cursor: pointer;
@@ -94,11 +95,13 @@
         .mra-tab.active { background: #fff; color: var(--brand); border-bottom-color: var(--brand); }
 
         .source-data-table-wrapper {
-            padding: 14px 16px;
+            padding: 10px 14px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
+            flex: 1;
+            overflow: hidden;
         }
 
         /* Summary Cards */
@@ -106,21 +109,20 @@
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 10px;
+            flex-shrink: 0;
         }
         .crs-stat {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 14px;
+            padding: 8px 12px;
             background: #ffffff;
             border: 1px solid var(--line);
             border-radius: 6px;
-            transition: transform 0.15s ease;
         }
-        .crs-stat:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .crs-stat-icon {
-            width: 34px;
-            height: 34px;
+            width: 30px;
+            height: 30px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
@@ -128,10 +130,10 @@
             border-radius: 6px;
             background: #e3edf2;
             color: var(--brand);
-            font-size: 15px;
+            font-size: 14px;
         }
-        .crs-stat-label { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
-        .crs-stat-value { font-size: 18px; font-weight: bold; color: var(--ink); line-height: 1; }
+        .crs-stat-label { font-size: 10.5px; color: var(--muted); font-weight: 600; margin-bottom: 1px; }
+        .crs-stat-value { font-size: 16px; font-weight: bold; color: var(--ink); line-height: 1; }
 
         /* Toolbar & Filters */
         .crs-filter-bar {
@@ -140,38 +142,39 @@
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
+            flex-shrink: 0;
         }
         .crs-search-wrap {
             position: relative;
             flex: 1;
-            min-width: 280px;
-            max-width: 380px;
+            min-width: 260px;
+            max-width: 360px;
         }
         .crs-search-wrap i {
             position: absolute;
-            left: 11px;
-            top: 11px;
+            left: 10px;
+            top: 9px;
             color: var(--muted);
-            font-size: 12px;
+            font-size: 11.5px;
         }
         .crs-search-wrap input {
             width: 100%;
-            height: 34px;
-            padding: 4px 8px 4px 30px;
+            height: 30px;
+            padding: 4px 8px 4px 28px;
             border: 1px solid var(--line);
             border-radius: 5px;
-            font-size: 12.5px;
+            font-size: 12px;
             outline: none;
             background: #ffffff;
         }
         .crs-filter-bar select {
-            height: 34px;
-            min-width: 170px;
-            padding: 0 10px;
+            height: 30px;
+            min-width: 160px;
+            padding: 0 8px;
             border: 1px solid var(--line);
             border-radius: 5px;
             background: #ffffff;
-            font-size: 12.5px;
+            font-size: 12px;
             color: var(--ink);
         }
 
@@ -179,32 +182,28 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            flex-wrap: wrap;
         }
         .crs-toolbar-btn {
-            height: 34px;
-            padding: 0 14px;
+            height: 30px;
+            padding: 0 12px;
             border: 1px solid var(--line);
             border-radius: 5px;
             background: #ffffff;
             color: var(--ink);
-            font-size: 12px;
+            font-size: 11.5px;
             font-weight: bold;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            transition: background .15s ease;
+            gap: 5px;
             text-decoration: none;
         }
         .crs-toolbar-btn:hover { background: var(--head-hover); }
         .crs-toolbar-btn.primary { background: var(--brand); color: #ffffff; border-color: var(--brand); }
         .crs-toolbar-btn.primary:hover { background: var(--brand-dark); }
-        .crs-toolbar-btn.green { background: #15803d; color: #ffffff; border-color: #15803d; }
-        .crs-toolbar-btn.green:hover { background: #166534; }
         .crs-file-input { display: none; }
 
-        /* Tables & Containers */
+        /* Tables & Containers - Uniform layout for both SFT and SFX */
         .file-list-container {
             border: 1px solid var(--line);
             border-radius: 6px;
@@ -212,28 +211,31 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            flex: 1;
+            min-height: 0;
         }
-        .file-list-container.dup-section { border-color: #fca5a5; margin-top: 10px; }
+        .file-list-container.dup-section { border-color: #fca5a5; max-height: 220px; flex: none; }
 
         .file-list-title-bar {
-            padding: 8px 14px;
+            padding: 6px 12px;
             background: #f8fafc;
             border-bottom: 1px solid var(--line);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 12.5px;
+            font-size: 12px;
             color: var(--ink);
+            flex-shrink: 0;
         }
-        .file-list-title-bar strong { color: var(--brand-dark); font-size: 13px; }
+        .file-list-title-bar strong { color: var(--brand-dark); font-size: 12.5px; }
 
         .table-scroll-box {
-            max-height: 320px;
             overflow-y: auto;
             position: relative;
+            flex: 1;
         }
 
-        .dedicated-file-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+        .dedicated-file-table { width: 100%; border-collapse: collapse; font-size: 11.5px; table-layout: fixed; }
         .dedicated-file-table th {
             position: sticky;
             top: 0;
@@ -241,12 +243,12 @@
             background: #f1f5f9;
             color: var(--ink);
             text-align: left;
-            padding: 6px 8px; /* Reduced vertical & horizontal padding */
+            padding: 5px 8px;
             border-bottom: 1px solid var(--line);
             font-weight: 600;
         }
         .dedicated-file-table td {
-            padding: 6px 8px; /* Reduced vertical & horizontal space between data rows */
+            padding: 5px 8px;
             border-bottom: 1px solid #edf2f7;
             color: var(--text);
             vertical-align: middle;
@@ -259,7 +261,7 @@
 
         .ref-link { color: #0284c7; font-weight: bold; text-decoration: underline; cursor: pointer; }
 
-        .crs-status { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+        .crs-status { display: inline-block; padding: 2px 6px; border-radius: 6px; font-size: 10.5px; font-weight: bold; white-space: nowrap; }
         .crs-status-pending { background: #fef3c7; color: #b45309; }
         .crs-status-completed { background: #dcfce7; color: #15803d; }
         .crs-status-error { background: #fee2e2; color: #b91c1c; }
@@ -268,55 +270,56 @@
         .action-btn-group { display: inline-flex; align-items: center; gap: 4px; justify-content: center; }
         .edit-row-btn {
             background: var(--brand); color: #ffffff; border: none; border-radius: 3px;
-            padding: 3px 8px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
+            padding: 2px 6px; font-size: 10.5px; font-weight: bold; cursor: pointer;
         }
         .edit-row-btn:hover { background: var(--brand-dark); }
         .xml-row-btn {
             background: #15803d; color: #ffffff; border: none; border-radius: 3px;
-            padding: 3px 8px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
+            padding: 2px 6px; font-size: 10.5px; font-weight: bold; cursor: pointer;
         }
         .xml-row-btn:hover { background: #166534; }
         .delete-row-btn {
             background: #dc2626; color: #ffffff; border: none; border-radius: 3px;
-            padding: 3px 8px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background .15s ease;
+            padding: 2px 6px; font-size: 10.5px; font-weight: bold; cursor: pointer;
         }
         .delete-row-btn:hover { background: #b91c1c; }
 
         /* Pagination bar */
         .table-pagination-bar {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 6px 12px; background: #ffffff; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink);
+            padding: 5px 10px; background: #ffffff; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--ink);
+            flex-shrink: 0;
         }
-        .pagination-nav-wrap { display: flex; align-items: center; gap: 4px; }
+        .pagination-nav-wrap { display: flex; align-items: center; gap: 3px; }
         .pagination-btn {
-            background: #ffffff; border: 1px solid #cbd5e1; border-radius: 3px; padding: 2px 8px;
-            font-size: 11px; color: var(--ink); cursor: pointer; transition: all .15s ease;
+            background: #ffffff; border: 1px solid #cbd5e1; border-radius: 3px; padding: 2px 6px;
+            font-size: 11px; color: var(--ink); cursor: pointer;
         }
         .pagination-btn.active { background: var(--brand); color: #ffffff; border-color: var(--brand); font-weight: bold; }
         .pagination-btn:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border-color: #e2e8f0; }
 
-        .no-data { text-align: center !important; color: var(--muted) !important; padding: 18px 10px !important; font-size: 12px; }
-        .no-data i { display: block; font-size: 20px; margin-bottom: 4px; color: #b4c2cc; }
+        .no-data { text-align: center !important; color: var(--muted) !important; padding: 14px 10px !important; font-size: 11.5px; }
+        .no-data i { display: block; font-size: 18px; margin-bottom: 3px; color: #b4c2cc; }
 
         .source-data-footer {
-            border-top: 1px solid #e3e8ec; padding: 6px 0; text-align: center; background: #ffffff; border-radius: 0 0 8px 8px;
+            border-top: 1px solid #e3e8ec; padding: 5px 0; text-align: center; background: #ffffff; border-radius: 0 0 8px 8px; flex-shrink: 0;
         }
         .source-btn {
-            display: inline-block; padding: 4px 12px; margin: 0 3px; background: #ffffff; border: 1px solid #8a98a3;
-            border-radius: 3px; color: var(--ink); font-size: 11.5px; text-decoration: none; cursor: pointer;
+            display: inline-block; padding: 3px 10px; margin: 0 2px; background: #ffffff; border: 1px solid #8a98a3;
+            border-radius: 3px; color: var(--ink); font-size: 11px; text-decoration: none; cursor: pointer;
         }
         .source-btn:hover { background: var(--head-bg); border-color: var(--brand); color: #000; }
 
         /* Loading Spinner Overlay */
         .mra-loading-overlay {
             position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: none;
-            align-items: center; justify-content: center; z-index: 10; font-size: 13px; font-weight: bold; color: var(--brand);
+            align-items: center; justify-content: center; z-index: 10; font-size: 12px; font-weight: bold; color: var(--brand);
         }
 
         /* Clean Human Key-Value Popups */
-        .crs-human-kv { display: grid; grid-template-columns: 180px 1fr; padding: 6px 10px; border-bottom: 1px solid #edf2f5; font-size: 11.5px; align-items: center; }
+        .crs-human-kv { display: grid; grid-template-columns: 160px 1fr; padding: 5px 8px; border-bottom: 1px solid #edf2f5; font-size: 11px; align-items: center; }
         .crs-human-label { font-weight: bold; color: #2c5667; }
-        .crs-human-value { color: #102a43; word-break: break-word; font-family: monospace; font-size: 12px; }
+        .crs-human-value { color: #102a43; word-break: break-word; font-family: monospace; font-size: 11.5px; }
 
         /* Modals */
         .failed-modal-overlay {
@@ -324,35 +327,35 @@
         }
         .failed-modal-overlay.open { display: flex; }
         .failed-modal-card {
-            width: 100%; max-width: 650px; background: #ffffff; border-radius: 10px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25); overflow: hidden;
+            width: 100%; max-width: 600px; background: #ffffff; border-radius: 8px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25); overflow: hidden;
         }
         .failed-modal-header {
-            padding: 10px 16px; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
-            color: #ffffff; display: flex; align-items: center; justify-content: space-between; font-size: 13.5px; font-weight: bold;
+            padding: 8px 14px; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
+            color: #ffffff; display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: bold;
         }
-        .failed-modal-close-x { background: transparent; border: none; color: #ffffff; font-size: 20px; line-height: 1; cursor: pointer; }
-        .failed-modal-body { padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .failed-field { display: flex; flex-direction: column; gap: 3px; }
+        .failed-modal-close-x { background: transparent; border: none; color: #ffffff; font-size: 18px; line-height: 1; cursor: pointer; }
+        .failed-modal-body { padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 55vh; overflow-y: auto; }
+        .failed-field { display: flex; flex-direction: column; gap: 2px; }
         .failed-field.full { grid-column: 1 / -1; }
-        .failed-field label { font-size: 11px; font-weight: bold; color: var(--ink); }
+        .failed-field label { font-size: 10.5px; font-weight: bold; color: var(--ink); }
         .failed-field input, .failed-field select {
-            height: 30px; padding: 3px 8px; border: 1px solid #cbd5dc; border-radius: 4px; font-size: 11.5px; outline: none; background: #fff; width: 100%;
+            height: 28px; padding: 2px 6px; border: 1px solid #cbd5dc; border-radius: 4px; font-size: 11px; outline: none; background: #fff; width: 100%;
         }
         .failed-modal-footer {
-            padding: 10px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 6px;
+            padding: 8px 14px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 6px;
         }
-        .modal-submit-btn { background: #16a34a; color: #ffffff; border: none; padding: 5px 12px; border-radius: 4px; font-size: 11.5px; font-weight: bold; cursor: pointer; }
+        .modal-submit-btn { background: #16a34a; color: #ffffff; border: none; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; }
         .modal-submit-btn:hover { background: #15803d; }
-        .modal-cancel-btn { background: #ffffff; border: 1px solid #cbd5dc; padding: 5px 10px; border-radius: 4px; font-size: 11.5px; cursor: pointer; }
+        .modal-cancel-btn { background: #ffffff; border: 1px solid #cbd5dc; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; }
 
-        .action-alert-body { padding: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; }
-        .action-alert-icon { font-size: 30px; margin-bottom: 6px; }
+        .action-alert-body { padding: 14px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .action-alert-icon { font-size: 26px; margin-bottom: 5px; }
         .action-alert-icon.success { color: #16a34a; }
         .action-alert-icon.error   { color: #dc2626; }
         .action-alert-icon.warning { color: #d97706; }
         .action-alert-icon.info    { color: #0284c7; }
-        .action-alert-title { font-size: 14px; font-weight: bold; color: var(--ink); margin-bottom: 3px; }
-        .action-alert-text { font-size: 11.5px; color: #475569; line-height: 1.4; white-space: pre-line; }
+        .action-alert-title { font-size: 13.5px; font-weight: bold; color: var(--ink); margin-bottom: 2px; }
+        .action-alert-text { font-size: 11px; color: #475569; line-height: 1.4; white-space: pre-line; }
     </style>
 
     <script>
@@ -373,10 +376,8 @@
             loadDuplicatesQueue();
 
             $('.mra-tab').on('click', function() {
-                $('.mra-tab').removeClass('active');
-                $(this).addClass('active');
-                activeTab = $(this).data('tab');
-                $('#mraCurrentTabLabel').text(activeTab);
+                $('.mra-tab').removeClass('active');$(this).addClass('active');
+                activeTab = $(this).data('tab');$('#mraCurrentTabLabel').text(activeTab);
                 $('#dupTabLabel').text(activeTab);
                 currentPageMain = 1;
                 currentPageDup = 1;
@@ -634,11 +635,14 @@
                 var st = r.STATUS || 'PENDING';
                 var statusClass = st.toUpperCase() === 'COMPLETED' ? 'crs-status-completed' : (st.toUpperCase() === 'ERROR' ? 'crs-status-error' : 'crs-status-pending');
                 var displayInfo = r.PASSPORT || r.EXTRA_COL || '-';
+                
+                // Enforce account number to render strictly as a plain string (prevents scientific notation E+13)
+                var rawAccNum = r.ACCOUNT_NUMBER !== null && r.ACCOUNT_NUMBER !== undefined ? String(r.ACCOUNT_NUMBER) : '-';
 
                 var rowHtml = '<tr>' +
                     '<td>' + actualIdx + '</td>' +
-                    '<td><span class="ref-link" onclick="openRecordDetailsPopup(' + r.REPORT_ID + ')">' + escapeHtml(displayInfo) + '</span></td>' +
-                    '<td><span class="ref-link" style="color:var(--brand-dark);" onclick="openHorizontalTablePopup(' + r.REPORT_ID + ')"><b>' + escapeHtml(r.ACCOUNT_NUMBER || '-') + '</b></span></td>' +
+                    '<td><span class="ref-link" onclick="openPersonDetailsPopup(' + r.REPORT_ID + ')">' + escapeHtml(displayInfo) + '</span></td>' +
+                    '<td><span class="ref-link" style="color:var(--brand-dark);" onclick="openTransactionDataPopup(' + r.REPORT_ID + ')"><b>' + escapeHtml(rawAccNum) + '</b></span></td>' +
                     '<td>' + escapeHtml(r.HOLDER_NAME || '-') + '</td>' +
                     '<td>' + escapeHtml(r.TAX_COUNTRY || 'MU') + '</td>' +
                     '<td>' + escapeHtml(bal) + '</td>' +
@@ -652,28 +656,34 @@
             renderMainPagination(totalFiltered, totalPagesMain);
         }
 
-        // 1. Passport / Ref Click: Clean Human-Readable Details
-        function openRecordDetailsPopup(reportId) {
+        // 1. Popup when clicking Passport / Ref: Shows person details (ID, Surname, Othername, Nationality, Passport, BRN)
+        function openPersonDetailsPopup(reportId) {
             $.get('./getMraRecordDetails', { type: activeTab, reportId: reportId }, function(data) {
                 var r = data.record || data;
                 popupCount++;
-                var popupId = "mra_details_popup_" + Date.now() + "_" + popupCount;
+                var popupId = "person_popup_" + Date.now() + "_" + popupCount;
 
+                var personCols = ['ID', 'SURNAME', 'OTHERNAME', 'NATIONALITY', 'PASSPORT', 'BRN'];
                 var contentRows = '';
-                for (var key in r) {
-                    if (r.hasOwnProperty(key)) {
-                        var humanKey = key.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, function(l) { return l.toUpperCase(); });
-                        contentRows += '<div class="crs-human-kv"><span class="crs-human-label">' + escapeHtml(humanKey) + '</span><span class="crs-human-value">' + escapeHtml(r[key]) + '</span></div>';
+
+                personCols.forEach(function(col) {
+                    if (r.hasOwnProperty(col) && r[col] !== null && r[col] !== undefined && String(r[col]).trim() !== '') {
+                        var humanKey = col.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, function(l) { return l.toUpperCase(); });
+                        contentRows += '<div class="crs-human-kv"><span class="crs-human-label">' + escapeHtml(humanKey) + '</span><span class="crs-human-value">' + escapeHtml(r[col]) + '</span></div>';
                     }
+                });
+
+                if (!contentRows) {
+                    contentRows = '<div style="padding:10px; text-align:center; color:var(--muted);">No person details available.</div>';
                 }
 
-                var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="position:fixed; width:520px; max-width:90vw; background:#fff; border-radius:8px; box-shadow:0 14px 36px rgba(0,0,0,0.25); border:1px solid #bcd0dc; z-index:10000; overflow:hidden; top:120px; left:200px;">' +
-                    '<div class="crs-popup-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color:#fff; font-size:13px; font-weight:bold; cursor:move;">' +
-                        '<span><i class="fa fa-info-circle" style="margin-right:6px;"></i> Record Details — ID: ' + reportId + '</span>' +
+                var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="position:fixed; width:480px; max-width:90vw; background:#fff; border-radius:8px; box-shadow:0 14px 36px rgba(0,0,0,0.25); border:1px solid #bcd0dc; z-index:10000; overflow:hidden; top:120px; left:200px;">' +
+                    '<div class="crs-popup-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color:#fff; font-size:12px; font-weight:bold; cursor:move;">' +
+                        '<span><i class="fa fa-user" style="margin-right:5px;"></i> Person Details — ID: ' + reportId + '</span>' +
                         '<button type="button" class="failed-modal-close-x" onclick="$(\'#' + popupId + '\').remove()">&times;</button>' +
                     '</div>' +
-                    '<div class="crs-popup-body" style="padding:12px 14px; max-height:340px; overflow-y:auto; background:#fdfdfd;">' + contentRows + '</div>' +
-                    '<div class="crs-popup-footer" style="padding:8px 14px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">' +
+                    '<div class="crs-popup-body" style="padding:10px; max-height:280px; overflow-y:auto; background:#fdfdfd;">' + contentRows + '</div>' +
+                    '<div class="crs-popup-footer" style="padding:6px 12px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">' +
                         '<button type="button" class="source-btn" onclick="$(\'#' + popupId + '\').remove()">Close</button>' +
                     '</div>' +
                 '</div>');
@@ -683,34 +693,34 @@
             });
         }
 
-        // 2. Account / ID Click: Horizontal Table Popup with requested columns
-        function openHorizontalTablePopup(reportId) {
+        // 2. Popup when clicking Account / ID: Shows exact transaction details in order (ID, BRN, NATIONALITY, PASSPORT, SURNAME, OTHERNAME, AMOUNT, FOREIGN CURRENCY, TYPE OF TRANSACTION, EQUIVALENT IN MUR)
+        function openTransactionDataPopup(reportId) {
             $.get('./getMraRecordDetails', { type: activeTab, reportId: reportId }, function(data) {
                 var r = data.record || data;
                 popupCount++;
-                var popupId = "mra_horizontal_popup_" + Date.now() + "_" + popupCount;
+                var popupId = "txn_popup_" + Date.now() + "_" + popupCount;
 
-                var targetCols = ['ID', 'BRN', 'NATIONALITY', 'PASSPORT', 'SURNAME', 'OTHERNAME', 'JOINT_ACCOUNT', 'ACCOUNT_NUMBER', 'TOTAL_DEPOSITS', 'BALANCE', 'AMOUNT', 'FOREIGN_CURRENCY', 'EQUIVALENT_IN_MUR'];
-                
-                var ths = '';
-                var tds = '';
+                var targetCols = ['ID', 'BRN', 'NATIONALITY', 'PASSPORT', 'SURNAME', 'OTHERNAME', 'AMOUNT', 'FOREIGN_CURRENCY', 'TYPE_OF_TRANSACTION', 'EQUIVALENT_IN_MUR', 'ACCOUNT_NUMBER', 'BALANCE', 'TOTAL_DEPOSITS'];
+                var contentRows = '';
 
                 targetCols.forEach(function(col) {
-                    if (r.hasOwnProperty(col) && r[col] !== null && r[col] !== undefined && r[col] !== '') {
-                        ths += '<th style="padding:7px 9px; background:#f1f5f9; border:1px solid #cbd5e1; font-size:11px; font-weight:bold; color:var(--ink); white-space:nowrap;">' + col.replace(/_/g, ' ') + '</th>';
-                        tds += '<td style="padding:7px 9px; border:1px solid #cbd5e1; font-size:11.5px; font-family:monospace; color:#102a43; white-space:nowrap;">' + escapeHtml(r[col]) + '</td>';
+                    if (r.hasOwnProperty(col) && r[col] !== null && r[col] !== undefined && String(r[col]).trim() !== '') {
+                        var humanKey = col.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, function(l) { return l.toUpperCase(); });
+                        contentRows += '<div class="crs-human-kv"><span class="crs-human-label">' + escapeHtml(humanKey) + '</span><span class="crs-human-value">' + escapeHtml(r[col]) + '</span></div>';
                     }
                 });
 
-                var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="position:fixed; width:800px; max-width:95vw; background:#fff; border-radius:8px; box-shadow:0 14px 36px rgba(0,0,0,0.25); border:1px solid #bcd0dc; z-index:10000; overflow:hidden; top:140px; left:150px;">' +
-                    '<div class="crs-popup-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color:#fff; font-size:13px; font-weight:bold; cursor:move;">' +
-                        '<span><i class="fa fa-table" style="margin-right:6px;"></i> Record Data Stream — ID: ' + reportId + '</span>' +
+                if (!contentRows) {
+                    contentRows = '<div style="padding:10px; text-align:center; color:var(--muted);">No transaction data available.</div>';
+                }
+
+                var popupEl = $('<div class="crs-multi-popup" id="' + popupId + '" style="position:fixed; width:500px; max-width:90vw; background:#fff; border-radius:8px; box-shadow:0 14px 36px rgba(0,0,0,0.25); border:1px solid #bcd0dc; z-index:10000; overflow:hidden; top:140px; left:150px;">' +
+                    '<div class="crs-popup-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); color:#fff; font-size:12px; font-weight:bold; cursor:move;">' +
+                        '<span><i class="fa fa-list-alt" style="margin-right:5px;"></i> Transaction Details — ID: ' + reportId + '</span>' +
                         '<button type="button" class="failed-modal-close-x" onclick="$(\'#' + popupId + '\').remove()">&times;</button>' +
                     '</div>' +
-                    '<div class="crs-popup-body" style="padding:14px; max-height:300px; overflow-x:auto; overflow-y:auto; background:#fdfdfd;">' +
-                        '<table style="border-collapse:collapse; width:100%;"><tr>' + ths + '</tr><tr>' + tds + '</tr></table>' +
-                    '</div>' +
-                    '<div class="crs-popup-footer" style="padding:8px 14px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">' +
+                    '<div class="crs-popup-body" style="padding:10px; max-height:300px; overflow-y:auto; background:#fdfdfd;">' + contentRows + '</div>' +
+                    '<div class="crs-popup-footer" style="padding:6px 12px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">' +
                         '<button type="button" class="source-btn" onclick="$(\'#' + popupId + '\').remove()">Close</button>' +
                     '</div>' +
                 '</div>');
@@ -764,7 +774,7 @@
             $('#dupPageInfoText').text(totalItems === 0 ? "Showing 0 entries" :
                 `Showing ${(startIndex + 1).toLocaleString()} to ${endIndex.toLocaleString()} of ${totalItems.toLocaleString()} entries`);
 
-            var $tbody =$('#dupTableBody');
+            var $tbody = $('#dupTableBody');
             $tbody.empty();
 
             if (pageItems.length === 0) {
@@ -775,11 +785,12 @@
 
             pageItems.forEach(function (r) {
                 var bal = Number(r.ACCOUNT_BALANCE || 0).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' ' + (r.CURRENCY_CODE || 'MUR');
+                var rawDupAccNum = r.ACCOUNT_NUMBER !== null && r.ACCOUNT_NUMBER !== undefined ? String(r.ACCOUNT_NUMBER) : '-';
 
                 var rowHtml = '<tr>' +
                     '<td>' + r.DUP_ID + '</td>' +
                     '<td>' + escapeHtml(r.FILE_NAME || '-') + '</td>' +
-                    '<td><b>' + escapeHtml(r.ACCOUNT_NUMBER || '-') + '</b></td>' +
+                    '<td><b>' + escapeHtml(rawDupAccNum) + '</b></td>' +
                     '<td>' + escapeHtml(r.HOLDER_NAME || '-') + '</td>' +
                     '<td>' + escapeHtml(r.RESIDENCE_COUNTRY || '-') + '</td>' +
                     '<td>' + escapeHtml(bal) + '</td>' +
@@ -798,7 +809,7 @@
         }
 
         function renderDupPagination(totalItems, totalPages) {
-            var $nav =$('#dupPaginationNav');
+            var $nav = $('#dupPaginationNav');
             $nav.empty();
             if (totalPages <= 1) return;
 
@@ -874,7 +885,7 @@
                 var r = data.record || data;
                 $('#rectifyDupId').val(dupId);
 
-                var $fieldsContainer =$('#rectifyModalFields');
+                var $fieldsContainer = $('#rectifyModalFields');
                 $fieldsContainer.empty();
 
                 var criticalFields = activeTab === 'SFX' 
@@ -897,9 +908,9 @@
                 }
 
                 $fieldsContainer.append(
-                    '<div class="failed-field full" style="margin-top: 6px; border-top: 1px solid #e2e8f0; padding-top: 6px;">' +
+                    '<div class="failed-field full" style="margin-top: 5px; border-top: 1px solid #e2e8f0; padding-top: 5px;">' +
                         '<label>Resolution Status *</label>' +
-                        '<select name="updatedStatus" class="failed-field" style="width:100%; height:30px; background:#fff; border:1px solid #cbd5dc; border-radius:4px;">' +
+                        '<select name="updatedStatus" class="failed-field" style="width:100%; height:28px; background:#fff; border:1px solid #cbd5dc; border-radius:4px;">' +
                             '<option value="COMPLETED">Resolve &amp; Promote to Master List</option>' +
                             '<option value="ERROR">Discard / Exclude Record</option>' +
                         '</select>' +
@@ -1057,7 +1068,7 @@
                         </div>
 
                         <div style="display: flex; align-items: center; gap: 5px;">
-                            <button type="button" class="crs-toolbar-btn" style="height: 25px; font-size: 10.5px; padding: 0 8px; background: #dc2626; color: #fff; border-color: #dc2626;" onclick="deleteAllDuplicateRecords()">
+                            <button type="button" class="crs-toolbar-btn" style="height: 24px; font-size: 10px; padding: 0 6px; background: #dc2626; color: #fff; border-color: #dc2626;" onclick="deleteAllDuplicateRecords()">
                                 <i class="fa fa-trash"></i> Delete All
                             </button>
                         </div>
@@ -1175,7 +1186,7 @@
 
             <form id="mraDupForm">
                 <input type="hidden" id="rectifyDupId" name="dupId">
-                <div class="failed-modal-body" id="rectifyModalFields" style="max-height: 60vh; overflow-y: auto;">
+                <div class="failed-modal-body" id="rectifyModalFields">
                     <!-- Dynamically populated fields -->
                 </div>
 
@@ -1189,7 +1200,7 @@
 
     <!-- Unified System Notification Modal -->
     <div class="failed-modal-overlay" id="customActionModal">
-        <div class="failed-modal-card" style="max-width: 380px;">
+        <div class="failed-modal-card" style="max-width: 360px;">
             <div class="failed-modal-header">
                 <span><i class="fa fa-bell-o"></i> System Notification</span>
                 <button type="button" class="failed-modal-close-x" onclick="closeAppModal()">&times;</button>
