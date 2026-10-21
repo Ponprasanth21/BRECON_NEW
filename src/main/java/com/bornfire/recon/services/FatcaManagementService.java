@@ -598,15 +598,18 @@ public class FatcaManagementService {
     public String generateSingleFatcaXml(String refNo) {
         List<Map<String, Object>> list;
         try {
+            // Change TRN_ID to your table's actual primary key column name (e.g., TRN_ID)
             list = jdbcTemplate.queryForList(
                 "SELECT * FROM BRECON.FACTA_TRANSCATION_DATA " +
                 "WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'Completed') <> 'DUPLICATE' " +
-                "  AND NVL(BATCH_ID, 'LEGACY') = ? ORDER BY TRN_ID", refNo);
+                "  AND TRN_ID = ?", refNo);
         } catch (Exception ex) {
-            throw new IllegalArgumentException("FATCA batch not found for reference: " + refNo);
+            logger.error("Database query failed for FATCA refNo {}: {}", refNo, ex.getMessage(), ex);
+            throw new RuntimeException("DB Error: " + ex.getMessage());
         }
+        
         if (list.isEmpty()) {
-            throw new IllegalArgumentException("FATCA batch not found for reference: " + refNo);
+            throw new IllegalArgumentException("FATCA record not found for reference: " + refNo);
         }
 
         StringBuilder xml = new StringBuilder();
@@ -617,7 +620,7 @@ public class FatcaManagementService {
         appendXmlFooter(xml);
         return xml.toString();
     }
-
+    
     private void appendXmlHeader(StringBuilder xml) {
         String currentTimeStamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
