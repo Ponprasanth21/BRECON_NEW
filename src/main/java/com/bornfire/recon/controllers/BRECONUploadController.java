@@ -41,6 +41,12 @@ import com.bornfire.recon.entities.upload.*;
 import com.bornfire.recon.services.SourceDataUploadService;
 import com.bornfire.recon.services.upload.*;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import java.nio.charset.StandardCharsets;
+
 @Controller
 @ConfigurationProperties("default")
 public class BRECONUploadController {
@@ -598,6 +604,7 @@ public class BRECONUploadController {
                 "FROM BRECON.RECON_TXN " +
                 "WHERE RECON_STATUS IN ('FAILED_REFUND', 'PENDING_INVESTIGATION') " +
                 "AND ROWNUM <= 10"
+                
             );
         } catch (Exception e) {
             logger.warn("Warning querying RECON_TXN exceptions: {}", e.getMessage());
@@ -810,20 +817,19 @@ public class BRECONUploadController {
     }
 
     @GetMapping("/downloadSingleFatcaXml")
-    public void downloadSingleFatcaXml(@RequestParam("refNo") String refNo, HttpServletResponse response) {
+    public ResponseEntity<?> downloadSingleFatcaXml(@RequestParam("refNo") String refNo) {
         try {
             String xmlContent = fatcaService.generateSingleFatcaXml(refNo);
-            response.setContentType("application/xml");
-            response.setCharacterEncoding("UTF-8");
-            response.setHeader("Content-Disposition", 
-                    "attachment; filename=\"FATCA_" + refNo + ".xml\"");
-            response.getOutputStream().write(xmlContent.getBytes(StandardCharsets.UTF_8));
-            response.getOutputStream().flush();
+            byte[] xmlBytes = xmlContent.getBytes(StandardCharsets.UTF_8);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_XML)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"FATCA_" + refNo + ".xml\"")
+                    .body(xmlBytes);
         } catch (Exception e) {
             logger.error("Error downloading individual FATCA XML for Ref No {}", refNo, e);
-            try {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to generate single FATCA XML: " + e.getMessage());
-            } catch (Exception ignored) {}
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to generate single FATCA XML: " + e.getMessage());
         }
     }
 

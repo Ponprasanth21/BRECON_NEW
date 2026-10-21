@@ -53,7 +53,6 @@ public class FatcaManagementService {
         "FILE_NAME", "BATCH_ID"
     };
 
-    // Index of RECORD_STATUS inside DB_COLUMNS (avoids the hard-coded "9")
     private static final int STATUS_IDX = indexOfColumn("RECORD_STATUS");
 
     private static int indexOfColumn(String name) {
@@ -134,18 +133,11 @@ public class FatcaManagementService {
         }
     }
 
-    /**
-     * Duplicate key. Built in Java (not SQL) because Oracle treats '' as NULL,
-     * which made "OTHER_NAME = ''" comparisons never match.
-     * To make the rule stricter (e.g. two different people with the same name),
-     * add BRN or PASSPORT_NO here.
-     */
     private String dupKey(String surname, String otherName) {
         return (surname == null ? "" : surname.trim().toLowerCase())
              + "|" + (otherName == null ? "" : otherName.trim().toLowerCase());
     }
 
-    /** Loads keys of all active, non-duplicate records ONCE per upload. */
     private Set<String> loadExistingKeys() {
         final Set<String> keys = new HashSet<>();
         jdbcTemplate.query(
@@ -185,7 +177,6 @@ public class FatcaManagementService {
         Timestamp currentTime = new Timestamp(System.currentTimeMillis());
         String effectiveUser = (userId != null && !userId.isEmpty()) ? userId : "SYSTEM";
 
-        // One BATCH_ID per uploaded file: the list page shows one row per file/batch
         final String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "UNKNOWN";
         final String batchId = "FTC" + new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date());
 
@@ -194,13 +185,8 @@ public class FatcaManagementService {
         int totalFailed = 0;
         List<Object[]> chunk = new ArrayList<>(CHUNK_SIZE);
 
-        // Keys already in DB + keys seen earlier in this file.
-        // Set.add() returns false when the key already exists => duplicate.
         Set<String> existingKeys = loadExistingKeys();
 
-        // ---------------------------------------------------------------
-        // 1. CSV / Text upload
-        // ---------------------------------------------------------------
         if (isCsv) {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
@@ -239,7 +225,7 @@ public class FatcaManagementService {
                         else if ("FILE_NAME".equals(col)) rowValues[i] = originalName;
                         else if ("BATCH_ID".equals(col)) rowValues[i] = batchId;
                         else if ("RECORD_SOURCE".equals(col)) rowValues[i] = "FX_CSV";
-                        else if ("RECORD_STATUS".equals(col)) rowValues[i] = STATUS_COMPLETED; // decided below
+                        else if ("RECORD_STATUS".equals(col)) rowValues[i] = STATUS_COMPLETED;
                         else {
                             Integer idx = colIndexMap.get(col);
                             if (idx != null && idx >= 0 && idx < tokens.length) {
@@ -267,11 +253,7 @@ public class FatcaManagementService {
                     }
                 }
             }
-        }
-        // ---------------------------------------------------------------
-        // 2. Excel upload (.xlsx, .xls)
-        // ---------------------------------------------------------------
-        else {
+        } else {
             try (InputStream is = file.getInputStream();
                  Workbook workbook = WorkbookFactory.create(is)) {
 
@@ -311,7 +293,7 @@ public class FatcaManagementService {
                         else if ("FILE_NAME".equals(col)) rowValues[i] = originalName;
                         else if ("BATCH_ID".equals(col)) rowValues[i] = batchId;
                         else if ("RECORD_SOURCE".equals(col)) rowValues[i] = "EXCEL_UP";
-                        else if ("RECORD_STATUS".equals(col)) rowValues[i] = STATUS_COMPLETED; // decided below
+                        else if ("RECORD_STATUS".equals(col)) rowValues[i] = STATUS_COMPLETED;
                         else {
                             Integer cIdx = colMap.get(col);
                             if (cIdx != null) {
@@ -341,7 +323,6 @@ public class FatcaManagementService {
             }
         }
 
-        // Flush remaining chunk
         if (!chunk.isEmpty()) {
             totalInserted += executeBatchChunk(insertSql, chunk, numColumns);
             chunk.clear();
@@ -387,14 +368,24 @@ public class FatcaManagementService {
     // =========================================================================
     public Map<String, Object> getFatcaDashboardData() {
         Map<String, Object> data = new HashMap<>();
-        int total = 0, pending = 0, completed = 0, error = 0;
+        int total = 0, pending = 0, duplicates = 0, error = 0;
+
         try {
+            // Total valid (non-duplicate, active) records
             Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM BRECON.FACTA_TRANSCATION_DATA " +
                 "WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND NVL(RECORD_STATUS, 'Completed') <> 'DUPLICATE'",
                 Integer.class);
             total = count != null ? count : 0;
 
+            // Accurate count of DUPLICATE records queue
+            Integer dupCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM BRECON.FACTA_TRANSCATION_DATA " +
+                "WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND RECORD_STATUS = 'DUPLICATE'",
+                Integer.class);
+            duplicates = dupCount != null ? dupCount : 0;
+
+            // Count pending vs error records
             List<Map<String, Object>> statusList = jdbcTemplate.queryForList(
                 "SELECT NVL(RECORD_STATUS, 'Completed') AS STAT, COUNT(*) AS CNT " +
                 "FROM BRECON.FACTA_TRANSCATION_DATA " +
@@ -404,9 +395,11 @@ public class FatcaManagementService {
             for (Map<String, Object> r : statusList) {
                 String st = String.valueOf(r.get("STAT")).toUpperCase();
                 int cnt = ((Number) r.get("CNT")).intValue();
-                if (st.contains("COMPLET")) completed += cnt;
-                else if (st.contains("ERR") || st.contains("REJ")) error += cnt;
-                else pending += cnt;
+                if (st.contains("ERR") || st.contains("REJ")) {
+                    error += cnt;
+                } else {
+                    pending += cnt;
+                }
             }
         } catch (Exception ex) {
             logger.warn("Querying FATCA counts: {}", ex.getMessage());
@@ -414,12 +407,12 @@ public class FatcaManagementService {
 
         data.put("totalRecords", total);
         data.put("pendingRecords", pending);
-        data.put("completedRecords", completed);
+        data.put("duplicateRecords", duplicates);
         data.put("errorRecords", error);
 
+        // List of uploaded file batches
         List<Map<String, Object>> records = new ArrayList<>();
         try {
-            // One row per uploaded file (batch). Legacy rows without BATCH_ID are grouped as 'LEGACY'.
             records = jdbcTemplate.queryForList(
                 "SELECT * FROM (" +
                 "  SELECT NVL(BATCH_ID, 'LEGACY') AS REF_NO, " +
@@ -430,32 +423,40 @@ public class FatcaManagementService {
                 "         CASE " +
                 "           WHEN SUM(CASE WHEN UPPER(RECORD_STATUS) LIKE '%ERR%' OR UPPER(RECORD_STATUS) LIKE '%REJ%' THEN 1 ELSE 0 END) > 0 THEN 'Error' " +
                 "           WHEN SUM(CASE WHEN NVL(RECORD_STATUS,'Completed') <> 'DUPLICATE' " +
-                "                          AND UPPER(NVL(RECORD_STATUS,'COMPLETED')) NOT LIKE '%COMPLET%' " +
-                "                          AND UPPER(NVL(RECORD_STATUS,'COMPLETED')) NOT LIKE '%ERR%' " +
-                "                          AND UPPER(NVL(RECORD_STATUS,'COMPLETED')) NOT LIKE '%REJ%' THEN 1 ELSE 0 END) > 0 THEN 'Pending' " +
+                "                              AND UPPER(NVL(RECORD_STATUS,'COMPLETED')) NOT LIKE '%COMPLET%' " +
+                "                              AND UPPER(NVL(RECORD_STATUS,'COMPLETED')) NOT LIKE '%ERR%' " +
+                "                              AND UPPER(NVL(RECORD_STATUS,'COMPLETED')) NOT LIKE '%REJ%' THEN 1 ELSE 0 END) > 0 THEN 'Pending' " +
                 "           ELSE 'Completed' END AS STATUS " +
                 "  FROM BRECON.FACTA_TRANSCATION_DATA " +
                 "  WHERE NVL(DEL_FLAG, 'N') <> 'Y' " +
                 "  GROUP BY NVL(BATCH_ID, 'LEGACY') " +
-                "  HAVING SUM(CASE WHEN NVL(RECORD_STATUS,'Completed') <> 'DUPLICATE' THEN 1 ELSE 0 END) > 0 " +
                 "  ORDER BY MAX(ENTRY_TIME) DESC, NVL(BATCH_ID, 'LEGACY') DESC" +
                 ") WHERE ROWNUM <= 100");
         } catch (Exception ex) {
             logger.warn("Querying FATCA records: {}", ex.getMessage());
         }
+
         data.put("records", records);
         return data;
     }
 
     public List<Map<String, Object>> getFatcaDuplicateRecords() {
-        String sql = "SELECT TRN_ID AS DUP_ID, BRN AS ACCOUNT_NUMBER, RES_COUNTRY_CODE AS COUNTRY_CODE, " +
-                     "       PASSPORT_NO AS TIN, SURNAME AS FIRST_NAME, OTHER_NAME AS LAST_NAME, " +
-                     "       FOREIGN_AMOUNT AS ACCOUNT_BALANCE, FOREIGN_CURR AS CURRENCY_CODE, " +
-                     "       TO_CHAR(TRN_ID) AS REF_NO, SURNAME AS ENTITY_NAME, FOREIGN_AMOUNT AS AMOUNT_ORG, " +
-                     "       NVL(FILE_NAME, 'File_Upload') AS FILE_NAME, 'PENDING' AS STATUS " +
+        String sql = "SELECT TRN_ID AS DUP_ID, " +
+                     "       NVL(BRN, '-') AS ACCOUNT_NUMBER, " +
+                     "       NVL(RES_COUNTRY_CODE, 'MU') AS COUNTRY_CODE, " +
+                     "       NVL(PASSPORT_NO, '-') AS TIN, " +
+                     "       NVL(SURNAME, '-') AS FIRST_NAME, " +
+                     "       NVL(OTHER_NAME, '-') AS LAST_NAME, " +
+                     "       NVL(FOREIGN_AMOUNT, 0) AS ACCOUNT_BALANCE, " +
+                     "       NVL(FOREIGN_CURR, 'USD') AS CURRENCY_CODE, " +
+                     "       NVL(BATCH_ID, TO_CHAR(TRN_ID)) AS REF_NO, " +
+                     "       TRIM(NVL(SURNAME, '') || ' ' || NVL(OTHER_NAME, '')) AS ENTITY_NAME, " +
+                     "       NVL(FOREIGN_AMOUNT, 0) AS AMOUNT_ORG, " +
+                     "       NVL(FILE_NAME, 'File_Upload') AS FILE_NAME, " +
+                     "       'PENDING' AS STATUS " +
                      "FROM BRECON.FACTA_TRANSCATION_DATA " +
                      "WHERE NVL(DEL_FLAG, 'N') <> 'Y' AND RECORD_STATUS = 'DUPLICATE' " +
-                     "ORDER BY TRN_ID";
+                     "ORDER BY TRN_ID DESC";
         try {
             return jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
@@ -465,20 +466,57 @@ public class FatcaManagementService {
     }
 
     @Transactional
-    public boolean rectifyFatcaDuplicate(String dupId, String accountNumber, String firstName,
-                                         String lastName, String countryCode, String tin,
-                                         BigDecimal balance, String currency, String status) {
+    public boolean rectifyFatcaDuplicate(
+            String dupId,
+            String accountNumber,
+            String firstName,
+            String lastName,
+            String countryCode,
+            String tin,
+            BigDecimal balance,
+            String currency,
+            String status) {
+
+        String sql =
+            "UPDATE BRECON.FACTA_TRANSCATION_DATA SET " +
+            "BRN = ?, " +
+            "SURNAME = ?, " +
+            "OTHER_NAME = ?, " +
+            "RES_COUNTRY_CODE = ?, " +
+            "PASSPORT_NO = ?, " +
+            "FOREIGN_AMOUNT = ?, " +
+            "FOREIGN_CURR = ?, " +
+            "RECORD_STATUS = ?, " +
+            "DEL_FLAG = 'N', " +
+            "MODIFY_TIME = SYSTIMESTAMP, " +
+            "MODIFY_USER = ? " +
+            "WHERE TRN_ID = ? " +
+            "AND NVL(DEL_FLAG, 'N') <> 'Y'";
+
         try {
-            String sql = "UPDATE BRECON.FACTA_TRANSCATION_DATA " +
-                         "SET BRN = ?, SURNAME = ?, OTHER_NAME = ?, RES_COUNTRY_CODE = ?, " +
-                         "    PASSPORT_NO = ?, FOREIGN_AMOUNT = ?, FOREIGN_CURR = ?, RECORD_STATUS = ? " +
-                         "WHERE TRN_ID = ?";
-            int updated = jdbcTemplate.update(sql, accountNumber, firstName, lastName,
-                                              countryCode, tin, balance, currency, status, dupId);
+            int updated = jdbcTemplate.update(
+                sql,
+                accountNumber,
+                firstName,
+                lastName,
+                countryCode,
+                tin,
+                balance,
+                currency,
+                (status == null || status.trim().isEmpty()) ? STATUS_COMPLETED : status,
+                "SYSTEM",
+                dupId
+            );
+
             return updated > 0;
+
         } catch (Exception e) {
-            logger.error("Error rectifying FATCA duplicate", e);
-            return false;
+            logger.error(
+                "Error rectifying FATCA duplicate TRN_ID={}",
+                dupId,
+                e
+            );
+            throw e;
         }
     }
 
@@ -517,7 +555,6 @@ public class FatcaManagementService {
         }
     }
 
-    /** refNo is a BATCH_ID: returns a summary of that uploaded file. */
     public Map<String, Object> getFatcaRecordDetails(String refNo) {
         try {
             return jdbcTemplate.queryForMap(
@@ -558,7 +595,6 @@ public class FatcaManagementService {
         return xml.toString();
     }
 
-    /** refNo is a BATCH_ID: exports all non-duplicate records of that uploaded file. */
     public String generateSingleFatcaXml(String refNo) {
         List<Map<String, Object>> list;
         try {
