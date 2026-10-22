@@ -170,15 +170,15 @@ public class BRECONUploadController {
     private int fetchLiveRowCount(String type) {
         String table;
         if ("ATM".equalsIgnoreCase(type)) {
-            table = "BRECON.ATM_TRANSACTION_DATA";
+            table = "BRECON.SWITCH_ATM";
         } else if ("POS".equalsIgnoreCase(type)) {
-            table = "BRECON.POS_TRANSATION_DATA";
+            table = "BRECON.SWITCH_POS";
         } else if ("CBS".equalsIgnoreCase(type)) {
             table = "BRECON.CBS_TXN";
         } else if ("EPIN".equalsIgnoreCase(type)) {
-            table = "BRECON.BRECON_CARD_EPIN_DATA_TABLE";
+            table = "BRECON.VISA_EPIN";
         } else if ("VISANET".equalsIgnoreCase(type) || "EPIN745".equalsIgnoreCase(type) || "EP745".equalsIgnoreCase(type)) {
-            table = "BRECON.BRECON_CARD_EP745_DATA_TABLE";
+            table = "BRECON.VISA_EPIN745";
         } else {
             return 0;
         }
@@ -270,11 +270,11 @@ public class BRECONUploadController {
             switch (typeUpper) {
                 case "ATM":
                     inserted = jdbcTemplate.update(
-                        "INSERT INTO BRECON.ATM_TRANSACTION_DATA (" +
+                        "INSERT INTO BRECON.SWITCH_ATM (" +
                         "  HEADX_CRD_CARD_CRD_NUM, AUTHX_SEQ_NUM, AUTHX_APPRV_CDE, AUTHX_AMT_1, TRAN_DT, AUTHX_TYP" +
                         ") SELECT ?, ?, ?, ?, ?, ? FROM DUAL " +
                         "WHERE NOT EXISTS (" +
-                        "  SELECT 1 FROM BRECON.ATM_TRANSACTION_DATA " +
+                        "  SELECT 1 FROM BRECON.SWITCH_ATM " +
                         "  WHERE AUTHX_SEQ_NUM = ? AND AUTHX_APPRV_CDE = ? AND TRAN_DT = ? AND AUTHX_TYP = ?" +
                         ")",
                         cleanCard, cleanRrn, cleanAuthId, numericAmount, cleanDate, cleanType,
@@ -284,11 +284,11 @@ public class BRECONUploadController {
 
                 case "POS":
                     inserted = jdbcTemplate.update(
-                        "INSERT INTO BRECON.POS_TRANSATION_DATA (" +
+                        "INSERT INTO BRECON.SWITCH_POS (" +
                         "  HEADX_CRD_CARD_CRD_NUM, AUTHX_SEQ_NUM, AUTHX_APPRV_CDE, AUTHX_AMT_1, TRAN_DT, AUTHX_TYP" +
                         ") SELECT ?, ?, ?, ?, ?, ? FROM DUAL " +
                         "WHERE NOT EXISTS (" +
-                        "  SELECT 1 FROM BRECON.POS_TRANSATION_DATA " +
+                        "  SELECT 1 FROM BRECON.SWITCH_POS " +
                         "  WHERE AUTHX_SEQ_NUM = ? AND AUTHX_APPRV_CDE = ? AND TRAN_DT = ? AND AUTHX_TYP = ?" +
                         ")",
                         cleanCard, cleanRrn, cleanAuthId, numericAmount, cleanDate, cleanType,
@@ -312,11 +312,11 @@ public class BRECONUploadController {
 
                 case "EPIN":
                     inserted = jdbcTemplate.update(
-                        "INSERT INTO BRECON.BRECON_CARD_EPIN_DATA_TABLE (" +
+                        "INSERT INTO BRECON.VISA_EPIN (" +
                         "  ACCT_NO, AUTH_CODE, DEST_AMT, PURCHASE_DATE" +
                         ") SELECT ?, ?, ?, TO_DATE(?, 'YYYY-MM-DD') FROM DUAL " +
                         "WHERE NOT EXISTS (" +
-                        "  SELECT 1 FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE " +
+                        "  SELECT 1 FROM BRECON.VISA_EPIN " +
                         "  WHERE ACCT_NO = ? AND AUTH_CODE = ? AND DEST_AMT = ?" +
                         ")",
                         cleanCard, cleanAuthId, numericAmount, cleanDate,
@@ -327,11 +327,11 @@ public class BRECONUploadController {
                 case "VISANET":
                 case "EP745":
                     inserted = jdbcTemplate.update(
-                        "INSERT INTO BRECON.BRECON_CARD_EP745_DATA_TABLE (" +
+                        "INSERT INTO BRECON.VISA_EPIN745 (" +
                         "  CARD_NUM, RET_REF_NUM, TRACE_NUM, TRAN_AMOUNT, TRAN_DATE" +
                         ") SELECT ?, ?, ?, ?, ? FROM DUAL " +
                         "WHERE NOT EXISTS (" +
-                        "  SELECT 1 FROM BRECON.BRECON_CARD_EP745_DATA_TABLE " +
+                        "  SELECT 1 FROM BRECON.VISA_EPIN745 " +
                         "  WHERE CARD_NUM = ? AND RET_REF_NUM = ? AND TRAN_DATE = ?" +
                         ")",
                         cleanCard, cleanRrn, cleanAuthId, numericAmount, cleanDate,
@@ -565,10 +565,10 @@ public class BRECONUploadController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getReconAnalytics() {
         Map<String, Object> data = new HashMap<>();
-        data.put("atmCount", getSafeCount("BRECON.ATM_TRANSACTION_DATA"));
-        data.put("posCount", getSafeCount("BRECON.POS_TRANSATION_DATA"));
+        data.put("atmCount", getSafeCount("BRECON.SWITCH_ATM"));
+        data.put("posCount", getSafeCount("BRECON.SWITCH_POS"));
         data.put("cbsCount", getSafeCount("BRECON.CBS_TXN"));
-        data.put("epinCount", getSafeCount("BRECON.BRECON_CARD_EPIN_DATA_TABLE"));
+        data.put("epinCount", getSafeCount("BRECON.VISA_EPIN"));
 
         int settled = 0, failedRefund = 0, pending = 0;
         try {
@@ -632,7 +632,7 @@ public class BRECONUploadController {
         response.setContentType("text/plain");
         response.setHeader("Content-Disposition", "attachment; filename=EPIN_Report_" + System.currentTimeMillis() + ".TXT");
         
-        List<Map<String, Object>> records = jdbcTemplate.queryForList("SELECT * FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE");
+        List<Map<String, Object>> records = jdbcTemplate.queryForList("SELECT * FROM BRECON.VISA_EPIN");
         
         try (PrintWriter writer = response.getWriter()) {
             writer.println("CARD_NO|RRN|AUTH_ID|AMOUNT|TRAN_DATE");
@@ -654,7 +654,7 @@ public class BRECONUploadController {
         response.setContentType("text/plain");
         response.setHeader("Content-Disposition", "attachment; filename=VisaNet_EP745_Report_" + System.currentTimeMillis() + ".TXT");
         
-        List<Map<String, Object>> records = jdbcTemplate.queryForList("SELECT * FROM BRECON.BRECON_CARD_EP745_DATA_TABLE");
+        List<Map<String, Object>> records = jdbcTemplate.queryForList("SELECT * FROM BRECON.VISA_EPIN745");
         
         try (PrintWriter writer = response.getWriter()) {
             writer.println("CARD_NO|RRN|AUTH_ID|AMOUNT|SETT_DATE");

@@ -111,9 +111,6 @@ public class SourceDataUploadService {
         return s.replaceAll("[^A-Z0-9_]", "");
     }
 
-    // =========================================================================
-    // FAST CELL EXTRACTOR (Compatible with POI 3.x, 4.x, and 5.x)
-    // =========================================================================
     private String getFastCellValue(Cell cell) {
         if (cell == null) return null;
         try {
@@ -150,9 +147,6 @@ public class SourceDataUploadService {
         }
     }
 
-    // =========================================================================
-    // MAIN TRANSACTION FILE UPLOAD ROUTER
-    // =========================================================================
     public Map<String, Object> uploadTransactionFile(MultipartFile file, String type, String userId) throws Exception {
         Map<String, Object> result = new HashMap<>();
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
@@ -167,12 +161,12 @@ public class SourceDataUploadService {
         if (isEpin && fileName.endsWith(".txt")) {
             String reportDateStr = new SimpleDateFormat("dd-MM-yy").format(new Date());
             try { jdbcTemplate.update("TRUNCATE TABLE BRECON.BRECON_EPIN_TEXT_TABLE"); } catch (Exception ignored) {}
-            try { jdbcTemplate.update("DELETE FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE WHERE TO_CHAR(ENTRY_TIME, 'DD-MM-YY') = ?", reportDateStr); } catch (Exception ignored) {}
+            try { jdbcTemplate.update("DELETE FROM BRECON.VISA_EPIN WHERE TO_CHAR(ENTRY_TIME, 'DD-MM-YY') = ?", reportDateStr); } catch (Exception ignored) {}
 
             uploadRawEpinTextFile(file, reportDateStr);
             executeCompanyEpinProcedure(reportDateStr);
 
-            Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM BRECON.BRECON_CARD_EPIN_DATA_TABLE", Integer.class);
+            Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM BRECON.VISA_EPIN", Integer.class);
             result.put("insertedRows", count != null ? count : 0);
             result.put("failedRows", 0);
             return result;
@@ -186,9 +180,9 @@ public class SourceDataUploadService {
             return result;
         }
 
-        String targetTable = isAtm ? "BRECON.ATM_TRANSACTION_DATA" :
-                             isPos ? "BRECON.POS_TRANSATION_DATA" :
-                             isCbs ? "BRECON.CBS_TXN" : "BRECON.BRECON_CARD_EP745_DATA_TABLE";
+        String targetTable = isAtm ? "BRECON.SWITCH_ATM" :
+                             isPos ? "BRECON.SWITCH_POS" :
+                             isCbs ? "BRECON.CBS_TXN" : "BRECON.VISA_EPIN745";
 
         String[] targetColumns = isCbs ? CBS_COLUMNS : isEpin745 ? EPIN745_COLUMNS : DB_COLUMNS;
 
@@ -469,7 +463,6 @@ public class SourceDataUploadService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logFailedRecord(String src, String card, String rrn, String auth, String amt, String dt, String reason) {
         try {
-            // Check if this exact failure record is already logged as PENDING to prevent re-inserting it repeatedly
             Integer existingPendingCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM BRECON.UPLOAD_FAILED_RECORDS " +
                 "WHERE UPPER(SOURCE_TYPE) = UPPER(?) " +
@@ -482,11 +475,9 @@ public class SourceDataUploadService {
             );
 
             if (existingPendingCount != null && existingPendingCount > 0) {
-                // Already in the queue; skip duplicate entry
                 return;
             }
 
-            // Insert single clean failure record
             jdbcTemplate.update(
                 "INSERT INTO BRECON.UPLOAD_FAILED_RECORDS " +
                 "(SOURCE_TYPE, RAW_CARD_NO, RAW_RRN, RAW_AUTH_ID, RAW_AMOUNT, RAW_TRAN_DATE, ERROR_REASON, STATUS) " +
@@ -550,11 +541,12 @@ public class SourceDataUploadService {
 
         if (batchParams.isEmpty()) return 0;
 
-        String sql = "INSERT INTO BRECON.BRECON_CARD_EP745_DATA_TABLE (" +
+     // Find this exact SQL string inside uploadEpin745File() in SourceDataUploadService.java:
+        String sql = "INSERT INTO BRECON.VISA_EPIN745 (" +
                      "BATCH_NUM, TRAN_DATE, TRAN_TIME, CARD_NUM, RET_REF_NUM, TRACE_NUM, " +
                      "ISSUER_ID, TRAN_TYPE, PROCESS_CODE, ENT_MODE, CN_STP, RSP_CD, " +
                      "TRAN_AMOUNT, TRAN_CURRENCY, SETT_AMOUNT, SETT_INDICATOR, NAT_INTNAT, " +
-                     "ENTITY_FLG, MODIFY_FLG, DEL_FLG, ENTRY_USER, ENTRY_TIME, SRL_NUM) " +
+                     "ENTITY_FLG, MODIFY_FLG, DEL_FLG, ENTRY_USER, ENTRY_TIME, SRL_NUM) " + // <--- CHANGED DEL_FLAG TO DEL_FLG
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)";
 
         int[] updateCounts = jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
@@ -586,11 +578,11 @@ public class SourceDataUploadService {
 
         switch (type.toUpperCase().trim()) {
             case "ATM":
-                tableName = "BRECON.ATM_TRANSACTION_DATA";
+                tableName = "BRECON.SWITCH_ATM";
                 fileNamePrefix = "ATM_Source_Data";
                 break;
             case "POS":
-                tableName = "BRECON.POS_TRANSATION_DATA";
+                tableName = "BRECON.SWITCH_POS";
                 fileNamePrefix = "POS_Source_Data";
                 break;
             case "CBS":
@@ -598,32 +590,29 @@ public class SourceDataUploadService {
                 fileNamePrefix = "CBS_Source_Data";
                 break;
             case "EPIN":
-                tableName = "BRECON.BRECON_CARD_EPIN_DATA_TABLE";
+                tableName = "BRECON.VISA_EPIN";
                 fileNamePrefix = "EPIN_Source_Data";
                 break;
             case "VISANET":
             case "EP745":
-                tableName = "BRECON.BRECON_CARD_EP745_DATA_TABLE";
+                tableName = "BRECON.VISA_EPIN745";
                 fileNamePrefix = "VisaNet_EP745_Source_Data";
                 break;
             default:
                 throw new IllegalArgumentException("Invalid source data type: " + type);
         }
 
-        // Set response headers for Excel download
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         String headerKey = "Content-Disposition";
         String headerValue = "attachment; filename=" + fileNamePrefix + "_" + System.currentTimeMillis() + ".xlsx";
         response.setHeader(headerKey, headerValue);
 
-        // Fetch records and stream into Apache POI Workbook
         List<Map<String, Object>> records = jdbcTemplate.queryForList("SELECT * FROM " + tableName);
 
         try (Workbook workbook = new XSSFWorkbook(); ServletOutputStream outputStream = response.getOutputStream()) {
             Sheet sheet = workbook.createSheet(type.toUpperCase() + "_Data");
 
             if (!records.isEmpty()) {
-                // Create Header Row
                 Row headerRow = sheet.createRow(0);
                 Set<String> columns = records.get(0).keySet();
                 int colIdx = 0;
@@ -632,7 +621,6 @@ public class SourceDataUploadService {
                     cell.setCellValue(col);
                 }
 
-                // Create Data Rows
                 int rowIdx = 1;
                 for (Map<String, Object> record : records) {
                     Row row = sheet.createRow(rowIdx++);
