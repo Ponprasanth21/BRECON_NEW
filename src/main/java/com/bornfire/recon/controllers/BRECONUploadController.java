@@ -209,11 +209,20 @@ public class BRECONUploadController {
     @GetMapping("/getUploadFailedRecords")
     @ResponseBody
     public List<Map<String, Object>> getUploadFailedRecords(@RequestParam("sourceType") String sourceType) {
-        String sql = "SELECT FAIL_ID, SOURCE_TYPE, RAW_CARD_NO, RAW_RRN, RAW_AUTH_ID, RAW_AMOUNT, RAW_TRAN_DATE, ERROR_REASON " +
-                     "FROM BRECON.UPLOAD_FAILED_RECORDS " +
-                     "WHERE UPPER(SOURCE_TYPE) = UPPER(?) AND STATUS = 'PENDING' " +
-                     "ORDER BY FAIL_ID DESC";
-        return jdbcTemplate.queryForList(sql, sourceType);
+        String typeUpper = (sourceType != null) ? sourceType.trim().toUpperCase() : "";
+        if ("VISANET".equals(typeUpper) || "VISA_NET".equals(typeUpper) || "EPIN745".equals(typeUpper) || "EP745".equals(typeUpper)) {
+            String sql = "SELECT FAIL_ID, SOURCE_TYPE, RAW_CARD_NO, RAW_RRN, RAW_AUTH_ID, RAW_AMOUNT, RAW_TRAN_DATE, ERROR_REASON " +
+                         "FROM BRECON.UPLOAD_FAILED_RECORDS " +
+                         "WHERE UPPER(SOURCE_TYPE) IN ('VISANET', 'VISA_NET', 'EPIN745', 'EP745') AND STATUS = 'PENDING' " +
+                         "ORDER BY FAIL_ID DESC";
+            return jdbcTemplate.queryForList(sql);
+        } else {
+            String sql = "SELECT FAIL_ID, SOURCE_TYPE, RAW_CARD_NO, RAW_RRN, RAW_AUTH_ID, RAW_AMOUNT, RAW_TRAN_DATE, ERROR_REASON " +
+                         "FROM BRECON.UPLOAD_FAILED_RECORDS " +
+                         "WHERE UPPER(SOURCE_TYPE) = UPPER(?) AND STATUS = 'PENDING' " +
+                         "ORDER BY FAIL_ID DESC";
+            return jdbcTemplate.queryForList(sql, typeUpper);
+        }
     }
 
     @PostMapping("/submitCorrectedRecord")
@@ -271,14 +280,14 @@ public class BRECONUploadController {
                 case "ATM":
                     inserted = jdbcTemplate.update(
                         "INSERT INTO BRECON.SWITCH_ATM (" +
-                        "  HEADX_CRD_CARD_CRD_NUM, AUTHX_SEQ_NUM, AUTHX_APPRV_CDE, AUTHX_AMT_1, TRAN_DT, AUTHX_TYP" +
+                        "  HEADX_CRD_PAN, AUTHX_SEQ_NUM, AUTHX_AUTH_ID_RESP, AUTHX_AMT_1, TXN_DT, AUTHX_TYP" +
                         ") SELECT ?, ?, ?, ?, ?, ? FROM DUAL " +
                         "WHERE NOT EXISTS (" +
                         "  SELECT 1 FROM BRECON.SWITCH_ATM " +
-                        "  WHERE AUTHX_SEQ_NUM = ? AND AUTHX_APPRV_CDE = ? AND TRAN_DT = ? AND AUTHX_TYP = ?" +
+                        "  WHERE AUTHX_SEQ_NUM = ? AND TXN_DT = ? AND AUTHX_TYP = ?" +
                         ")",
                         cleanCard, cleanRrn, cleanAuthId, numericAmount, cleanDate, cleanType,
-                        cleanRrn, cleanAuthId, cleanDate, cleanType
+                        cleanRrn, cleanDate, cleanType
                     );
                     break;
 
@@ -299,43 +308,44 @@ public class BRECONUploadController {
                 case "CBS":
                     inserted = jdbcTemplate.update(
                         "INSERT INTO BRECON.CBS_TXN (" +
-                        "  CARD_NUMBER, RRN, AMOUNT, TRAN_DATE" +
-                        ") SELECT ?, ?, ?, ? FROM DUAL " +
+                        "  ACID, TRAN_ID, PART_TRAN_SRL_NUM, TRAN_AMT, TRAN_DATE" +
+                        ") SELECT ?, ?, ?, ?, ? FROM DUAL " +
                         "WHERE NOT EXISTS (" +
                         "  SELECT 1 FROM BRECON.CBS_TXN " +
-                        "  WHERE RRN = ? AND CARD_NUMBER = ? AND TRAN_DATE = ?" +
+                        "  WHERE TRAN_ID = ? AND PART_TRAN_SRL_NUM = ? AND TRAN_DATE = ?" +
                         ")",
-                        cleanCard, cleanRrn, numericAmount.toPlainString(), cleanDate,
-                        cleanRrn, cleanCard, cleanDate
+                        cleanCard, cleanRrn, cleanAuthId, numericAmount.toPlainString(), cleanDate,
+                        cleanRrn, cleanAuthId, cleanDate
                     );
                     break;
 
                 case "EPIN":
                     inserted = jdbcTemplate.update(
                         "INSERT INTO BRECON.VISA_EPIN (" +
-                        "  ACCT_NO, AUTH_CODE, DEST_AMT, PURCHASE_DATE" +
-                        ") SELECT ?, ?, ?, TO_DATE(?, 'YYYY-MM-DD') FROM DUAL " +
+                        "  ACCT_NO, AUTH_CODE, DEST_AMT, PURCHASE_DATE, ACQ_REF_NUM" +
+                        ") SELECT ?, ?, ?, TO_DATE(?, 'YYYY-MM-DD'), ? FROM DUAL " +
                         "WHERE NOT EXISTS (" +
                         "  SELECT 1 FROM BRECON.VISA_EPIN " +
                         "  WHERE ACCT_NO = ? AND AUTH_CODE = ? AND DEST_AMT = ?" +
                         ")",
-                        cleanCard, cleanAuthId, numericAmount, cleanDate,
+                        cleanCard, cleanAuthId, numericAmount, cleanDate, cleanRrn,
                         cleanCard, cleanAuthId, numericAmount
                     );
                     break;
 
                 case "VISANET":
                 case "EP745":
+                case "EPIN745":
                     inserted = jdbcTemplate.update(
                         "INSERT INTO BRECON.VISA_EPIN745 (" +
                         "  CARD_NUM, RET_REF_NUM, TRACE_NUM, TRAN_AMOUNT, TRAN_DATE" +
                         ") SELECT ?, ?, ?, ?, ? FROM DUAL " +
                         "WHERE NOT EXISTS (" +
                         "  SELECT 1 FROM BRECON.VISA_EPIN745 " +
-                        "  WHERE CARD_NUM = ? AND RET_REF_NUM = ? AND TRAN_DATE = ?" +
+                        "  WHERE CARD_NUM = ? AND TRACE_NUM = ? AND TRAN_DATE = ? AND TRAN_AMOUNT = ?" +
                         ")",
                         cleanCard, cleanRrn, cleanAuthId, numericAmount, cleanDate,
-                        cleanCard, cleanRrn, cleanDate
+                        cleanCard, cleanAuthId, cleanDate, numericAmount
                     );
                     break;
 
@@ -441,14 +451,22 @@ public class BRECONUploadController {
     public ResponseEntity<Map<String, Object>> deleteAllFailedRecords(@RequestParam("sourceType") String sourceType) {
         Map<String, Object> response = new HashMap<>();
         try {
-            int rowsDeleted = jdbcTemplate.update(
-                "DELETE FROM BRECON.UPLOAD_FAILED_RECORDS WHERE UPPER(SOURCE_TYPE) = UPPER(?) AND STATUS = 'PENDING'",
-                sourceType
-            );
+            int rowsDeleted;
+            String typeUpper = (sourceType != null) ? sourceType.trim().toUpperCase() : "";
+            if ("VISANET".equals(typeUpper) || "VISA_NET".equals(typeUpper) || "EPIN745".equals(typeUpper) || "EP745".equals(typeUpper)) {
+                rowsDeleted = jdbcTemplate.update(
+                    "DELETE FROM BRECON.UPLOAD_FAILED_RECORDS WHERE UPPER(SOURCE_TYPE) IN ('VISANET', 'VISA_NET', 'EPIN745', 'EP745') AND STATUS = 'PENDING'"
+                );
+            } else {
+                rowsDeleted = jdbcTemplate.update(
+                    "DELETE FROM BRECON.UPLOAD_FAILED_RECORDS WHERE UPPER(SOURCE_TYPE) = UPPER(?) AND STATUS = 'PENDING'",
+                    sourceType
+                );
+            }
 
             response.put("status", "SUCCESS");
             response.put("deletedCount", rowsDeleted);
-            response.put("message", "All " + rowsDeleted + " record(s) deleted successfully for " + sourceType.toUpperCase() + ".");
+            response.put("message", "All " + rowsDeleted + " record(s) deleted successfully for " + typeUpper + ".");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error deleting all failed records for type: {}", sourceType, e);
@@ -474,10 +492,18 @@ public class BRECONUploadController {
                   "WHERE FAIL_ID IN (" + placeholders + ") ORDER BY FAIL_ID DESC";
             failedList = jdbcTemplate.queryForList(sql, failIds.toArray());
         } else {
-            sql = "SELECT FAIL_ID, SOURCE_TYPE, RAW_CARD_NO, RAW_RRN, RAW_AUTH_ID, RAW_AMOUNT, RAW_TRAN_DATE, ERROR_REASON, STATUS, CREATED_AT " +
-                  "FROM BRECON.UPLOAD_FAILED_RECORDS " +
-                  "WHERE UPPER(SOURCE_TYPE) = UPPER(?) AND STATUS = 'PENDING' ORDER BY FAIL_ID DESC";
-            failedList = jdbcTemplate.queryForList(sql, sourceType);
+            String typeUpper = (sourceType != null) ? sourceType.trim().toUpperCase() : "";
+            if ("VISANET".equals(typeUpper) || "VISA_NET".equals(typeUpper) || "EPIN745".equals(typeUpper) || "EP745".equals(typeUpper)) {
+                sql = "SELECT FAIL_ID, SOURCE_TYPE, RAW_CARD_NO, RAW_RRN, RAW_AUTH_ID, RAW_AMOUNT, RAW_TRAN_DATE, ERROR_REASON, STATUS, CREATED_AT " +
+                      "FROM BRECON.UPLOAD_FAILED_RECORDS " +
+                      "WHERE UPPER(SOURCE_TYPE) IN ('VISANET', 'VISA_NET', 'EPIN745', 'EP745') AND STATUS = 'PENDING' ORDER BY FAIL_ID DESC";
+                failedList = jdbcTemplate.queryForList(sql);
+            } else {
+                sql = "SELECT FAIL_ID, SOURCE_TYPE, RAW_CARD_NO, RAW_RRN, RAW_AUTH_ID, RAW_AMOUNT, RAW_TRAN_DATE, ERROR_REASON, STATUS, CREATED_AT " +
+                      "FROM BRECON.UPLOAD_FAILED_RECORDS " +
+                      "WHERE UPPER(SOURCE_TYPE) = UPPER(?) AND STATUS = 'PENDING' ORDER BY FAIL_ID DESC";
+                failedList = jdbcTemplate.queryForList(sql, sourceType);
+            }
         }
 
         try (org.apache.poi.xssf.streaming.SXSSFWorkbook workbook = new org.apache.poi.xssf.streaming.SXSSFWorkbook(100)) {
