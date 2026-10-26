@@ -130,7 +130,7 @@ public class SourceDataUploadService {
         "PARTY_CODE", "SVS_TRAN_ID", "CRNCY_HOL_CHK_DONE_FLG", "REFERRAL_ID", "GL_DATE",
         "BKDT_TRAN_FLG", "BANK_ID", "IMPL_CASH_PART_TRAN_FLG", "PTRAN_CHRG_EXISTS_FLG",
         "MUD_POOL_BAL_BUILD_FLG", "GL_SEGMENT_STRING", "SYS_PART_TRAN_CODE", "USER_PART_TRAN_CODE",
-        "TRAN_FREE_CODE1", "TRAN_FREE_CODE2"
+        "TRAN_FREE_CODE1", "TRAN_FREE_CODE2", "AUTH_ID"
     };
 
     private static final String[] EPIN745_COLUMNS = new String[] {
@@ -421,6 +421,8 @@ public class SourceDataUploadService {
         if (configuredOracleHome != null && !configuredOracleHome.trim().isEmpty()) {
             candidates.add(new File(configuredOracleHome.trim(), "bin/sqlldr.exe").getAbsolutePath());
             candidates.add(new File(configuredOracleHome.trim(), "bin/sqlldr").getAbsolutePath());
+            candidates.add(new File(configuredOracleHome.trim(), "sqlldr.exe").getAbsolutePath());
+            candidates.add(new File(configuredOracleHome.trim(), "sqlldr").getAbsolutePath());
         }
 
         // 2. ORACLE_HOME environment variable
@@ -428,9 +430,40 @@ public class SourceDataUploadService {
         if (envHome != null && !envHome.trim().isEmpty()) {
             candidates.add(new File(envHome.trim(), "bin/sqlldr.exe").getAbsolutePath());
             candidates.add(new File(envHome.trim(), "bin/sqlldr").getAbsolutePath());
+            candidates.add(new File(envHome.trim(), "sqlldr.exe").getAbsolutePath());
+            candidates.add(new File(envHome.trim(), "sqlldr").getAbsolutePath());
         }
 
-        // 3. Dynamic search in user's profile and common installation roots
+        // 3. Locate via OS 'where.exe' (Windows) or 'which' (Linux/Unix)
+        try {
+            boolean isWin = System.getProperty("os.name", "").toLowerCase().contains("win");
+            Process p = new ProcessBuilder(isWin ? "where.exe" : "which", "sqlldr").start();
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                String line;
+                while ((line = r.readLine()) != null) {
+                    line = line.trim();
+                    if (!line.isEmpty() && new File(line).exists()) {
+                        candidates.add(line);
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // 4. Scan all directories in system PATH environment variable
+        String pathEnv = System.getenv("PATH");
+        if (pathEnv != null) {
+            for (String p : pathEnv.split(Pattern.quote(File.pathSeparator))) {
+                String trimmed = p.trim().replaceAll("^\"|\"$", "");
+                if (!trimmed.isEmpty()) {
+                    File exe = new File(trimmed, "sqlldr.exe");
+                    if (exe.exists() && exe.canExecute()) candidates.add(exe.getAbsolutePath());
+                    File sh = new File(trimmed, "sqlldr");
+                    if (sh.exists() && sh.canExecute()) candidates.add(sh.getAbsolutePath());
+                }
+            }
+        }
+
+        // 5. Dynamic search in user's profile and common installation roots
         String userName = System.getProperty("user.name");
         String envUser = System.getenv("USERNAME");
         Set<String> searchRoots = new LinkedHashSet<>();
@@ -443,14 +476,32 @@ public class SourceDataUploadService {
         }
         searchRoots.add("C:\\app");
         searchRoots.add("D:\\app");
+        searchRoots.add("E:\\app");
         searchRoots.add("C:\\oracle");
         searchRoots.add("D:\\oracle");
+        searchRoots.add("E:\\oracle");
+        searchRoots.add("C:\\Program Files\\Oracle");
+        searchRoots.add("C:\\Program Files (x86)\\Oracle");
+
+        // Check common Instant Client locations directly on C: and D:
+        for (String drive : new String[] { "C:\\", "D:\\" }) {
+            File d = new File(drive);
+            if (d.exists() && d.isDirectory()) {
+                File[] list = d.listFiles(f -> f.isDirectory() && f.getName().toLowerCase().contains("instantclient"));
+                if (list != null) {
+                    for (File ic : list) {
+                        File exe = new File(ic, "sqlldr.exe");
+                        if (exe.exists()) candidates.add(exe.getAbsolutePath());
+                    }
+                }
+            }
+        }
 
         for (String rootPath : searchRoots) {
             findSqlldrInDir(new File(rootPath), candidates, 4);
         }
 
-        // 4. System PATH execution candidates
+        // Fallbacks
         candidates.add("sqlldr.exe");
         candidates.add("sqlldr");
 
@@ -469,14 +520,19 @@ public class SourceDataUploadService {
             try {
                 ProcessBuilder pb = new ProcessBuilder(cand, "help=y");
                 String home = resolveOracleHome(cand);
+                File candFile = new File(cand);
+                File candDir = candFile.getParentFile();
+                if (candDir != null && candDir.exists()) {
+                    String curPath = pb.environment().get("PATH");
+                    pb.environment().put("PATH", candDir.getAbsolutePath() + File.pathSeparator + (curPath != null ? curPath : ""));
+                }
                 if (home != null) {
                     pb.environment().put("ORACLE_HOME", home);
-                    String curPath = pb.environment().get("PATH");
-                    pb.environment().put("PATH", home + File.separator + "bin" + File.pathSeparator + (curPath != null ? curPath : ""));
                 }
                 Process p = pb.start();
+                try { p.getOutputStream().close(); } catch (Exception ignored) {}
                 boolean finished = p.waitFor(3, TimeUnit.SECONDS);
-                if (finished && p.exitValue() == 0) {
+                if (finished) {
                     cachedSqlldrPath = cand;
                     logger.info("Successfully verified SQL*Loader executable: {}", cand);
                     return cachedSqlldrPath;
@@ -494,6 +550,16 @@ public class SourceDataUploadService {
         if (children == null) return;
         for (File child : children) {
             if (child.isDirectory()) {
+                // Check direct in folder (Instant Client layout)
+                File directExe = new File(child, "sqlldr.exe");
+                if (directExe.exists() && !candidates.contains(directExe.getAbsolutePath())) {
+                    candidates.add(directExe.getAbsolutePath());
+                }
+                File directSh = new File(child, "sqlldr");
+                if (directSh.exists() && !candidates.contains(directSh.getAbsolutePath())) {
+                    candidates.add(directSh.getAbsolutePath());
+                }
+                // Check bin/ subfolder (Standard Oracle Client layout)
                 File binExe = new File(child, "bin/sqlldr.exe");
                 if (binExe.exists() && !candidates.contains(binExe.getAbsolutePath())) {
                     candidates.add(binExe.getAbsolutePath());
@@ -518,9 +584,15 @@ public class SourceDataUploadService {
         if (sqlldrPath != null) {
             File f = new File(sqlldrPath);
             File parent = f.getParentFile();
-            if (parent != null && "bin".equalsIgnoreCase(parent.getName())) {
-                File home = parent.getParentFile();
-                if (home != null && home.exists()) return home.getAbsolutePath();
+            if (parent != null) {
+                if ("bin".equalsIgnoreCase(parent.getName())) {
+                    File home = parent.getParentFile();
+                    if (home != null && home.exists()) return home.getAbsolutePath();
+                } else if (new File(parent, "oci.dll").exists()) {
+                    // Instant client folder containing oci.dll
+                    return parent.getAbsolutePath();
+                }
+                return parent.getAbsolutePath();
             }
         }
         return null;
@@ -534,9 +606,13 @@ public class SourceDataUploadService {
             } catch (Exception ignored) {}
         }
         if (url != null && url.contains("@")) {
-            return url.substring(url.indexOf('@') + 1).trim();
+            String conn = url.substring(url.indexOf('@') + 1).trim();
+            if (!conn.startsWith("//") && !conn.startsWith("(")) {
+                conn = "//" + conn;
+            }
+            return conn;
         }
-        return "122.165.217.18:1521/BRECON";
+        return "//122.165.217.18:1521/BRECON";
     }
 
     private String getDbUser() {
@@ -554,18 +630,22 @@ public class SourceDataUploadService {
         if (sqlldrPath == null) throw new IllegalStateException("SQL*Loader executable not available");
 
         String oracleHome = resolveOracleHome(sqlldrPath);
+        File sqlldrFile = new File(sqlldrPath);
+        File sqlldrDir = sqlldrFile.getParentFile();
+
         String connectString = getOracleConnectString();
         String user = getDbUser();
         String pass = getDbPassword();
 
         List<String> cmd = new ArrayList<>();
         cmd.add(sqlldrPath);
-        cmd.add("userid=" + user + "/" + pass + "@" + connectString);
-        cmd.add("control=" + ctlFile.getAbsolutePath());
-        cmd.add("data=" + datFile.getAbsolutePath());
-        cmd.add("log=" + logFile.getAbsolutePath());
-        cmd.add("bad=" + badFile.getAbsolutePath());
-        cmd.add("discard=" + dscFile.getAbsolutePath());
+        // Quoting password handles special characters like @, #, $, / in database password
+        cmd.add("userid=" + user + "/\"" + pass.replace("\"", "\\\"") + "\"@" + connectString);
+        cmd.add("control=\"" + ctlFile.getAbsolutePath() + "\"");
+        cmd.add("data=\"" + datFile.getAbsolutePath() + "\"");
+        cmd.add("log=\"" + logFile.getAbsolutePath() + "\"");
+        cmd.add("bad=\"" + badFile.getAbsolutePath() + "\"");
+        cmd.add("discard=\"" + dscFile.getAbsolutePath() + "\"");
         if (sqlldrDirect) {
             cmd.add("direct=true");
         } else {
@@ -578,14 +658,33 @@ public class SourceDataUploadService {
         cmd.add("silent=header,feedback");
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
+
+        // Configure environment with SQL*Loader directory at head of PATH (ensures oci.dll resolves)
+        String curPath = pb.environment().get("PATH");
+        if (curPath == null) curPath = System.getenv("PATH");
+
+        StringBuilder augmentedPath = new StringBuilder();
+        if (sqlldrDir != null && sqlldrDir.exists()) {
+            augmentedPath.append(sqlldrDir.getAbsolutePath()).append(File.pathSeparator);
+        }
         if (oracleHome != null) {
             pb.environment().put("ORACLE_HOME", oracleHome);
-            String curPath = pb.environment().get("PATH");
-            pb.environment().put("PATH", oracleHome + File.separator + "bin" + File.pathSeparator + (curPath != null ? curPath : ""));
+            augmentedPath.append(oracleHome).append(File.separator).append("bin").append(File.pathSeparator);
+            augmentedPath.append(oracleHome).append(File.pathSeparator);
         }
+        if (curPath != null) {
+            augmentedPath.append(curPath);
+        }
+        pb.environment().put("PATH", augmentedPath.toString());
+        pb.environment().put("NLS_LANG", "AMERICAN_AMERICA.AL32UTF8");
 
         pb.redirectErrorStream(true);
         Process process = pb.start();
+
+        // Close stdin immediately so sqlldr never hangs waiting for password prompts
+        try {
+            process.getOutputStream().close();
+        } catch (Exception ignored) {}
 
         StringBuilder out = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
@@ -595,17 +694,34 @@ public class SourceDataUploadService {
             }
         }
 
-        boolean finished = process.waitFor(15, TimeUnit.MINUTES);
+        boolean finished = process.waitFor(5, TimeUnit.MINUTES);
         if (!finished) {
             process.destroyForcibly();
-            throw new RuntimeException("SQL*Loader process timed out after 15 minutes");
+            throw new RuntimeException("SQL*Loader process timed out after 5 minutes");
         }
 
         int exitCode = process.exitValue();
         if (exitCode != 0 && exitCode != 2) {
-            logger.error("SQL*Loader exited with code {}: {}", exitCode, out.toString());
-            throw new RuntimeException("SQL*Loader failed with exit code " + exitCode + ": " + out.toString());
+            String errSnippet = extractSqlLoaderErrors(logFile);
+            logger.error("SQL*Loader exited with code {}: {}. Log errors: {}", exitCode, out.toString(), errSnippet);
+            throw new RuntimeException("SQL*Loader failed with exit code " + exitCode + ": " + out.toString() + 
+                                       (errSnippet.isEmpty() ? "" : " Log errors: " + errSnippet));
         }
+    }
+
+    private String extractSqlLoaderErrors(File logFile) {
+        if (logFile == null || !logFile.exists()) return "";
+        StringBuilder errors = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(logFile), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.contains("ORA-") || line.contains("SQL*Loader-") || 
+                    (line.contains("Record ") && line.contains("Rejected"))) {
+                    errors.append(line.trim()).append(" | ");
+                }
+            }
+        } catch (Exception ignored) {}
+        return errors.toString();
     }
 
     private Map<String, Integer> parseSqlLoaderLog(File logFile) {
@@ -613,26 +729,25 @@ public class SourceDataUploadService {
         int failed = 0;
         int read = 0;
 
-        Pattern pLoaded = Pattern.compile("([0-9]+)\\s+Rows successfully loaded", Pattern.CASE_INSENSITIVE);
-        Pattern pFailed = Pattern.compile("([0-9]+)\\s+Rows not loaded due to data errors", Pattern.CASE_INSENSITIVE);
-        Pattern pRead = Pattern.compile("Total logical records read:\\s*([0-9]+)", Pattern.CASE_INSENSITIVE);
+        Pattern pLoaded = Pattern.compile("([0-9,]+)\\s+Rows successfully loaded", Pattern.CASE_INSENSITIVE);
+        Pattern pFailed = Pattern.compile("([0-9,]+)\\s+Rows not loaded due to data errors", Pattern.CASE_INSENSITIVE);
+        Pattern pRead = Pattern.compile("Total logical records read:\\s*([0-9,]+)", Pattern.CASE_INSENSITIVE);
 
         if (logFile != null && logFile.exists()) {
             try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(logFile), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     Matcher m = pLoaded.matcher(line);
-                    if (m.find()) loaded = Integer.parseInt(m.group(1));
+                    if (m.find()) loaded = Integer.parseInt(m.group(1).replace(",", ""));
                     m = pFailed.matcher(line);
-                    if (m.find()) failed = Integer.parseInt(m.group(1));
+                    if (m.find()) failed = Integer.parseInt(m.group(1).replace(",", ""));
                     m = pRead.matcher(line);
-                    if (m.find()) read = Integer.parseInt(m.group(1));
+                    if (m.find()) read = Integer.parseInt(m.group(1).replace(",", ""));
                 }
             } catch (Exception e) {
                 logger.error("Error reading SQL*Loader log: {}", e.getMessage());
             }
         }
-
         Map<String, Integer> res = new HashMap<>();
         res.put("total", read > 0 ? read : (loaded + failed));
         res.put("inserted", loaded);
@@ -897,6 +1012,13 @@ public class SourceDataUploadService {
                 stats.put("failed", rejectedCount);
             }
 
+            if (stats.getOrDefault("inserted", 0) == 0 && rowCount > 0) {
+                String errSnippet = extractSqlLoaderErrors(logFile);
+                logger.warn("SQL*Loader inserted 0 out of {} records for {}. Errors: {}. Triggering auto-fallback to JDBC batch.",
+                            rowCount, targetTable, errSnippet);
+                throw new RuntimeException("SQL*Loader inserted 0 rows for " + targetTable + ": " + errSnippet);
+            }
+
             logger.info("SQL*Loader completed for {}: Read={}, Inserted={}, Failed={}, LoggedRejected={}", 
                         targetTable, stats.get("total"), stats.get("inserted"), stats.get("failed"), rejectedCount);
             return stats;
@@ -959,7 +1081,13 @@ public class SourceDataUploadService {
             }
 
             runSqlLoaderProcess(ctlFile, datFile, logFile, badFile, dscFile);
-            return parseSqlLoaderLog(logFile);
+            Map<String, Integer> stats = parseSqlLoaderLog(logFile);
+            if (stats.getOrDefault("total", 0) == 0 && rows > 0) {
+                String errSnippet = extractSqlLoaderErrors(logFile);
+                logger.warn("SQL*Loader loaded 0 out of {} raw EPIN records. Errors: {}. Falling back to JDBC batch.", rows, errSnippet);
+                throw new RuntimeException("SQL*Loader loaded 0 raw EPIN records: " + errSnippet);
+            }
+            return stats;
         } finally {
             try { if (datFile.exists()) datFile.delete(); } catch (Exception ignored) {}
             try { if (ctlFile.exists()) ctlFile.delete(); } catch (Exception ignored) {}
@@ -1097,6 +1225,11 @@ public class SourceDataUploadService {
             }
             if (rejectedCount > stats.getOrDefault("failed", 0)) {
                 stats.put("failed", rejectedCount);
+            }
+            if (stats.getOrDefault("inserted", 0) == 0 && count > 0) {
+                String errSnippet = extractSqlLoaderErrors(logFile);
+                logger.warn("SQL*Loader inserted 0 out of {} records for EPIN745. Errors: {}. Falling back to JDBC batch.", count, errSnippet);
+                throw new RuntimeException("SQL*Loader inserted 0 EPIN745 rows: " + errSnippet);
             }
             return stats;
         } finally {
@@ -1405,10 +1538,10 @@ public class SourceDataUploadService {
 
         for (int i = 0; i < targetColumns.length; i++) {
             String col = targetColumns[i].toUpperCase();
-            if (cardIdx == -1 && (col.equals("HEADX_CRD_PAN") || col.equals("HEADX_CRD_CARD_CRD_NUM") || col.equals("ACID") || col.equals("CARD_NUM") || col.equals("ACCT_NO"))) {
+            if (cardIdx == -1 && (col.equals("HEADX_CRD_PAN") || col.equals("HEADX_CRD_CARD_CRD_NUM") || col.equals("ACID") || col.equals("CARD_NUM") || col.equals("ACCT_NO") || col.equals("PRNT_ADVC_IND"))) {
                 cardIdx = i;
             }
-            if (rrnIdx == -1 && (col.equals("AUTHX_ORIG_OSEQ_NUM") || col.equals("AUTHX_SEQ_NUM") || col.equals("TRAN_ID") || col.equals("RET_REF_NUM") || col.equals("ACQ_REF_NUM"))) {
+            if (rrnIdx == -1 && (col.equals("AUTHX_ORIG_OSEQ_NUM") || col.equals("AUTHX_SEQ_NUM") || col.equals("TRAN_ID") || col.equals("RET_REF_NUM") || col.equals("ACQ_REF_NUM") || col.equals("PSTD_USER_ID"))) {
                 rrnIdx = i;
             }
             if (authIdx == -1 && (col.equals("AUTHX_AUTH_ID_RESP") || col.equals("AUTHX_APPRV_CDE") || col.equals("PART_TRAN_SRL_NUM") || col.equals("TRACE_NUM") || col.equals("AUTH_CODE"))) {
@@ -1632,8 +1765,8 @@ public class SourceDataUploadService {
             int cardIdx = -1, rrnIdx = -1, authIdx = -1, amtIdx = -1, dateIdx = -1;
             for (int i = 0; i < targetColumns.length; i++) {
                 String col = targetColumns[i].toUpperCase();
-                if (cardIdx == -1 && (col.equals("HEADX_CRD_PAN") || col.equals("HEADX_CRD_CARD_CRD_NUM") || col.equals("ACID") || col.equals("CARD_NUM") || col.equals("ACCT_NO"))) cardIdx = i;
-                if (rrnIdx == -1 && (col.equals("AUTHX_ORIG_OSEQ_NUM") || col.equals("AUTHX_SEQ_NUM") || col.equals("TRAN_ID") || col.equals("RET_REF_NUM") || col.equals("ACQ_REF_NUM"))) rrnIdx = i;
+                if (cardIdx == -1 && (col.equals("HEADX_CRD_PAN") || col.equals("HEADX_CRD_CARD_CRD_NUM") || col.equals("ACID") || col.equals("CARD_NUM") || col.equals("ACCT_NO") || col.equals("PRNT_ADVC_IND"))) cardIdx = i;
+                if (rrnIdx == -1 && (col.equals("AUTHX_ORIG_OSEQ_NUM") || col.equals("AUTHX_SEQ_NUM") || col.equals("TRAN_ID") || col.equals("RET_REF_NUM") || col.equals("ACQ_REF_NUM") || col.equals("PSTD_USER_ID"))) rrnIdx = i;
                 if (authIdx == -1 && (col.equals("AUTHX_AUTH_ID_RESP") || col.equals("AUTHX_APPRV_CDE") || col.equals("PART_TRAN_SRL_NUM") || col.equals("TRACE_NUM") || col.equals("AUTH_CODE"))) authIdx = i;
                 if (amtIdx == -1 && (col.equals("AUTHX_AMT_1") || col.equals("TRAN_AMT") || col.equals("TRAN_AMOUNT") || col.equals("DEST_AMT"))) amtIdx = i;
                 if (dateIdx == -1 && (col.equals("TXN_DT") || col.equals("TRAN_DT") || col.equals("TRAN_DATE") || col.equals("PURCHASE_DATE"))) dateIdx = i;
