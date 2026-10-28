@@ -29,23 +29,26 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            background: #f3f6f8;
             font-family: Arial, sans-serif;
             color: var(--text);
         }
 
-        .source-data-wrapper {
-            width: 88%;
-            max-width: 1650px;
-            margin: 30px auto;
-        }
-
-        .source-data-card {
-            background: #ffffff;
-            border-radius: 14px;
-            box-shadow: 0 12px 32px rgba(20, 40, 55, 0.14);
-            overflow: visible;
-        }
+		 .source-data-wrapper {
+	    width: calc(100% - 60px);
+	    height: 100%;
+	    max-width: none;
+	    margin: 30px auto;
+	    box-sizing: border-box;
+	}
+		
+		.source-data-card {
+	    width: 100%;
+	    background: #ffffff;
+	    border-radius: 14px;
+	    box-shadow: 0 12px 32px rgba(20, 40, 55, 0.14);
+	    overflow: visible;
+	    box-sizing: border-box;
+	}
 
         .source-data-header {
             height: 46px;
@@ -286,18 +289,19 @@
             justify-content: center;
         }
 
-        .edit-fail-btn {
-            background: var(--brand);
-            color: #ffffff;
-            border: none;
-            border-radius: 5px;
-            padding: 5px 10px;
-            font-size: 11.5px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background .15s ease;
-            white-space: nowrap;
-        }
+		.edit-fail-btn {
+		    background: var(--brand);
+		    color: #ffffff;
+		    border: none;
+		    border-radius: 5px;
+		    padding: 4px 8px;       
+		    font-size: 11px;        
+		    font-weight: bold;
+		    cursor: pointer;
+		    transition: background .15s ease;
+		    white-space: nowrap;
+		}
+
         .edit-fail-btn:hover { background: var(--brand-dark); }
 
         .delete-fail-btn {
@@ -584,9 +588,47 @@
         }
     </style>
 
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        var serverActiveCategory = /*[[${activeCategory}]]*/ 'ATM';
+        /*]]>*/
+    </script>
+
     <script>
+        function getCategoryFromUrl() {
+            var validCategories = ['CBS', 'ATM', 'POS', 'EPIN', 'VISANET'];
+
+            // 1. Check URL query parameters (?type=..., ?category=..., ?source=..., ?formmode=...)
+            try {
+                var params = new URLSearchParams(window.location.search);
+                var qType = params.get('type') || params.get('category') || params.get('source') || params.get('formmode');
+                if (qType && validCategories.indexOf(qType.toUpperCase()) !== -1) {
+                    return qType.toUpperCase();
+                }
+            } catch (e) {}
+
+            // 2. Check URL pathname (e.g. /SourceData/CBS or /CBS)
+            try {
+                var pathname = window.location.pathname.toUpperCase();
+                var segments = pathname.split('/').filter(Boolean);
+                if (segments.length > 0) {
+                    var lastSegment = segments[segments.length - 1];
+                    if (validCategories.indexOf(lastSegment) !== -1) {
+                        return lastSegment;
+                    }
+                }
+            } catch (e) {}
+
+            // 3. Fallback to serverActiveCategory if set
+            if (typeof serverActiveCategory === 'string' && validCategories.indexOf(serverActiveCategory.toUpperCase()) !== -1) {
+                return serverActiveCategory.toUpperCase();
+            }
+
+            return "ATM";
+        }
+
         var currentUploadType = "";
-        var activeCategory = "ATM";
+        var activeCategory = getCategoryFromUrl();
 
         var dbRowCounts = { CBS: 0, ATM: 0, POS: 0, EPIN: 0, VISANET: 0 };
         var uploadedFilesStore = { CBS: [], ATM: [], POS: [], EPIN: [], VISANET: [] };
@@ -791,7 +833,14 @@
                 closeAppModal();
             });
 
-            switchCategory('ATM');
+            var initialCat = getCategoryFromUrl();
+            switchCategory(initialCat, false);
+
+            // Listen for browser Back/Forward navigation to dynamically change category
+            window.addEventListener('popstate', function (event) {
+                var targetCat = (event.state && event.state.category) ? event.state.category : getCategoryFromUrl();
+                switchCategory(targetCat, false);
+            });
         });
 
         // =========================================================================
@@ -858,17 +907,38 @@
             });
         }
 
-        function switchCategory(cat) {
+        function switchCategory(cat, updateHistory) {
+            if (!cat) cat = "ATM";
+            cat = cat.toUpperCase();
             activeCategory = cat;
             selectedFailedIds.clear();
             currentPageFailed = 1;
 
             $('.source-header-clickable').removeClass('active');
-            $('[data-header-for="' + cat + '"]').addClass('active');
+            var $btn = $('[data-header-for="' + cat + '"]');
+            $btn.addClass('active');
             $('#activeCategoryName').text(cat);
             $('#failedCategoryName').text(cat);
             renderDedicatedList();
             loadFailedRecords(cat);
+
+            // Dynamically change URL based on the corresponding button's endpoint
+            if (updateHistory !== false) {
+                var endpoint = $btn.attr('data-endpoint');
+                if (!endpoint) {
+                    var baseUrl = window.location.pathname;
+                    if (baseUrl.indexOf('/SourceData') !== -1) {
+                        baseUrl = baseUrl.substring(0, baseUrl.indexOf('/SourceData') + '/SourceData'.length);
+                    }
+                    endpoint = baseUrl + '?type=' + encodeURIComponent(cat);
+                }
+                if (window.history && window.history.pushState) {
+                    var currentRelative = window.location.pathname + window.location.search;
+                    if (currentRelative !== endpoint && window.location.href !== endpoint) {
+                        window.history.pushState({ category: cat }, '', endpoint);
+                    }
+                }
+            }
         }
 
         function updateBadges() {
@@ -1004,7 +1074,7 @@
                             '<div class="action-btn-group">' +
                                 '<button type="button" class="edit-fail-btn" ' +
                                         'onclick="openEditModal(' + failId + ', \'' + cardNo + '\', \'' + rrn + '\', \'' + authId + '\', \'' + amt + '\', \'' + dt + '\', \'' + reason + '\')">' +
-                                    '<i class="fa fa-pencil"></i> Edit &amp; Submit' +
+                                        '<i class="fa fa-pencil-square-o"></i> Modify' +
                                 '</button>' +
                                 '<button type="button" class="delete-fail-btn" ' +
                                         'onclick="deleteFailedRecord(' + failId + ')">' +
@@ -1270,31 +1340,56 @@
                     <thead>
                         <tr>
                             <th style="width:14%;">
-                                <button type="button" class="source-header-clickable" data-header-for="CBS" onclick="switchCategory('CBS')">
+                                <button type="button" class="source-header-clickable"
+                                        th:classappend="${activeCategory == 'CBS' ? 'active' : ''}"
+                                        data-header-for="CBS"
+                                        data-endpoint="SourceData?type=CBS"
+                                        th:attr="data-endpoint=@{/SourceData(type='CBS')}"
+                                        onclick="switchCategory('CBS')">
                                     <span>CBS</span>
                                     <span class="source-badge">0 rows</span>
                                 </button>
                             </th>
                             <th style="width:12%;">
-                                <button type="button" class="source-header-clickable active" data-header-for="ATM" onclick="switchCategory('ATM')">
+                                <button type="button" class="source-header-clickable"
+                                        th:classappend="${(activeCategory == null || activeCategory == 'ATM') ? 'active' : ''}"
+                                        data-header-for="ATM"
+                                        data-endpoint="SourceData?type=ATM"
+                                        th:attr="data-endpoint=@{/SourceData(type='ATM')}"
+                                        onclick="switchCategory('ATM')">
                                     <span>ATM</span>
                                     <span class="source-badge">0 rows</span>
                                 </button>
                             </th>
                             <th style="width:12%;">
-                                <button type="button" class="source-header-clickable" data-header-for="POS" onclick="switchCategory('POS')">
+                                <button type="button" class="source-header-clickable"
+                                        th:classappend="${activeCategory == 'POS' ? 'active' : ''}"
+                                        data-header-for="POS"
+                                        data-endpoint="SourceData?type=POS"
+                                        th:attr="data-endpoint=@{/SourceData(type='POS')}"
+                                        onclick="switchCategory('POS')">
                                     <span>POS</span>
                                     <span class="source-badge">0 rows</span>
                                 </button>
                             </th>
                             <th style="width:12%;">
-                                <button type="button" class="source-header-clickable" data-header-for="EPIN" onclick="switchCategory('EPIN')">
+                                <button type="button" class="source-header-clickable"
+                                        th:classappend="${activeCategory == 'EPIN' ? 'active' : ''}"
+                                        data-header-for="EPIN"
+                                        data-endpoint="SourceData?type=EPIN"
+                                        th:attr="data-endpoint=@{/SourceData(type='EPIN')}"
+                                        onclick="switchCategory('EPIN')">
                                     <span>EPIN</span>
                                     <span class="source-badge">0 rows</span>
                                 </button>
                             </th>
                             <th style="width:12%;">
-                                <button type="button" class="source-header-clickable" data-header-for="VISANET" onclick="switchCategory('VISANET')">
+                                <button type="button" class="source-header-clickable"
+                                        th:classappend="${activeCategory == 'VISANET' ? 'active' : ''}"
+                                        data-header-for="VISANET"
+                                        data-endpoint="SourceData?type=VISANET"
+                                        th:attr="data-endpoint=@{/SourceData(type='VISANET')}"
+                                        onclick="switchCategory('VISANET')">
                                     <span>VISANET</span>
                                     <span class="source-badge">0 rows</span>
                                 </button>
@@ -1350,7 +1445,7 @@
                 <!-- 1. Successfully Uploaded Files -->
                 <div class="file-list-container">
                     <div class="file-list-title-bar">
-                        <span>Uploaded File(s) for: <strong id="activeCategoryName">ATM</strong></span>
+                        <span>Uploaded File(s) for: <strong id="activeCategoryName" th:text="${activeCategory != null ? activeCategory : 'ATM'}">ATM</strong></span>
                         <span id="categoryFileCount" style="color: var(--muted); font-size: 12px;">0 file(s) found</span>
                     </div>
 
@@ -1367,7 +1462,7 @@
                             <tr>
                                 <td colspan="4" class="no-data">
                                     <i class="fa fa-folder-open-o"></i>
-                                    No files uploaded for <b>ATM</b> yet.
+                                    No files uploaded for <b th:text="${activeCategory != null ? activeCategory : 'ATM'}">ATM</b> yet.
                                 </td>
                             </tr>
                         </tbody>
@@ -1378,7 +1473,7 @@
                 <div class="file-list-container" style="border-top: 1px solid var(--line); border-radius: 10px;">
                     <div class="file-list-title-bar" style="background: #fff1f2;">
                         <div>
-                            <span><i class="fa fa-exclamation-triangle" style="color: #e11d48; margin-right: 6px;"></i> Upload Validation Errors &amp; Rejected Records for: <strong id="failedCategoryName" style="color: #be123c;">ATM</strong></span>
+                            <span><i class="fa fa-exclamation-triangle" style="color: #e11d48; margin-right: 6px;"></i> Upload Validation Errors &amp; Rejected Records for: <strong id="failedCategoryName" style="color: #be123c;" th:text="${activeCategory != null ? activeCategory : 'ATM'}">ATM</strong></span>
                             <span id="failedCountBadge" class="badge-error-pill" style="margin-left: 8px;">0 record(s)</span>
                         </div>
 
@@ -1415,7 +1510,7 @@
                             <tr>
                                 <td colspan="8" class="no-data">
                                     <i class="fa fa-check-circle-o" style="color: #22c55e;"></i>
-                                    No rejected records found for <b>ATM</b>.
+                                    No rejected records found for <b th:text="${activeCategory != null ? activeCategory : 'ATM'}">ATM</b>.
                                 </td>
                             </tr>
                         </tbody>
@@ -1452,7 +1547,7 @@
     <div class="failed-modal-overlay" id="editRecordModal">
         <div class="failed-modal-card">
             <div class="failed-modal-header">
-                <span><i class="fa fa-pencil-square-o"></i> Edit &amp; Submit Corrected Record</span>
+                <span><i class="fa fa-pencil-square-o"></i> Edit </span>
                 <button type="button" class="failed-modal-close-x" onclick="closeEditModal()">&times;</button>
             </div>
 

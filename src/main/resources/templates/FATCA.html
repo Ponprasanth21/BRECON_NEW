@@ -37,28 +37,29 @@
         }
 
         .fatca-page {
-            width: 96%;
-            max-width: 1700px;
-            margin: 16px auto 0; 
-            height: calc(105vh - 5px); 
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-        } 
+		    width: calc(100% - 48px);
+		    max-width: none;
+		    margin: 16px auto 0;
+		    height: calc(105vh - 105px);
+		    min-height: 0;
+		    display: flex;
+		    flex-direction: column;
+		    box-sizing: border-box;
+		} 
         
-        .fatca-card {
-            width: 100%;
-            height: 100%;
-            min-height: 0;
-            flex: 1 1 auto;
-            display: flex;
-            flex-direction: column;
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 6px 20px rgba(31, 55, 68, 0.12);
-            overflow: hidden;
-        }
-
+		      .fatca-card {
+		    width: 100%;
+		    height: 100%;
+		    min-height: 0;
+		    flex: 1 1 auto;
+		    display: flex;
+		    flex-direction: column;
+		    background: #fff;
+		    border-radius: 10px;
+		    box-shadow: 0 6px 20px rgba(31, 55, 68, 0.12);
+		    overflow: hidden;
+		    box-sizing: border-box;
+		}
         .fatca-title {
             flex: 0 0 38px;
             min-height: 38px;

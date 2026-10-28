@@ -36,6 +36,7 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -1930,16 +1931,60 @@ public class BRECONNavigationController {
 
 	// source data mapping
 	
-	@RequestMapping(value = "SourceData", method = { RequestMethod.GET, RequestMethod.POST })
-	public String SourceData(@RequestParam(required = false) String formmode,
-			@RequestParam(required = false) String userid, Model md) {
+	@RequestMapping(value = { "SourceData", "SourceData/{category}" }, method = { RequestMethod.GET, RequestMethod.POST })
+	public String SourceData(@PathVariable(required = false) String category,
+			@RequestParam(required = false) String formmode,
+			@RequestParam(required = false, name = "type") String type,
+			@RequestParam(required = false) String source,
+			@RequestParam(required = false) String userid,
+			HttpServletRequest request,
+			Model md) {
 
 		if (formmode == null || formmode.equals("list")) {
 			md.addAttribute("formmode", "list");
 			md.addAttribute("List", PRINT_ENQUIRY_REPO.getValues());
 		}
 
+		String selectedCategory = "ATM";
+		if (category != null && !category.trim().isEmpty()) {
+			selectedCategory = category.trim().toUpperCase();
+		} else if (type != null && !type.trim().isEmpty()) {
+			selectedCategory = type.trim().toUpperCase();
+		} else if (source != null && !source.trim().isEmpty()) {
+			selectedCategory = source.trim().toUpperCase();
+		} else if (formmode != null && !formmode.trim().isEmpty() && !formmode.equalsIgnoreCase("list")) {
+			selectedCategory = formmode.trim().toUpperCase();
+		}
+
+		md.addAttribute("activeCategory", selectedCategory);
+		md.addAttribute("selectedType", selectedCategory);
+
 		return "SourceData";
+	}
+
+	@GetMapping("/CBS")
+	public String cbsSourceNav(Model md, HttpServletRequest request) {
+		return SourceData("CBS", null, "CBS", null, null, request, md);
+	}
+
+	@GetMapping("/ATM")
+	public String atmSourceNav(Model md, HttpServletRequest request) {
+		return SourceData("ATM", null, "ATM", null, null, request, md);
+	}
+
+	@GetMapping("/POS")
+	public String posSourceNav(Model md, HttpServletRequest request) {
+		return SourceData("POS", null, "POS", null, null, request, md);
+	}
+
+	@GetMapping("/EPIN")
+	public String epinSourceNav(Model md, HttpServletRequest request) {
+		return SourceData("EPIN", null, "EPIN", null, null, request, md);
+	}
+
+	@GetMapping("/VISANET")
+	public String visanetSourceNav(Model md, HttpServletRequest request) {
+		return SourceData("VISANET", null, "VISANET", null, null, request, md);
 	}
 	
 	//fatca mapping
@@ -1959,9 +2004,28 @@ public class BRECONNavigationController {
         return "CRS";
     }
 	
-	@GetMapping("/MRA") 
-	public String showMRIPage() { 
-		return "MRI"; }
+	/*
+	 * @GetMapping("/MRA") public String showMRIPage() { return "MRI"; }
+	 */
+	
+	@GetMapping("/MRA")
+	public String showMRIPage() {
+	    return "MRI";
+	}
+
+	@GetMapping("/MRA/SFX")
+	public String showSFXPage() {
+	    return "MRI";
+	}
+
+	@GetMapping("/MRA/SFT")
+	public String showSFTPage() {
+	    return "MRI";
+	}
+	
+	
+	
+	
 	
 
 	@RequestMapping(value = "Report_Dr", method = { RequestMethod.GET, RequestMethod.POST })
