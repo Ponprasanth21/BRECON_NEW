@@ -96,6 +96,10 @@
                 <span class="text-muted">Real-time status of 3-Way settlement (Switch vs CBS vs VISA)</span>
             </div>
             <div>
+            <button type="button" class="btn btn-outline-danger mr-2" onclick="showExceptionQueue();">
+            <i class="fas fa-list-alt"></i>
+            Exception & Refund Queue
+        </button>
                 <button class="btn btn-outline-primary mr-2" onclick="refreshDashboard();">
                     <i class="fas fa-sync-alt"></i> Refresh Data
                 </button>
@@ -329,6 +333,34 @@
             initCharts();
             refreshDashboard();
         });
+        
+        
+     // Show Exception & Refund Queue
+        function showExceptionQueue() {
+
+            const exceptionSection = document.querySelector('.table-box');
+
+            if (exceptionSection) {
+
+                // Scroll to Exception & Refund Queue section
+                exceptionSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+
+                // Highlight the section
+                exceptionSection.style.transition = 'box-shadow 0.3s ease';
+                exceptionSection.style.boxShadow = '0 0 0 3px rgba(220, 53, 69, 0.25)';
+
+                // Remove highlight after 1.5 seconds
+                setTimeout(function () {
+                    exceptionSection.style.boxShadow =
+                        '0 4px 12px rgba(0, 0, 0, 0.05)';
+                }, 1500);
+
+            }
+
+        }
     </script>
 </body>
 </html>
