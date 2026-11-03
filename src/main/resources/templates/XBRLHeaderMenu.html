@@ -3,347 +3,349 @@
 
 
 <head>
- <link rel="icon" type="image/png"
-      th:href="@{/images/favicon_bob.png}">
-<title>BRECON</title>
-<link rel="stylesheet" href="/BRECON/css/bootstrap.min.css">
-<link rel="stylesheet" href="/BRECON/css/fontawesome.min.css">
-<link rel="stylesheet" href="/BRECON/css/jquery-ui.min.css">
-<link rel="stylesheet" href="/BRECON/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="/BRECON/css/dataTables.bootstrap4.min.css">
-<link rel="stylesheet" href="/BRECON/css/fontawesome.min.css">
+	<link rel="icon" type="image/png" th:href="@{/images/favicon_bob.png}">
+	<title>BRECON</title>
+	<link rel="stylesheet" href="/BRECON/css/bootstrap.min.css">
+	<link rel="stylesheet" href="/BRECON/css/fontawesome.min.css">
+	<link rel="stylesheet" href="/BRECON/css/jquery-ui.min.css">
+	<link rel="stylesheet" href="/BRECON/css/jquery.dataTables.min.css">
+	<link rel="stylesheet" href="/BRECON/css/dataTables.bootstrap4.min.css">
+	<link rel="stylesheet" href="/BRECON/css/fontawesome.min.css">
 
-<script src="/BRECON/js/jquery.min.js"></script>
-<script src="/BRECON/js/popper.min.js"></script>
-<script src="/BRECON/js/bootstrap.min.js"></script>
-<script src="/BRECON/js/jquery-ui.min.js"></script>
-<script src="/BRECON/js/jquery.form.min.js"></script>
-<script src="/BRECON/js/jquery.validate.min.js"></script>
-<script src="/BRECON/js/jquery.dataTables.min.js"></script>
-<script src="/BRECON/js/dataTables.bootstrap4.min.js"></script>
-<!-- TOAST -->
-<link rel="stylesheet" th:href="@{/css/jquery.toast.min.css}">
+	<script src="/BRECON/js/jquery.min.js"></script>
+	<script src="/BRECON/js/popper.min.js"></script>
+	<script src="/BRECON/js/bootstrap.min.js"></script>
+	<script src="/BRECON/js/jquery-ui.min.js"></script>
+	<script src="/BRECON/js/jquery.form.min.js"></script>
+	<script src="/BRECON/js/jquery.validate.min.js"></script>
+	<script src="/BRECON/js/jquery.dataTables.min.js"></script>
+	<script src="/BRECON/js/dataTables.bootstrap4.min.js"></script>
+	<!-- TOAST -->
+	<link rel="stylesheet" th:href="@{/css/jquery.toast.min.css}">
 
-<script th:src="@{/js/jquery.toast.min.js}"></script>
-<style>
-/* Global Font */
-body {
-	font-family: 'Nunito', sans-serif;
-	font-size: 18px;
-	font-weight: 400;
-}
+	<script th:src="@{/js/jquery.toast.min.js}"></script>
+	<style>
+		/* Global Font */
+		body {
+			font-family: 'Nunito', sans-serif;
+			font-size: 18px;
+			font-weight: 400;
+		}
 
-/* Navbar Styling */
-.navbar {
-	background: #323f48;
-	border-bottom: 2px solid #323f48;
-	-webkit-backdrop-filter: blur(8px);
-	backdrop-filter: blur(8px);
-	border: #323f48;
-	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.10);
-	height: 95px;
-	display: flex;
-	align-items: center;
-	border-radius: 0 !important;
-	padding: 0 20px;
-	position: relative;
-	z-index: 10000;
-}
+		/* Navbar Styling */
+		.navbar {
+			background: #323f48;
+			border-bottom: 2px solid #323f48;
+			-webkit-backdrop-filter: blur(8px);
+			backdrop-filter: blur(8px);
+			border: #323f48;
+			box-shadow: 0 6px 20px rgba(0, 0, 0, 0.10);
+			height: 95px;
+			display: flex;
+			align-items: center;
+			border-radius: 0 !important;
+			padding: 0 20px;
+			position: relative;
+			z-index: 10000;
+		}
 
-.first-layer {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	width: 100%;
-}
+		.first-layer {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			width: 100%;
+		}
 
-.left-group {
-	display: flex;
-	align-items: center;
-	gap: 40px;
-}
+		.left-group {
+			display: flex;
+			align-items: center;
+			gap: 40px;
+		}
 
-.nav-links {
-	display: flex;
-	list-style: none;
-	margin: 0;
-	padding: 0;
-}
+		.nav-links {
+			display: flex;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
 
-.nav-item {
-	margin: 0 10px;
-	position: relative;
-}
+		.nav-item {
+			margin: 0 10px;
+			position: relative;
+		}
 
-.nav-links>.nav-item>a, .nav-links>.nav-item>.dropdown-toggle {
-	color: #F5FAFF;
-	padding: 14px 18px;
-	text-decoration: none;
-	display: block;
-	font-family: Calibri;
-	font-weight: bold;
-	transition: background 0.2s, color 0.2s;
-	border-radius: 6px;
-	position: relative;
-	overflow: hidden;
-}
+		.nav-links>.nav-item>a,
+		.nav-links>.nav-item>.dropdown-toggle {
+			color: #F5FAFF;
+			padding: 14px 18px;
+			text-decoration: none;
+			display: block;
+			font-family: Calibri;
+			font-weight: bold;
+			transition: background 0.2s, color 0.2s;
+			border-radius: 6px;
+			position: relative;
+			overflow: hidden;
+		}
 
-.nav-links>.nav-item>a:hover, .nav-links>.nav-item>.dropdown-toggle:hover
-	{
-	background: rgba(27, 145, 174, 0.25);
-	color: #FFF;
-}
+		.nav-links>.nav-item>a:hover,
+		.nav-links>.nav-item>.dropdown-toggle:hover {
+			background: rgba(27, 145, 174, 0.25);
+			color: #FFF;
+		}
 
-.user-profile {
-	margin-right: 20px;
-}
+		.user-profile {
+			margin-right: 20px;
+		}
 
 
-.logo {
-	border-radius: 40px;
-	padding: 8px 16px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-	transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
+		.logo {
+			border-radius: 40px;
+			padding: 8px 16px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+			transition: transform 0.3s ease, box-shadow 0.3s ease;
+		}
 
-.logo:hover {
-	transform: scale(1.05);
-	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-}
+		.logo:hover {
+			transform: scale(1.05);
+			box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+		}
 
-.logo img {
-	height: 42px;
-	vertical-align: middle;
-	filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
-	transition: transform 0.3s ease;
-}
+		.logo img {
+			height: 42px;
+			vertical-align: middle;
+			filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+			transition: transform 0.3s ease;
+		}
 
-.logo img:hover {
-	transform: rotate(-2deg) scale(1.08);
-}
+		.logo img:hover {
+			transform: rotate(-2deg) scale(1.08);
+		}
 
-/* Dropdown Menu */
-.dropdown-menu {
-	display: none;
-	position: absolute;
-	top: 100%;
-	left: 0;
-	min-width: 170px;
-	background: rgba(255, 255, 255, 0.5) !important;
-	border-radius: 10px;
-	/* 	box-shadow: 0 8px 36px rgba(27, 145, 174, 0.08);
+		/* Dropdown Menu */
+		.dropdown-menu {
+			display: none;
+			position: absolute;
+			top: 100%;
+			left: 0;
+			min-width: 170px;
+			background: rgba(255, 255, 255, 0.5) !important;
+			border-radius: 10px;
+			/* 	box-shadow: 0 8px 36px rgba(27, 145, 174, 0.08);
 	 */
-	box-shadow: 0 8px 36px rgba(174, 27, 41, 0.5) !important;
-	backdrop-filter: blur(16px);
-	-webkit-backdrop-filter: blur(16px);
-	/* SOLUTION: ensure always on top */
-	z-index: 99999;
-	margin-top: 4px;
-	border: 1px solid rgba(27, 145, 174, 0.13);
-	padding: 10px;
-}
+			box-shadow: 0 8px 36px rgba(174, 27, 41, 0.5) !important;
+			backdrop-filter: blur(16px);
+			-webkit-backdrop-filter: blur(16px);
+			/* SOLUTION: ensure always on top */
+			z-index: 99999;
+			margin-top: 4px;
+			border: 1px solid rgba(27, 145, 174, 0.13);
+			padding: 10px;
+		}
 
-.dropdown-menu li {
-	margin-bottom: 5px;
-}
+		.dropdown-menu li {
+			margin-bottom: 5px;
+		}
 
-.dropdown-menu li:last-child {
-	margin-bottom: 0;
-}
+		.dropdown-menu li:last-child {
+			margin-bottom: 0;
+		}
 
-.dropdown-menu a {
-	color: #163760 !important;
-	padding: 12px 20px;
-	display: block;
-	border-radius: 6px;
-	background: transparent;
-	position: relative;
-	overflow: hidden;
-	font-weight: bold !important;
-	transition: background 0.2s, color 0.2s;
-}
+		.dropdown-menu a {
+			color: #163760 !important;
+			padding: 12px 20px;
+			display: block;
+			border-radius: 6px;
+			background: transparent;
+			position: relative;
+			overflow: hidden;
+			font-weight: bold !important;
+			transition: background 0.2s, color 0.2s;
+		}
 
-.dropdown-menu a:hover {
-	background: rgba(27, 145, 174, 0.17);
-	color: #ff0000 !important;
-}
+		.dropdown-menu a:hover {
+			background: rgba(27, 145, 174, 0.17);
+			color: #ff0000 !important;
+		}
 
-/* Navbar dropdown hover behavior */
-.nav-item.dropdown {
-	position: relative;
-}
+		/* Navbar dropdown hover behavior */
+		.nav-item.dropdown {
+			position: relative;
+		}
 
-.nav-item.dropdown:hover>.dropdown-menu {
-	display: block;
-	opacity: 1;
-	visibility: visible;
-	transform: translateY(0);
-}
+		.nav-item.dropdown:hover>.dropdown-menu {
+			display: block;
+			opacity: 1;
+			visibility: visible;
+			transform: translateY(0);
+		}
 
-/* Dropdown menu hidden state */
-.dropdown-menu {
-	display: block;
-	opacity: 0;
-	visibility: hidden;
-	transform: translateY(10px);
-	transition: all 0.25s ease;
-	position: absolute;
-	top: 100%;
-	left: 0;
-	min-width: 180px;
-	background: rgba(255, 255, 255, 0.07);
-	backdrop-filter: blur(16px);
-	border-radius: 10px;
-	border: 1px solid rgba(27, 145, 174, 0.13);
-	box-shadow: 0 8px 36px rgba(27, 145, 174, 0.08);
-	z-index: 1000;
-	padding: 10px 0;
-}
+		/* Dropdown menu hidden state */
+		.dropdown-menu {
+			display: block;
+			opacity: 0;
+			visibility: hidden;
+			transform: translateY(10px);
+			transition: all 0.25s ease;
+			position: absolute;
+			top: 100%;
+			left: 0;
+			min-width: 180px;
+			background: rgba(255, 255, 255, 0.07);
+			backdrop-filter: blur(16px);
+			border-radius: 10px;
+			border: 1px solid rgba(27, 145, 174, 0.13);
+			box-shadow: 0 8px 36px rgba(27, 145, 174, 0.08);
+			z-index: 1000;
+			padding: 10px 0;
+		}
 
-/* Dropdown links */
-.dropdown-menu li a {
-	color: #163760 !important;
-	padding: 10px 20px;
-	display: block;
-	font-weight: bold;
-	text-decoration: none;
-	border-radius: 6px;
-	white-space: nowrap;
-	/* Prevent text from wrapping */
-	position: relative;
-	background: transparent;
-	transition: background 0.2s ease, color 0.2s ease;
-}
+		/* Dropdown links */
+		.dropdown-menu li a {
+			color: #163760 !important;
+			padding: 10px 20px;
+			display: block;
+			font-weight: bold;
+			text-decoration: none;
+			border-radius: 6px;
+			white-space: nowrap;
+			/* Prevent text from wrapping */
+			position: relative;
+			background: transparent;
+			transition: background 0.2s ease, color 0.2s ease;
+		}
 
-/* Hover styling for dropdown items */
-.dropdown-menu li a:hover {
-	background: rgba(27, 145, 174, 0.17);
-	color: #f00 !important;
-	/* RED on hover */
-}
+		/* Hover styling for dropdown items */
+		.dropdown-menu li a:hover {
+			background: rgba(27, 145, 174, 0.17);
+			color: #f00 !important;
+			/* RED on hover */
+		}
 
-/* Shine effect */
-.dropdown-menu li a::before {
-	content: '';
-	position: absolute;
-	left: -60%;
-	top: 0;
-	width: 60%;
-	height: 100%;
-	background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%,
-		rgba(255, 255, 255, 0.55) 60%, rgba(255, 255, 255, 0) 100%);
-	transform: skewX(-30deg);
-	transition: left 0.8s cubic-bezier(0.3, 0.35, 0.3, 1);
-	pointer-events: none;
-}
+		/* Shine effect */
+		.dropdown-menu li a::before {
+			content: '';
+			position: absolute;
+			left: -60%;
+			top: 0;
+			width: 60%;
+			height: 100%;
+			background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%,
+					rgba(255, 255, 255, 0.55) 60%, rgba(255, 255, 255, 0) 100%);
+			transform: skewX(-30deg);
+			transition: left 0.8s cubic-bezier(0.3, 0.35, 0.3, 1);
+			pointer-events: none;
+		}
 
-.dropdown-menu li a:hover::before {
-	left: 120%;
-}
+		.dropdown-menu li a:hover::before {
+			left: 120%;
+		}
 
-/* Shine Effect */
-/* Basic link styling */
-.shine-effect {
-	position: relative;
-	display: inline-block;
-	padding: 10px 20px;
-	color: #fff;
-	text-decoration: none;
-	overflow: hidden;
-	z-index: 1;
-}
+		/* Shine Effect */
+		/* Basic link styling */
+		.shine-effect {
+			position: relative;
+			display: inline-block;
+			padding: 10px 20px;
+			color: #fff;
+			text-decoration: none;
+			overflow: hidden;
+			z-index: 1;
+		}
 
-/* Shine effect layer */
-.shine-effect::before {
-	content: '';
-	position: absolute;
-	top: 0;
-	left: -75%;
-	width: 50%;
-	height: 100%;
-	background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%,
-		rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 100%);
-	transform: skewX(-20deg);
-	z-index: 2;
-	pointer-events: none;
-}
+		/* Shine effect layer */
+		.shine-effect::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: -75%;
+			width: 50%;
+			height: 100%;
+			background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%,
+					rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 100%);
+			transform: skewX(-20deg);
+			z-index: 2;
+			pointer-events: none;
+		}
 
-/* Move the shine across on hover */
-.shine-effect:hover::before {
-	left: 130%;
-	transition: left 0.6s ease-in-out;
-}
+		/* Move the shine across on hover */
+		.shine-effect:hover::before {
+			left: 130%;
+			transition: left 0.6s ease-in-out;
+		}
 
-.nav-links>.nav-item>a:hover::before, .dropdown-menu li a:hover::before
-	{
-	left: 120%;
-	transition: left 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-}
+		.nav-links>.nav-item>a:hover::before,
+		.dropdown-menu li a:hover::before {
+			left: 120%;
+			transition: left 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+		}
 
-/* Utility */
-ul {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-}
+		/* Utility */
+		ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
 
-a {
-	text-decoration: none !important;
-}
+		a {
+			text-decoration: none !important;
+		}
 
-.form-control:focus, .btn-primary.focus, .btn-primary:focus {
-	box-shadow: unset !important;
-	outline: none;
-}
+		.form-control:focus,
+		.btn-primary.focus,
+		.btn-primary:focus {
+			box-shadow: unset !important;
+			outline: none;
+		}
 
-.modal-backdrop {
-	width: 200vw;
-	height: 200vh;
-}
+		.modal-backdrop {
+			width: 200vw;
+			height: 200vh;
+		}
 
-html {
-	zoom: 0.8;
-}
+		html {
+			zoom: 0.8;
+		}
 
-label {
-	text-align: left;
-}
+		label {
+			text-align: left;
+		}
 
-.error {
-	color: red;
-	padding-left: 10px;
-}
+		.error {
+			color: red;
+			padding-left: 10px;
+		}
 
-#loadingContent img {
-	width: 100px;
-	height: 100px;
-	margin-bottom: 10px;
-}
+		#loadingContent img {
+			width: 100px;
+			height: 100px;
+			margin-bottom: 10px;
+		}
 
-#loadingModal {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background-color: none;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	z-index: 9999;
-	backdrop-filter: blur(5px);
-}
+		#loadingModal {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-color: none;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			z-index: 9999;
+			backdrop-filter: blur(5px);
+		}
 
-#loadingContent {
-	text-align: center;
-	background-color: none;
-	z-index: 10000;
-}
-</style>
-<script type="text/javascript">
+		#loadingContent {
+			text-align: center;
+			background-color: none;
+			z-index: 10000;
+		}
+	</style>
+	<script type="text/javascript">
 		document.addEventListener("DOMContentLoaded", function () {
 			let menuTimeout;
 			// Function to show menu
@@ -395,7 +397,7 @@ label {
 			});
 		});
 	</script>
-<script type="text/javascript">
+	<script type="text/javascript">
 		/*<![CDATA[*/
 		/* Re-Direction Functionality */
 		function contentLoad(a) {
@@ -421,7 +423,7 @@ label {
 		}
 	</script>
 
-<script>
+	<script>
 		document.addEventListener("DOMContentLoaded", function () {
 			let navLinks = document.querySelectorAll(".nav-second-level .nav-link");
 			let dashboardLink = document.getElementById("Dashboard");
@@ -543,118 +545,117 @@ label {
 			$('#imageshow').modal('hide');
 		}
 	</script>
-<!-- for table  -->
+	<!-- for table  -->
 
-<script th:inline="javascript">
+	<script th:inline="javascript">
 		//<![CDATA[
 		const menus = /*[[${menus}]]*/ null;
 		const reportList = /*[[${reportList}]]*/ null;
-			
+
 		//]]>
 	</script>
-<script>
-function openusermanual() {
-    var url = /*[[@{/document/Recon_User_Manual.pdf}]]*/ "/BRECON/document/Recon_User_Manual.pdf";
-    var pageNum = 1;
-    window.open(url + "#page=" + pageNum, "_blank",
-                "width=600,height=500");
-}
-</script>
+	<script>
+		function openusermanual() {
+			var url = /*[[@{/document/Recon_User_Manual.pdf}]]*/ "/BRECON/document/Recon_User_Manual.pdf";
+			var pageNum = 1;
+			window.open(url + "#page=" + pageNum, "_blank",
+				"width=600,height=500");
+		}
+	</script>
 </head>
+
 <body>
 	<!------------------------------------------------------------------- User List ------------------------------------------------------>
 	<nav class="navbar blur-border">
-	    <!-- Top Header -->
-	    <div class="first-layer">
-	        <!-- Left: Logo and Menu -->
-	        <div class="left-group">
-	            <!-- Logo -->
-	            
-				 <div class="logo">
-	                <img th:src="@{/images/Bornfire.png}"    alt="BRECON Logo">
-	                 <span style="color:white; font-weight:bold; font-size:22px;">RECON</span>
-	            </div>
+		<!-- Top Header -->
+		<div class="first-layer">
+			<!-- Left: Logo and Menu -->
+			<div class="left-group">
+				<!-- Logo -->
 
-	            <!-- Menu -->
-	  <ul class="nav-links">
-    <!-- Dashboard -->
-    <li class="nav-item" th:if="${menus.contains('Dashboard')}">
-        <a href="#" id="Dashboard" onclick="contentLoad(this)" class="shine-effect">Home</a>
-    </li>
+				<div class="logo">
+					<img th:src="@{/images/Bornfire.png}" alt="BRECON Logo">
+					<span style="color:white; font-weight:bold; font-size:22px;">RECON</span>
+				</div>
 
-    <!-- Admin -->
-    <li class="nav-item dropdown" th:if="${menus.contains('Admin')}">
-        <a href="#" class="dropdown-toggle shine-effect">Admin</a>
-        <ul class="dropdown-menu">
-            <li th:if="${menus.contains('User Profile')}">
-                <a href="#" onclick="contentLoad(this)" id="UserProfile">User Profile</a>
-            </li>
-            <li th:if="${menus.contains('Access Roles')}">
-                <a href="#" onclick="contentLoad(this)" id="AccessandRoles">Access and Role</a>
-            </li>
-            <li th:if="${menus.contains('Bankbranchmaster')}">
-                <a id="BankBranchMaster" href="#" onclick="contentLoad(this)">Bank and Branch Master</a>
-            </li>
-            <li th:if="${menus.contains('Referencecode')}">
-                <a href="#" onclick="contentLoad(this)" id="refcode">Reference Code</a>
-            </li>
-        </ul>
-    </li>
-    
-    <!-- Source Data -->
-   <li class="nav-item"><a href="#" class="nav-link shine-effect" id="SourceData" onclick="contentLoad(this)">
-        Source Data
-    </a>
-</li>
+				<!-- Menu -->
+				<ul class="nav-links">
+					<!-- Dashboard -->
+					<li class="nav-item" th:if="${menus.contains('Dashboard')}">
+						<a href="#" id="Dashboard" onclick="contentLoad(this)" class="shine-effect">Home</a>
+					</li>
 
-<!-- FATCA -->
-<li class="nav-item">
-    <a href="#" id="FATCA"
-       th:attr="data-url=@{/FATCA}"
-       onclick="contentLoad(this); return false;">
-        FATCA
-    </a>
-</li>
+					<!-- Admin -->
+					<li class="nav-item dropdown" th:if="${menus.contains('Admin')}">
+						<a href="#" class="dropdown-toggle shine-effect">Admin</a>
+						<ul class="dropdown-menu">
+							<li th:if="${menus.contains('User Profile')}">
+								<a href="#" onclick="contentLoad(this)" id="UserProfile">User Profile</a>
+							</li>
+							<li th:if="${menus.contains('Access Roles')}">
+								<a href="#" onclick="contentLoad(this)" id="AccessandRoles">Access and Role</a>
+							</li>
+							<li th:if="${menus.contains('Bankbranchmaster')}">
+								<a id="BankBranchMaster" href="#" onclick="contentLoad(this)">Bank and Branch Master</a>
+							</li>
+							<li th:if="${menus.contains('Referencecode')}">
+								<a href="#" onclick="contentLoad(this)" id="refcode">Reference Code</a>
+							</li>
+						</ul>
+					</li>
 
-    <!-- CRS -->
-   <li class="nav-item">
-    <a href="#" id="CRS"
-     th:attr="data-url=@{/CRS}"
-       onclick="contentLoad(this); return false;"
-       class="shine-effect">CRS</a>
-</li>
+					<!-- Source Data -->
+					<!--
+	<li class="nav-item">
+	    <a href="#" class="nav-link shine-effect"
+	       id="SourceData"
+	       onclick="contentLoad(this)">
+	        Source Data
+	    </a>
+	</li>
+	-->
 
-    
-   <li class="nav-item">
-    <a href="javascript:void(0);"
-       id="MRA"
-       th:href="@{/MRA}"
-       class="shine-effect">
-        MRA
-    </a>
-</li>
-    <!-- Audit Inquiries -->
-    <li class="nav-item dropdown" th:if="${menus.contains('Audit Inquiries')}">
-        <a href="#" class="dropdown-toggle shine-effect">Audit Inquiries</a>
-        <ul class="dropdown-menu">
-            <li th:if="${menus.contains('User Level Audit')}">
-                <a href="#" onclick="contentLoad(this)" id="User_Audit">User Level Audit</a>
-            </li>
-            <li th:if="${menus.contains('Service Level Audit')}">
-                <a href="#" onclick="contentLoad(this)" id="Audits">Service Level Audit</a>
-            </li>
-        </ul>
-    </li>
-    
+					<!-- FATCA -->
+					<li class="nav-item">
+						<a href="#" id="FATCA" th:attr="data-url=@{/FATCA}" onclick="contentLoad(this); return false;">
+							FATCA
+						</a>
+					</li>
 
-    
-    
-    
-       
-   
+					<!-- CRS -->
+					<li class="nav-item">
+						<a href="#" id="CRS" th:attr="data-url=@{/CRS}" onclick="contentLoad(this); return false;"
+							class="shine-effect">CRS</a>
+					</li>
 
-    <!-- Credit Card -->
-   <!--  <li class="nav-item dropdown" th:if="${menus.contains('Credit Card')}">
+
+					<li class="nav-item">
+						<a href="javascript:void(0);" id="MRA" th:href="@{/MRA}" class="shine-effect">
+							MRA
+						</a>
+					</li>
+					<!-- Audit Inquiries -->
+					<li class="nav-item dropdown" th:if="${menus.contains('Audit Inquiries')}">
+						<a href="#" class="dropdown-toggle shine-effect">Audit Inquiries</a>
+						<ul class="dropdown-menu">
+							<li th:if="${menus.contains('User Level Audit')}">
+								<a href="#" onclick="contentLoad(this)" id="User_Audit">User Level Audit</a>
+							</li>
+							<li th:if="${menus.contains('Service Level Audit')}">
+								<a href="#" onclick="contentLoad(this)" id="Audits">Service Level Audit</a>
+							</li>
+						</ul>
+					</li>
+
+
+
+
+
+
+
+
+					<!-- Credit Card -->
+					<!--  <li class="nav-item dropdown" th:if="${menus.contains('Credit Card')}">
         <a href="#" class="dropdown-toggle shine-effect">Credit Card</a>
         <ul class="dropdown-menu">
             <li th:if="${menus.contains('CR Upload')}">
@@ -673,8 +674,8 @@ function openusermanual() {
         </ul>
     </li> -->
 
-    <!-- Debit Card -->
-    <!-- <li class="nav-item dropdown" th:if="${menus.contains('Debit Card')}">
+					<!-- Debit Card -->
+					<!-- <li class="nav-item dropdown" th:if="${menus.contains('Debit Card')}">
         <a href="#" class="dropdown-toggle shine-effect">Debit Card</a>
         <ul class="dropdown-menu">
             <li th:if="${menus.contains('DR Upload')}">
@@ -688,7 +689,7 @@ function openusermanual() {
             </li>
         </ul>
     </li> -->
-    <!-- <li class="nav-item dropdown" th:if="${menus.contains('UPI')}"><a href="#"
+					<!-- <li class="nav-item dropdown" th:if="${menus.contains('UPI')}"><a href="#"
 						class="dropdown-toggle shine-effect">UPI Debit Card</a>
 						<ul class="dropdown-menu">
 							<li th:if="${menus.contains('UPI Upload')}"><a href="#" onclick="contentLoad(this)" id="Upi_Debit_Upload">Upload</a></li>
@@ -713,35 +714,34 @@ function openusermanual() {
 							<li th:if="${menus.contains('Rate Maintenance')}"><a href="#" onclick="contentLoad(this)" id="Rate_main">Rate Maintenance</a></li>
 						</ul></li>
  -->
- 
-    
-    <!--  <li class="nav-item" th:if="${menus.contains('Print Queue')}">
+
+
+					<!--  <li class="nav-item" th:if="${menus.contains('Print Queue')}">
         <a href="#" id="DeleteReport" onclick="contentLoad(this)" class="shine-effect">Delete Report</a>
     </li> -->
-</ul>
+				</ul>
 
-	        </div>
-	
-	        <!-- Right: User Profile -->
-	        <div class="user-profile">
-	            <button type="button" class="btn btn-default" id="userdtl"
-	                style="margin-top: 5px; color: white" onclick="clickPhoto1(this)">
-	                <p id="userid" hidden th:text="${session.USERID}"></p>
-	                <i class="fas fa-user-tie">
-	                    <font style="font-family: Calibri;" th:text="'  ' + ${session.USERNAME}"> Abdul Halith</font>
-	                </i>
-	              </button>
+			</div>
+
+			<!-- Right: User Profile -->
+			<div class="user-profile">
+				<button type="button" class="btn btn-default" id="userdtl" style="margin-top: 5px; color: white"
+					onclick="clickPhoto1(this)">
+					<p id="userid" hidden th:text="${session.USERID}"></p>
+					<i class="fas fa-user-tie">
+						<font style="font-family: Calibri;" th:text="'  ' + ${session.USERNAME}"> Abdul Halith</font>
+					</i>
+				</button>
 				<!-- Button with icon -->
-				<button type="button" class="btn btn-default" id="manualBtn"
-					style="margin-top: 5px; color: white" onclick="openusermanual()">
+				<button type="button" class="btn btn-default" id="manualBtn" style="margin-top: 5px; color: white"
+					onclick="openusermanual()">
 					<i class="fas fa-question-circle pl-3" title="Manual"></i>
 				</button>
-				<button type="button" class="btn btn-default" id="userdtl"
-	                style="margin-top: 5px; color: white">
-	                  <i class="fas fa-sign-out-alt pl-3" id="logout" onclick="cancelformLogout(this)" ></i>
-	                </button>
-	        </div>
-	    </div>
+				<button type="button" class="btn btn-default" id="userdtl" style="margin-top: 5px; color: white">
+					<i class="fas fa-sign-out-alt pl-3" id="logout" onclick="cancelformLogout(this)"></i>
+				</button>
+			</div>
+		</div>
 	</nav>
 </body>
 <!------------------------------------------------------------------- Loading Modal ------------------------------------------------------>
